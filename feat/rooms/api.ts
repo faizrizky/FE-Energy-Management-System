@@ -4,9 +4,7 @@ import type {
   RoomSummaryDTO,
   RoomDetailDTO,
   RoomDeviceDTO,
-  RoomDeviceLogEntryDTO
 } from "./dto";
-import type { RoomFormValues } from "./schema";
 
 export interface RoomListParams {
   page?: number;
@@ -15,7 +13,6 @@ export interface RoomListParams {
   roleFilter?: string;
 }
 
-/** Server-side data access for Rooms (list, detail, device list, CRUD). */
 export const roomsApi = {
   getSummary: () => http<RoomSummaryDTO>("/rooms/summary", { next: { revalidate: 30 } }),
 
@@ -33,18 +30,4 @@ export const roomsApi = {
 
   getDevices: (roomId: string) =>
     http<RoomDeviceDTO[]>(`/rooms/${roomId}/devices`, { next: { revalidate: 15 } }),
-
-  create: (payload: RoomFormValues) => http<RoomDetailDTO>("/rooms", { method: "POST", body: payload }),
-
-  update: (roomId: string, payload: RoomFormValues) =>
-    http<RoomDetailDTO>(`/rooms/${roomId}`, { method: "PATCH", body: payload }),
-
-  remove: (roomId: string) => http<void>(`/rooms/${roomId}`, { method: "DELETE" }),
-
-  setPower: (roomId: string, isPowerOn: boolean) =>
-      http<void>(`/rooms/${roomId}/power`, { method: "POST", body: { action: isPowerOn ? "on" : "off" } }),
-
-  getDeviceLog: (roomId: string, deviceId: string) =>
-    // NOTE: endpoint belum ada di backend, lihat komentar di device-log-drawer.tsx
-    http<RoomDeviceLogEntryDTO[]>(`/rooms/${roomId}/devices/${deviceId}/logs`),
 };

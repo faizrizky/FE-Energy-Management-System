@@ -6,6 +6,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { roomsApi } from "@/feat/rooms/api";
 import type { RoomDeviceDTO, RoomDeviceLogEntryDTO } from "@/feat/rooms/dto";
+import { roomsClientApi } from "@/feat/rooms/api.client";
 
 interface DeviceLogDrawerProps {
   device: RoomDeviceDTO | null;
@@ -35,10 +36,7 @@ export function DeviceLogDrawer({ device, roomId, open, onClose }: DeviceLogDraw
   useEffect(() => {
     if (!open || !device) return;
     setLogs(null);
-    roomsApi
-      .getDeviceLog(roomId, device.id)
-      .then(setLogs)
-      .catch(() => setLogs([]));
+    roomsClientApi.getDeviceLog(roomId, device.id).then(setLogs).catch(() => setLogs([]));
   }, [open, device, roomId]);
 
   if (!open || !device) return null;

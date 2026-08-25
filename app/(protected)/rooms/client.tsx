@@ -15,9 +15,10 @@ import { api } from "@/lib/axios";
 import { toast } from "@/lib/toast-store";
 import { formatNumber } from "@/lib/utils";
 import { getRoomsColumns } from "@/column/rooms";
-import { roomsApi } from "@/feat/rooms/api";
+import { roomsClientApi } from "@/feat/rooms/api.client";
 import type { RoomListItemDTO, RoomListResponseDTO, RoomSummaryDTO } from "@/feat/rooms/dto";
 import { RoomFormModal } from "./_partials/modal";
+import { Trash2 } from "lucide-react";
 
 interface RoomsClientProps {
   summary: RoomSummaryDTO;
@@ -33,6 +34,9 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
   const [modalState, setModalState] = useState<{ open: boolean; room?: RoomListItemDTO }>({ open: false });
   const [deleteTarget, setDeleteTarget] = useState<RoomListItemDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -48,7 +52,7 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await toast.promise(roomsApi.remove(deleteTarget.id), {
+      await toast.promise(roomsClientApi.remove(deleteTarget.id), {
         loading: `Deleting ${deleteTarget.name}...`,
         success: "Room has been deleted",
       });
@@ -60,6 +64,23 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
       setDeleting(false);
     }
   };
+
+  const handleConfirmBulkDelete = async () => {
+  const ids = Array.from(selected);
+  setBulkDeleting(true);
+  try {
+    await toast.promise(Promise.all(ids.map((id) => roomsClientApi.remove(id))), {
+      loading: `Deleting ${ids.length} room(s)...`,
+      success: `${ids.length} room(s) have been deleted`,
+    });
+    setData((prev) => ({ ...prev, data: prev.data.filter((r) => !selected.has(r.id)) }));
+    setSelected(new Set());
+    setBulkDeleteOpen(false);
+  } catch {
+  } finally {
+    setBulkDeleting(false);
+  }
+};
 
   const columns = useMemo(
     () =>
@@ -73,7 +94,7 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
           }),
         onTogglePower: async (room) => {
           try {
-            await roomsApi.setPower(room.id, !room.isPowerOn);
+            await roomsClientApi.setPower(room.id, !room.isPowerOn);
             setData((prev) => ({
               ...prev,
               data: prev.data.map((r) => (r.id === room.id ? { ...r, isPowerOn: !r.isPowerOn } : r)),
@@ -127,6 +148,11 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
         <div className="flex w-full items-center justify-between">
           <p className="text-lg font-semibold text-emerald-500">{formatNumber(data.totalRows)} room(s)</p>
           <div className="flex items-center gap-2">
+            {selected.size > 0 && (
+              <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>
+                <Trash2 className="size-4" /> Delete ({selected.size})
+              </Button>
+            )}
             <SearchInput value={search} onChange={setSearch} placeholder="Ruang 101" />
             <Button variant="outline" size="sm" className="w-[150px] justify-between">
               <ListFilter className="size-4" /> Filter by role

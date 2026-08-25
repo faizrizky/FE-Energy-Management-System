@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
-  description: ReactNode;
+  description?: ReactNode;
+  count?: number;
+  itemLabel?: string;
   confirmLabel?: string;
   cancelLabel?: string;
   confirming?: boolean;
@@ -15,18 +17,35 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-
 export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "Yes, Delete",
+  count,
+  itemLabel = "item",
+  confirmLabel,
   cancelLabel = "No, cancel",
   confirming,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   if (!open) return null;
+
+  const resolvedDescription =
+    description ??
+    (count !== undefined ? (
+      <>
+        Are you sure you want to delete{" "}
+        <span className="font-bold">
+          {count} selected {itemLabel}
+          {count === 1 ? "" : "s"}
+        </span>
+        ? This action cannot be undone.
+      </>
+    ) : null);
+
+  const resolvedConfirmLabel =
+    confirmLabel ?? (count && count > 1 ? `Yes, Delete (${count})` : "Yes, Delete");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4">
@@ -37,7 +56,7 @@ export function ConfirmDialog({
           </div>
           <div className="flex flex-col items-center gap-2 text-center">
             <p className="text-lg font-semibold text-status-error">{title}</p>
-            <p className="text-sm text-slate-600">{description}</p>
+            <p className="text-sm text-slate-600">{resolvedDescription}</p>
           </div>
         </div>
 
@@ -46,7 +65,7 @@ export function ConfirmDialog({
             {cancelLabel}
           </Button>
           <Button variant="destructiveSolid" className="flex-1" onClick={onConfirm} disabled={confirming}>
-            {confirming ? "Deleting..." : confirmLabel}
+            {confirming ? "Deleting..." : resolvedConfirmLabel}
           </Button>
         </div>
       </div>
