@@ -19,7 +19,9 @@ export async function http<TResponse>(
   path: string,
   { method = "GET", body, cache, next }: HttpOptions = {}
 ): Promise<TResponse> {
-  const token = (await cookies()).get("ems_token")?.value ?? process.env.DEV_API_TOKEN;
+  const token =
+    (await cookies()).get("ems_token")?.value ??
+    process.env.DEV_API_TOKEN;
 
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
@@ -34,8 +36,12 @@ export async function http<TResponse>(
 
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}));
-    throw new Error(errorBody?.message ?? `Request failed: ${res.status}`);
+    throw new Error(
+      errorBody?.message ?? `Request failed: ${res.status}`
+    );
   }
 
-  return res.json() as Promise<TResponse>;
+  const json = await res.json();
+
+  return json.data as TResponse;
 }
