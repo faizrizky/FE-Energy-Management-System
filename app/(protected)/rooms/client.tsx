@@ -26,7 +26,9 @@ interface RoomsClientProps {
 }
 
 export function RoomsClient({ summary, initialData }: RoomsClientProps) {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState<RoomListResponseDTO>(
+  initialData ?? { data: [], page: 1, rowsPerPage: 10, totalRows: 0, totalPages: 1 }
+);
   const [page, setPage] = useState(initialData.page);
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState("");

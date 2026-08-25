@@ -14,7 +14,7 @@ export interface RoomListParams {
 }
 
 export const roomsApi = {
-  getSummary: () => http<RoomSummaryDTO>("/rooms/summary", { next: { revalidate: 30 } }),
+    getSummary: () => http<RoomSummaryDTO>("/rooms/stats", { next: { revalidate: 30 } }),
 
   list: ({ page = 1, rowsPerPage = 10, search, roleFilter }: RoomListParams = {}) => {
     const query = new URLSearchParams({
