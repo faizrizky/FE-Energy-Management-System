@@ -1,9 +1,5 @@
 'use client';
 
-/**
- * Client-side HTTP client for use inside "use client" components/hooks.
- * Attaches the auth token automatically and normalizes error shape.
- */
 import axios from 'axios';
 
 export class ApiError extends Error {
@@ -20,9 +16,27 @@ export class ApiError extends Error {
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/api',
+
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+api.interceptors.request.use((config) => {
+  if (typeof document === 'undefined') {
+    return config;
+  }
+
+  const token = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith('ems_token='))
+    ?.split('=')[1];
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${decodeURIComponent(token)}`;
+  }
+
+  return config;
 });
 
 api.interceptors.response.use(
@@ -39,6 +53,7 @@ api.interceptors.response.use(
   },
   (error) => {
     const status = error?.response?.status;
+
     const message =
       error?.response?.data?.message ??
       error?.message ??

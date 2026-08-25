@@ -160,7 +160,7 @@ export function ScheduleDetailDrawer({
                 </div>
               </section>
 
-              <section>
+              {/* <section>
                 <p className="mb-3 text-xs text-slate-600">
                   Schedule information
                 </p>
@@ -177,7 +177,7 @@ export function ScheduleDetailDrawer({
                     }
                   />
                 </div>
-              </section>
+              </section> */}
 
               <section>
                 <p className="mb-3 text-xs text-slate-600">

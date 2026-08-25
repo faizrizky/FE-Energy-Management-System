@@ -45,6 +45,20 @@ interface ScheduleClientProps {
 
 type ScheduleTab = 'active' | 'upcoming';
 
+function isUpcoming(schedule: ScheduleDTO) {
+  if (schedule.status !== 'active') {
+    return false;
+  }
+
+  const next = getNextOccurrence(schedule);
+
+  if (!next) {
+    return false;
+  }
+
+  return next.getTime() > Date.now();
+}
+
 export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
   const [schedules, setSchedules] = useState<ScheduleDTO[]>(initialData ?? []);
 
@@ -91,6 +105,11 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
   );
 
   const upcomingSchedules = useMemo(
+    () => schedules.filter(isUpcoming),
+    [schedules]
+  );
+
+  const upcomingWithin24Hours = useMemo(
     () => schedules.filter(isUpcomingWithin24Hours),
     [schedules]
   );
@@ -313,7 +332,7 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
 
         <AnalyticCard
           title="Upcoming schedule(s)"
-          value={formatNumber(upcomingSchedules.length)}
+          value={formatNumber(upcomingWithin24Hours.length)}
           unit="Next 24h"
         />
       </div>
@@ -597,7 +616,7 @@ function isUpcomingWithin24Hours(schedule: ScheduleDTO) {
 function getNextOccurrence(schedule: ScheduleDTO) {
   const now = new Date();
 
-  const base = toLocalDate(schedule.scheduledDate);
+  const startDate = toLocalDate(schedule.scheduledDate);
 
   const startMinutes = timeToMinutes(schedule.startTime);
 
@@ -610,9 +629,17 @@ function getNextOccurrence(schedule: ScheduleDTO) {
   };
 
   if (schedule.repeatType === 'none') {
-    const date = createDate(base);
+    const occurrence = createDate(startDate);
 
-    return date > now ? date : null;
+    return occurrence > now ? occurrence : null;
+  }
+
+  // Recurring schedule belum mulai
+  // sebelum scheduledDate.
+  if (startDate > startOfDay(now)) {
+    const firstOccurrence = createDate(startDate);
+
+    return firstOccurrence > now ? firstOccurrence : null;
   }
 
   if (schedule.repeatType === 'daily') {
@@ -640,6 +667,10 @@ function getNextOccurrence(schedule: ScheduleDTO) {
       const candidate = new Date(startOfDay(now));
 
       candidate.setDate(candidate.getDate() + offset);
+
+      if (candidate < startDate) {
+        continue;
+      }
 
       if (!days.includes(candidate.getDay())) {
         continue;
