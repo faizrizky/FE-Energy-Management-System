@@ -6,13 +6,15 @@ import { ArrowLeft, ListFilter } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { AnalyticCard } from "@/components/shared/analytic-card";
 import { SearchInput } from "@/components/shared/search-input";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { formatDate, formatKwh } from "@/lib/utils";
+import { toast } from "@/lib/toast-store";
 import { getRoomDevicesColumns } from "@/column/room-devices";
-import { roomsApi } from "@/feat/rooms/api";
 import type { RoomDetailDTO, RoomDeviceDTO } from "@/feat/rooms/dto";
+import { DeviceLogDrawer } from "./_partials/device-log-drawer";
 
 interface RoomDetailClientProps {
   room: RoomDetailDTO;
@@ -23,9 +25,24 @@ export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps
   const [devices, setDevices] = useState(initialDevices);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [logDevice, setLogDevice] = useState<RoomDeviceDTO | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<RoomDeviceDTO | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const filtered = devices.filter((d) => d.tbDeviceId.includes(search) || d.deviceEui.includes(search));
   const online = devices.filter((d) => d.isPowerOn).length;
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    // NOTE: sama seperti kode sebelumnya, ini cuma menghapus dari state lokal —
+    // belum ada endpoint "remove device dari room" yang di-wire di sini.
+    // Delete device sungguhan ada di modul Device (Fase 6, feat/device).
+    setDevices((prev) => prev.filter((d) => d.id !== deleteTarget.id));
+    toast.success("Device has been removed from this room");
+    setDeleteTarget(null);
+    setDeleting(false);
+  };
 
   const columns = useMemo(
     () =>
@@ -41,11 +58,8 @@ export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps
           setDevices((prev) =>
             prev.map((d) => (d.id === device.id ? { ...d, isPowerOn: !d.isPowerOn } : d))
           ),
-        onViewLog: (device) => (window.location.href = `/rooms/detail/${room.id}/devices/${device.id}/log`),
-        onDelete: async (device) => {
-          if (!confirm(`Delete ${device.tbDeviceId}?`)) return;
-          setDevices((prev) => prev.filter((d) => d.id !== device.id));
-        },
+        onViewLog: (device) => setLogDevice(device),
+        onDelete: (device) => setDeleteTarget(device),
         onIntervalChange: (device, minutes) => {
           if (minutes < 15) return;
           setDevices((prev) =>
@@ -53,7 +67,7 @@ export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps
           );
         },
       }),
-    [selected, room.id]
+    [selected]
   );
 
   return (
@@ -150,6 +164,22 @@ export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps
           </TableBody>
         </Table>
       </div>
+
+      <DeviceLogDrawer device={logDevice} roomId={room.id} open={!!logDevice} onClose={() => setLogDevice(null)} />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Device"
+        description={
+          <>
+            Are you sure you want to remove <span className="font-bold">&quot;{deleteTarget?.tbDeviceId}&quot;</span> from
+            this room? This action cannot be undone.
+          </>
+        }
+        confirming={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

@@ -49,3 +49,12 @@ export interface RoomDeviceDTO {
   intervalMinutes: number;
   isPowerOn: boolean;
 }
+
+export interface RoomDeviceLogEntryDTO {
+  id: string;
+  date: string;
+  time: string;
+  description: string;
+  picName: string;
+  picRole: string;
+}

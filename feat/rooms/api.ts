@@ -4,6 +4,7 @@ import type {
   RoomSummaryDTO,
   RoomDetailDTO,
   RoomDeviceDTO,
+  RoomDeviceLogEntryDTO
 } from "./dto";
 import type { RoomFormValues } from "./schema";
 
@@ -42,4 +43,8 @@ export const roomsApi = {
 
   setPower: (roomId: string, isPowerOn: boolean) =>
       http<void>(`/rooms/${roomId}/power`, { method: "POST", body: { action: isPowerOn ? "on" : "off" } }),
+
+  getDeviceLog: (roomId: string, deviceId: string) =>
+    // NOTE: endpoint belum ada di backend, lihat komentar di device-log-drawer.tsx
+    http<RoomDeviceLogEntryDTO[]>(`/rooms/${roomId}/devices/${deviceId}/logs`),
 };

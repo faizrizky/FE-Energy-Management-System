@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, ListFilter } from "lucide-react";
+import { Plus, ListFilter, DoorOpen } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { AnalyticCard } from "@/components/shared/analytic-card";
 import { SearchInput } from "@/components/shared/search-input";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -29,6 +31,8 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{ open: boolean; room?: RoomListItemDTO }>({ open: false });
+  const [deleteTarget, setDeleteTarget] = useState<RoomListItemDTO | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -39,6 +43,23 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
     }, 250);
     return () => clearTimeout(timeout);
   }, [page, rowsPerPage, search]);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await toast.promise(roomsApi.remove(deleteTarget.id), {
+        loading: `Deleting ${deleteTarget.name}...`,
+        success: "Room has been deleted",
+      });
+      setData((prev) => ({ ...prev, data: prev.data.filter((r) => r.id !== deleteTarget.id) }));
+      setDeleteTarget(null);
+    } catch {
+      // toast.promise sudah menampilkan toast.error; biarkan modal tetap terbuka
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const columns = useMemo(
     () =>
@@ -52,12 +73,6 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
           }),
         onTogglePower: async (room) => {
           try {
-            // Catatan: backend powerRoom() bisa balikin 200 walau sebagian device
-            // gagal (mis. tbDeviceId kosong) — status per-device ada di response
-            // body yang saat ini belum kita baca di feat/rooms/api.ts#setPower
-            // (return type-nya void). Untuk sekarang toast cuma nutup kegagalan
-            // level request (network/404 room), bukan kegagalan per-device.
-            // Detail per-device masuk lingkup Fase 4 (Rooms) kalau mau ditampilkan.
             await roomsApi.setPower(room.id, !room.isPowerOn);
             setData((prev) => ({
               ...prev,
@@ -69,20 +84,7 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
         },
         onView: (room) => (window.location.href = `/rooms/detail/${room.id}`),
         onEdit: (room) => setModalState({ open: true, room }),
-        onDelete: async (room) => {
-          if (!confirm(`Delete ${room.name}?`)) return;
-          try {
-            await toast.promise(roomsApi.remove(room.id), {
-              loading: `Deleting ${room.name}...`,
-              // Copy toast persis mengikuti Figma: "Room has been deleted"
-              success: "Room has been deleted",
-            });
-            setData((prev) => ({ ...prev, data: prev.data.filter((r) => r.id !== room.id) }));
-          } catch {
-            // toast.promise sudah menampilkan toast.error dengan pesan dari backend,
-            // di sini cukup biarkan state room tetap ada (gak ke-delete di UI).
-          }
-        },
+        onDelete: (room) => setDeleteTarget(room),
       }),
     [selected]
   );
@@ -132,47 +134,68 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
           </div>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={() =>
-                    setSelected(allSelected ? new Set() : new Set(data.data.map((r) => r.id)))
-                  }
-                />
-              </TableHead>
-              <TableHead>Room</TableHead>
-              <TableHead>Gateway</TableHead>
-              <TableHead>Device</TableHead>
-              <TableHead>Total usage(24H)</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.data.map((room) => (
-              <TableRow key={room.id}>
-                <TableCell>{columns.checkbox(room)}</TableCell>
-                <TableCell>{columns.room(room)}</TableCell>
-                <TableCell>{columns.gateway(room)}</TableCell>
-                <TableCell>{columns.device(room)}</TableCell>
-                <TableCell>{columns.usage(room)}</TableCell>
-                <TableCell>{columns.status(room)}</TableCell>
-                <TableCell>{columns.action(room)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {data.data.length === 0 ? (
+          <EmptyState
+            icon={DoorOpen}
+            title={search ? "No matching rooms" : "No rooms yet"}
+            description={
+              search
+                ? `No rooms match "${search}". Try a different search term.`
+                : "Create your first room to connect your gateway and device."
+            }
+            action={
+              !search && (
+                <Button onClick={() => setModalState({ open: true })} className="w-[200px]">
+                  <Plus className="size-4" /> Add room
+                </Button>
+              )
+            }
+          />
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={() =>
+                        setSelected(allSelected ? new Set() : new Set(data.data.map((r) => r.id)))
+                      }
+                    />
+                  </TableHead>
+                  <TableHead>Room</TableHead>
+                  <TableHead>Gateway</TableHead>
+                  <TableHead>Device</TableHead>
+                  <TableHead>Total usage(24H)</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.data.map((room) => (
+                  <TableRow key={room.id}>
+                    <TableCell>{columns.checkbox(room)}</TableCell>
+                    <TableCell>{columns.room(room)}</TableCell>
+                    <TableCell>{columns.gateway(room)}</TableCell>
+                    <TableCell>{columns.device(room)}</TableCell>
+                    <TableCell>{columns.usage(room)}</TableCell>
+                    <TableCell>{columns.status(room)}</TableCell>
+                    <TableCell>{columns.action(room)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
-        <Pagination
-          page={page}
-          totalPages={data.totalPages}
-          onPageChange={setPage}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={setRowsPerPage}
-        />
+            <Pagination
+              page={page}
+              totalPages={data.totalPages}
+              onPageChange={setPage}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={setRowsPerPage}
+            />
+          </>
+        )}
       </div>
 
       <RoomFormModal
@@ -188,6 +211,20 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
           }));
           setModalState({ open: false });
         }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Room"
+        description={
+          <>
+            Are you sure you want to delete <span className="font-bold">&quot;{deleteTarget?.name}&quot;</span>? This
+            action cannot be undone.
+          </>
+        }
+        confirming={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );
