@@ -11,18 +11,22 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-api.interceptors.request.use((config) => {
-  let token: string | undefined;
-  if (typeof document !== "undefined") {
-    token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("ems_token="))
-      ?.split("=")[1];
+api.interceptors.response.use(
+  (response) => {
+    if (
+      response.data &&
+      typeof response.data === "object" &&
+      "data" in response.data
+    ) {
+      response.data = response.data.data;
+    }
+
+    return response;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  token ??= process.env.NEXT_PUBLIC_DEV_API_TOKEN;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+);
 
 api.interceptors.response.use(
   (response) => response,

@@ -39,16 +39,42 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
+  const safeSummary: RoomSummaryDTO = {
+  totalRooms: summary?.totalRooms ?? 0,
+  totalGateways: {
+    total: summary?.totalGateways?.total ?? 0,
+    online: summary?.totalGateways?.online ?? 0,
+    offline: summary?.totalGateways?.offline ?? 0,
+  },
+  totalDevices: {
+    total: summary?.totalDevices?.total ?? 0,
+    online: summary?.totalDevices?.online ?? 0,
+    offline: summary?.totalDevices?.offline ?? 0,
+  },
+};
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      api
-        .get<RoomListResponseDTO>("/rooms", { params: { page, rowsPerPage, search: search || undefined } })
-        .then((res) => setData(res.data))
-        .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load rooms"));
-    }, 250);
-    return () => clearTimeout(timeout);
-  }, [page, rowsPerPage, search]);
+
+const loadRooms = async (
+  nextPage = page,
+  nextRowsPerPage = rowsPerPage,
+  nextSearch = search
+) => {
+  try {
+    const res = await api.get<RoomListResponseDTO>("/rooms", {
+      params: {
+        page: nextPage,
+        rowsPerPage: nextRowsPerPage,
+        search: nextSearch || undefined,
+      },
+    });
+
+    setData(res.data);
+  } catch (err) {
+    toast.error(
+      err instanceof Error ? err.message : "Failed to load rooms"
+    );
+  }
+};
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -127,35 +153,35 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
       />
 
       <div className="flex w-full items-stretch gap-2.5">
-        <AnalyticCard title="Total room(s)" value={formatNumber(summary.totalRooms)} unit="all locations" />
+        <AnalyticCard title="Total room(s)" value={formatNumber(safeSummary.totalRooms)} unit="all locations" />
         <AnalyticCard
           title="Total gateway(s)"
-          value={formatNumber(summary.totalGateways.total)}
+          value={formatNumber(safeSummary.totalGateways.total)}
           breakdown={[
-            { label: `${summary.totalGateways.online} Online`, tone: "success" },
-            { label: `${summary.totalGateways.offline} Offline`, tone: "error" },
+            { label: `${safeSummary.totalGateways.online} Online`, tone: "success" },
+            { label: `${safeSummary.totalGateways.offline} Offline`, tone: "error" },
           ]}
         />
         <AnalyticCard
           title="Total device(s)"
-          value={formatNumber(summary.totalDevices.total)}
+          value={formatNumber(safeSummary.totalDevices.total)}
           breakdown={[
-            { label: `${summary.totalDevices.online} Online`, tone: "success" },
-            { label: `${summary.totalDevices.offline} Offline`, tone: "error" },
+            { label: `${safeSummary.totalDevices.online} Online`, tone: "success" },
+            { label: `${safeSummary.totalDevices.offline} Offline`, tone: "error" },
           ]}
         />
       </div>
 
       <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
         <div className="flex w-full items-center justify-between">
-          <p className="text-lg font-semibold text-emerald-500">{formatNumber(data.totalRows)} room(s)</p>
+          <p className="text-lg font-semibold text-emerald-500">{formatNumber(data.totalRows ?? 0)} room(s)</p>
           <div className="flex items-center gap-2">
             {selected.size > 0 && (
               <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>
                 <Trash2 className="size-4" /> Delete ({selected.size})
               </Button>
             )}
-            <SearchInput value={search} onChange={setSearch} placeholder="Ruang 101" />
+            <SearchInput value={search} onChange={setSearch} placeholder="Search..." />
             <Button variant="outline" size="sm" className="w-[150px] justify-between">
               <ListFilter className="size-4" /> Filter by role
             </Button>
@@ -216,12 +242,19 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
             </Table>
 
             <Pagination
-              page={page}
-              totalPages={data.totalPages}
-              onPageChange={setPage}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={setRowsPerPage}
-            />
+            page={page}
+            totalPages={data.totalPages}
+            onPageChange={(nextPage) => {
+              setPage(nextPage);
+              loadRooms(nextPage, rowsPerPage, search);
+            }}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(nextRowsPerPage) => {
+              setRowsPerPage(nextRowsPerPage);
+              setPage(1);
+              loadRooms(1, nextRowsPerPage, search);
+            }}
+          />
           </>
         )}
       </div>

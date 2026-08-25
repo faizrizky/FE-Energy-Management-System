@@ -35,7 +35,7 @@ export function RoomForm({ defaultValues, onSubmit, onCancel, submitting }: Room
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
       <Field label="Room name" error={errors.name?.message}>
-        <Input placeholder="e.g. Ruang 101" {...register("name")} aria-invalid={!!errors.name} />
+        <Input placeholder="e.g. Room A" {...register("name")} aria-invalid={!!errors.name} />
       </Field>
 
       <Field label="Location" error={errors.location?.message}>

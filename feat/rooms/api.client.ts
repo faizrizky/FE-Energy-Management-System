@@ -13,23 +13,33 @@ import type { RoomFormValues } from "./schema";
  */
 export const roomsClientApi = {
   create: (payload: RoomFormValues) =>
-    api.post<{ data: RoomDetailDTO }>("/rooms", payload).then((res) => res.data.data),
+    api.post<RoomDetailDTO>("/rooms", payload).then((res) => res.data),
 
   update: (roomId: string, payload: RoomFormValues) =>
-    api.patch<{ data: RoomDetailDTO }>(`/rooms/${roomId}`, payload).then((res) => res.data.data),
+    api
+      .patch<RoomDetailDTO>(`/rooms/${roomId}`, payload)
+      .then((res) => res.data),
 
-  remove: (roomId: string) => api.delete(`/rooms/${roomId}`).then(() => undefined),
+  remove: (roomId: string) =>
+    api.delete(`/rooms/${roomId}`).then(() => undefined),
 
   setPower: (roomId: string, isPowerOn: boolean) =>
     api
-      .post<{ data: { results: { deviceId: string; status: string; notes: string | null }[] } }>(
-        `/rooms/${roomId}/power`,
-        { action: isPowerOn ? "on" : "off" }
-      )
-      .then((res) => res.data.data),
+      .post<{
+        results: {
+          deviceId: string;
+          status: string;
+          notes: string | null;
+        }[];
+      }>(`/rooms/${roomId}/power`, {
+        action: isPowerOn ? "on" : "off",
+      })
+      .then((res) => res.data),
 
   getDeviceLog: (roomId: string, deviceId: string) =>
     api
-      .get<{ data: RoomDeviceLogEntryDTO[] }>(`/rooms/${roomId}/devices/${deviceId}/logs`)
-      .then((res) => res.data.data),
+      .get<RoomDeviceLogEntryDTO[]>(
+        `/rooms/${roomId}/devices/${deviceId}/logs`
+      )
+      .then((res) => res.data),
 };
