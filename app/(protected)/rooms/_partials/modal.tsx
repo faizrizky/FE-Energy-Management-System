@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { RoomForm } from "./form";
 import { roomsApi } from "@/feat/rooms/api";
+import { toast } from "@/lib/toast-store";
 import type { RoomFormValues } from "@/feat/rooms/schema";
 import type { RoomDetailDTO, RoomListItemDTO } from "@/feat/rooms/dto";
 
@@ -24,7 +25,14 @@ export function RoomFormModal({ open, room, onOpenChange, onSuccess }: RoomFormM
     setSubmitting(true);
     try {
       const saved = room ? await roomsApi.update(room.id, values) : await roomsApi.create(values);
+      // Copy toast persis mengikuti Figma: "Room has been created" / "Room has been updated"
+      toast.success(room ? "Room has been updated" : "Room has been created");
       onSuccess(saved);
+    } catch (err) {
+      // err.message di sini adalah pesan asli dari backend (lib/http.ts / lib/axios.ts
+      // sudah mem-parse field `message` dari response error), jadi validasi seperti
+      // "Room name is required" (zod) ikut muncul apa adanya di toast.
+      toast.error(err instanceof Error ? err.message : "Room could not be saved");
     } finally {
       setSubmitting(false);
     }

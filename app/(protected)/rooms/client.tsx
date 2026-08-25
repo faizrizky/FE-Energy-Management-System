@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
 import { api } from "@/lib/axios";
+import { toast } from "@/lib/toast-store";
 import { formatNumber } from "@/lib/utils";
 import { getRoomsColumns } from "@/column/rooms";
 import { roomsApi } from "@/feat/rooms/api";
@@ -33,7 +34,8 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
     const timeout = setTimeout(() => {
       api
         .get<RoomListResponseDTO>("/rooms", { params: { page, rowsPerPage, search: search || undefined } })
-        .then((res) => setData(res.data));
+        .then((res) => setData(res.data))
+        .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load rooms"));
     }, 250);
     return () => clearTimeout(timeout);
   }, [page, rowsPerPage, search]);
@@ -49,18 +51,37 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
             return next;
           }),
         onTogglePower: async (room) => {
-          await roomsApi.setPower(room.id, !room.isPowerOn).catch(() => {});
-          setData((prev) => ({
-            ...prev,
-            data: prev.data.map((r) => (r.id === room.id ? { ...r, isPowerOn: !r.isPowerOn } : r)),
-          }));
+          try {
+            // Catatan: backend powerRoom() bisa balikin 200 walau sebagian device
+            // gagal (mis. tbDeviceId kosong) — status per-device ada di response
+            // body yang saat ini belum kita baca di feat/rooms/api.ts#setPower
+            // (return type-nya void). Untuk sekarang toast cuma nutup kegagalan
+            // level request (network/404 room), bukan kegagalan per-device.
+            // Detail per-device masuk lingkup Fase 4 (Rooms) kalau mau ditampilkan.
+            await roomsApi.setPower(room.id, !room.isPowerOn);
+            setData((prev) => ({
+              ...prev,
+              data: prev.data.map((r) => (r.id === room.id ? { ...r, isPowerOn: !r.isPowerOn } : r)),
+            }));
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Could not change room power state");
+          }
         },
         onView: (room) => (window.location.href = `/rooms/detail/${room.id}`),
         onEdit: (room) => setModalState({ open: true, room }),
         onDelete: async (room) => {
           if (!confirm(`Delete ${room.name}?`)) return;
-          await roomsApi.remove(room.id);
-          setData((prev) => ({ ...prev, data: prev.data.filter((r) => r.id !== room.id) }));
+          try {
+            await toast.promise(roomsApi.remove(room.id), {
+              loading: `Deleting ${room.name}...`,
+              // Copy toast persis mengikuti Figma: "Room has been deleted"
+              success: "Room has been deleted",
+            });
+            setData((prev) => ({ ...prev, data: prev.data.filter((r) => r.id !== room.id) }));
+          } catch {
+            // toast.promise sudah menampilkan toast.error dengan pesan dari backend,
+            // di sini cukup biarkan state room tetap ada (gak ke-delete di UI).
+          }
         },
       }),
     [selected]
