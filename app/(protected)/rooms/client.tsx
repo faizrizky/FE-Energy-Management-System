@@ -1,24 +1,35 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import { Plus, ListFilter, DoorOpen } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
-import { AnalyticCard } from "@/components/shared/analytic-card";
-import { SearchInput } from "@/components/shared/search-input";
-import { EmptyState } from "@/components/shared/empty-state";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Pagination } from "@/components/ui/pagination";
-import { api } from "@/lib/axios";
-import { toast } from "@/lib/toast-store";
-import { formatNumber } from "@/lib/utils";
-import { getRoomsColumns } from "@/column/rooms";
-import { roomsClientApi } from "@/feat/rooms/api.client";
-import type { RoomListItemDTO, RoomListResponseDTO, RoomSummaryDTO } from "@/feat/rooms/dto";
-import { RoomFormModal } from "./_partials/modal";
-import { Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from 'react';
+import { Plus, ListFilter, DoorOpen } from 'lucide-react';
+import { PageHeader } from '@/components/shared/page-header';
+import { AnalyticCard } from '@/components/shared/analytic-card';
+import { SearchInput } from '@/components/shared/search-input';
+import { EmptyState } from '@/components/shared/empty-state';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
+import { Pagination } from '@/components/ui/pagination';
+import { api } from '@/lib/axios';
+import { toast } from '@/lib/toast-store';
+import { formatNumber } from '@/lib/utils';
+import { getRoomsColumns } from '@/column/rooms';
+import { roomsClientApi } from '@/feat/rooms/api.client';
+import type {
+  RoomListItemDTO,
+  RoomListResponseDTO,
+  RoomSummaryDTO,
+} from '@/feat/rooms/dto';
+import { RoomFormModal } from './_partials/modal';
+import { Trash2 } from 'lucide-react';
 
 interface RoomsClientProps {
   summary: RoomSummaryDTO;
@@ -27,54 +38,62 @@ interface RoomsClientProps {
 
 export function RoomsClient({ summary, initialData }: RoomsClientProps) {
   const [data, setData] = useState<RoomListResponseDTO>(
-  initialData ?? { data: [], page: 1, rowsPerPage: 10, totalRows: 0, totalPages: 1 }
-);
+    initialData ?? {
+      data: [],
+      page: 1,
+      rowsPerPage: 10,
+      totalRows: 0,
+      totalPages: 1,
+    }
+  );
   const [page, setPage] = useState(initialData.page);
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [modalState, setModalState] = useState<{ open: boolean; room?: RoomListItemDTO }>({ open: false });
-  const [deleteTarget, setDeleteTarget] = useState<RoomListItemDTO | null>(null);
+  const [modalState, setModalState] = useState<{
+    open: boolean;
+    room?: RoomListItemDTO;
+  }>({ open: false });
+  const [deleteTarget, setDeleteTarget] = useState<RoomListItemDTO | null>(
+    null
+  );
   const [deleting, setDeleting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const safeSummary: RoomSummaryDTO = {
-  totalRooms: summary?.totalRooms ?? 0,
-  totalGateways: {
-    total: summary?.totalGateways?.total ?? 0,
-    online: summary?.totalGateways?.online ?? 0,
-    offline: summary?.totalGateways?.offline ?? 0,
-  },
-  totalDevices: {
-    total: summary?.totalDevices?.total ?? 0,
-    online: summary?.totalDevices?.online ?? 0,
-    offline: summary?.totalDevices?.offline ?? 0,
-  },
-};
+    totalRooms: summary?.totalRooms ?? 0,
+    totalGateways: {
+      total: summary?.totalGateways?.total ?? 0,
+      online: summary?.totalGateways?.online ?? 0,
+      offline: summary?.totalGateways?.offline ?? 0,
+    },
+    totalDevices: {
+      total: summary?.totalDevices?.total ?? 0,
+      online: summary?.totalDevices?.online ?? 0,
+      offline: summary?.totalDevices?.offline ?? 0,
+    },
+  };
 
+  const loadRooms = async (
+    nextPage = page,
+    nextRowsPerPage = rowsPerPage,
+    nextSearch = search
+  ) => {
+    try {
+      const res = await api.get<RoomListResponseDTO>('/rooms', {
+        params: {
+          page: nextPage,
+          rowsPerPage: nextRowsPerPage,
+          search: nextSearch || undefined,
+        },
+      });
 
-const loadRooms = async (
-  nextPage = page,
-  nextRowsPerPage = rowsPerPage,
-  nextSearch = search
-) => {
-  try {
-    const res = await api.get<RoomListResponseDTO>("/rooms", {
-      params: {
-        page: nextPage,
-        rowsPerPage: nextRowsPerPage,
-        search: nextSearch || undefined,
-      },
-    });
-
-    setData(res.data);
-  } catch (err) {
-    toast.error(
-      err instanceof Error ? err.message : "Failed to load rooms"
-    );
-  }
-};
+      setData(res.data);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load rooms');
+    }
+  };
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -82,9 +101,12 @@ const loadRooms = async (
     try {
       await toast.promise(roomsClientApi.remove(deleteTarget.id), {
         loading: `Deleting ${deleteTarget.name}...`,
-        success: "Room has been deleted",
+        success: 'Room has been deleted',
       });
-      setData((prev) => ({ ...prev, data: prev.data.filter((r) => r.id !== deleteTarget.id) }));
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.filter((r) => r.id !== deleteTarget.id),
+      }));
       setDeleteTarget(null);
     } catch {
       // toast.promise sudah menampilkan toast.error; biarkan modal tetap terbuka
@@ -94,21 +116,27 @@ const loadRooms = async (
   };
 
   const handleConfirmBulkDelete = async () => {
-  const ids = Array.from(selected);
-  setBulkDeleting(true);
-  try {
-    await toast.promise(Promise.all(ids.map((id) => roomsClientApi.remove(id))), {
-      loading: `Deleting ${ids.length} room(s)...`,
-      success: `${ids.length} room(s) have been deleted`,
-    });
-    setData((prev) => ({ ...prev, data: prev.data.filter((r) => !selected.has(r.id)) }));
-    setSelected(new Set());
-    setBulkDeleteOpen(false);
-  } catch {
-  } finally {
-    setBulkDeleting(false);
-  }
-};
+    const ids = Array.from(selected);
+    setBulkDeleting(true);
+    try {
+      await toast.promise(
+        Promise.all(ids.map((id) => roomsClientApi.remove(id))),
+        {
+          loading: `Deleting ${ids.length} room(s)...`,
+          success: `${ids.length} room(s) have been deleted`,
+        }
+      );
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.filter((r) => !selected.has(r.id)),
+      }));
+      setSelected(new Set());
+      setBulkDeleteOpen(false);
+    } catch {
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   const columns = useMemo(
     () =>
@@ -125,10 +153,16 @@ const loadRooms = async (
             await roomsClientApi.setPower(room.id, !room.isPowerOn);
             setData((prev) => ({
               ...prev,
-              data: prev.data.map((r) => (r.id === room.id ? { ...r, isPowerOn: !r.isPowerOn } : r)),
+              data: prev.data.map((r) =>
+                r.id === room.id ? { ...r, isPowerOn: !r.isPowerOn } : r
+              ),
             }));
           } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Could not change room power state");
+            toast.error(
+              err instanceof Error
+                ? err.message
+                : 'Could not change room power state'
+            );
           }
         },
         onView: (room) => (window.location.href = `/rooms/detail/${room.id}`),
@@ -138,7 +172,8 @@ const loadRooms = async (
     [selected]
   );
 
-  const allSelected = data.data.length > 0 && data.data.every((r) => selected.has(r.id));
+  const allSelected =
+    data.data.length > 0 && data.data.every((r) => selected.has(r.id));
 
   return (
     <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-y-auto bg-slate-50 p-8">
@@ -146,60 +181,100 @@ const loadRooms = async (
         title="Rooms"
         description="Manage rooms and monitor connected electrical devices."
         actions={
-          <Button onClick={() => setModalState({ open: true })} className="w-[200px]">
+          <Button
+            onClick={() => setModalState({ open: true })}
+            className="w-[200px]"
+          >
             <Plus className="size-4" /> Add room
           </Button>
         }
       />
 
       <div className="flex w-full items-stretch gap-2.5">
-        <AnalyticCard title="Total room(s)" value={formatNumber(safeSummary.totalRooms)} unit="all locations" />
+        <AnalyticCard
+          title="Total room(s)"
+          value={formatNumber(safeSummary.totalRooms)}
+          unit="all locations"
+        />
         <AnalyticCard
           title="Total gateway(s)"
           value={formatNumber(safeSummary.totalGateways.total)}
           breakdown={[
-            { label: `${safeSummary.totalGateways.online} Online`, tone: "success" },
-            { label: `${safeSummary.totalGateways.offline} Offline`, tone: "error" },
+            {
+              label: `${safeSummary.totalGateways.online} Online`,
+              tone: 'success',
+            },
+            {
+              label: `${safeSummary.totalGateways.offline} Offline`,
+              tone: 'error',
+            },
           ]}
         />
         <AnalyticCard
           title="Total device(s)"
           value={formatNumber(safeSummary.totalDevices.total)}
           breakdown={[
-            { label: `${safeSummary.totalDevices.online} Online`, tone: "success" },
-            { label: `${safeSummary.totalDevices.offline} Offline`, tone: "error" },
+            {
+              label: `${safeSummary.totalDevices.online} Online`,
+              tone: 'success',
+            },
+            {
+              label: `${safeSummary.totalDevices.offline} Offline`,
+              tone: 'error',
+            },
           ]}
         />
       </div>
 
       <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
         <div className="flex w-full items-center justify-between">
-          <p className="text-lg font-semibold text-emerald-500">{formatNumber(data.totalRows ?? 0)} room(s)</p>
+          <p className="text-lg font-semibold text-emerald-500">
+            {formatNumber(data.totalRows ?? 0)} room(s)
+          </p>
           <div className="flex items-center gap-2">
-            {selected.size > 0 && (
-              <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>
-                <Trash2 className="size-4" /> Delete ({selected.size})
-              </Button>
-            )}
-            <SearchInput value={search} onChange={setSearch} placeholder="Search..." />
-            <Button variant="outline" size="sm" className="w-[150px] justify-between">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Search..."
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-[150px] justify-between"
+            >
               <ListFilter className="size-4" /> Filter by role
             </Button>
           </div>
         </div>
 
+        {selected.size > 0 && (
+          <div className="flex w-full items-center">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              Delete ({selected.size})
+            </Button>
+          </div>
+        )}
+
         {data.data.length === 0 ? (
           <EmptyState
             icon={DoorOpen}
-            title={search ? "No matching rooms" : "No rooms yet"}
+            title={search ? 'No matching rooms' : 'No rooms yet'}
             description={
               search
                 ? `No rooms match "${search}". Try a different search term.`
-                : "Create your first room to connect your gateway and device."
+                : 'Create your first room to connect your gateway and device.'
             }
             action={
               !search && (
-                <Button onClick={() => setModalState({ open: true })} className="w-[200px]">
+                <Button
+                  onClick={() => setModalState({ open: true })}
+                  className="w-[200px]"
+                >
                   <Plus className="size-4" /> Add room
                 </Button>
               )
@@ -214,7 +289,11 @@ const loadRooms = async (
                     <Checkbox
                       checked={allSelected}
                       onCheckedChange={() =>
-                        setSelected(allSelected ? new Set() : new Set(data.data.map((r) => r.id)))
+                        setSelected(
+                          allSelected
+                            ? new Set()
+                            : new Set(data.data.map((r) => r.id))
+                        )
                       }
                     />
                   </TableHead>
@@ -242,19 +321,19 @@ const loadRooms = async (
             </Table>
 
             <Pagination
-            page={page}
-            totalPages={data.totalPages}
-            onPageChange={(nextPage) => {
-              setPage(nextPage);
-              loadRooms(nextPage, rowsPerPage, search);
-            }}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={(nextRowsPerPage) => {
-              setRowsPerPage(nextRowsPerPage);
-              setPage(1);
-              loadRooms(1, nextRowsPerPage, search);
-            }}
-          />
+              page={page}
+              totalPages={data.totalPages}
+              onPageChange={(nextPage) => {
+                setPage(nextPage);
+                loadRooms(nextPage, rowsPerPage, search);
+              }}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(nextRowsPerPage) => {
+                setRowsPerPage(nextRowsPerPage);
+                setPage(1);
+                loadRooms(1, nextRowsPerPage, search);
+              }}
+            />
           </>
         )}
       </div>
@@ -267,7 +346,11 @@ const loadRooms = async (
           setData((prev) => ({
             ...prev,
             data: modalState.room
-              ? prev.data.map((r) => (r.id === saved.id ? { ...r, name: saved.name, location: saved.location } : r))
+              ? prev.data.map((r) =>
+                  r.id === saved.id
+                    ? { ...r, name: saved.name, location: saved.location }
+                    : r
+                )
               : prev.data,
           }));
           setModalState({ open: false });
@@ -279,8 +362,9 @@ const loadRooms = async (
         title="Delete Room"
         description={
           <>
-            Are you sure you want to delete <span className="font-bold">&quot;{deleteTarget?.name}&quot;</span>? This
-            action cannot be undone.
+            Are you sure you want to delete{' '}
+            <span className="font-bold">&quot;{deleteTarget?.name}&quot;</span>?
+            This action cannot be undone.
           </>
         }
         confirming={deleting}
