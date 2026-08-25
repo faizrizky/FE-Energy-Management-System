@@ -12,15 +12,15 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  let token: string | undefined;
   if (typeof document !== "undefined") {
-    const token = document.cookie
+    token = document.cookie
       .split("; ")
       .find((row) => row.startsWith("ems_token="))
       ?.split("=")[1];
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
   }
+  token ??= process.env.NEXT_PUBLIC_DEV_API_TOKEN;
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 

@@ -19,7 +19,7 @@ export async function http<TResponse>(
   path: string,
   { method = "GET", body, cache, next }: HttpOptions = {}
 ): Promise<TResponse> {
-  const token = (await cookies()).get("ems_token")?.value;
+  const token = (await cookies()).get("ems_token")?.value ?? process.env.DEV_API_TOKEN;
 
   const res = await fetch(`${BASE_URL}${path}`, {
     method,

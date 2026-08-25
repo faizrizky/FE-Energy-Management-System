@@ -41,5 +41,5 @@ export const roomsApi = {
   remove: (roomId: string) => http<void>(`/rooms/${roomId}`, { method: "DELETE" }),
 
   setPower: (roomId: string, isPowerOn: boolean) =>
-    http<void>(`/rooms/${roomId}/power`, { method: "POST", body: { isPowerOn } }),
+      http<void>(`/rooms/${roomId}/power`, { method: "POST", body: { action: isPowerOn ? "on" : "off" } }),
 };
