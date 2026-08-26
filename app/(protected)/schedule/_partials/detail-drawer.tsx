@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-
 import type { ScheduleDTO } from '@/feat/schedule/dto';
-
 import { scheduleClientApi } from '@/feat/schedule/api.client';
+import {
+  formatScheduleDate,
+  formatScheduleDateTime,
+  dayName,
+} from '@/feat/schedule/time';
 
 interface ScheduleDetailDrawerProps {
   scheduleId: string | null;
@@ -109,7 +112,7 @@ export function ScheduleDetailDrawer({
 
                   <InfoRow
                     label="Created at"
-                    value={formatDateTime(schedule.createdAt)}
+                    value={formatScheduleDateTime(schedule.createdAt)}
                   />
 
                   <InfoRow
@@ -138,7 +141,7 @@ export function ScheduleDetailDrawer({
                     </p>
 
                     <p className="mt-1 text-sm text-slate-950">
-                      {formatDate(schedule.scheduledDate)}
+                      {formatScheduleDate(schedule.scheduledDate)}
                     </p>
 
                     <p className="text-sm text-slate-950">
@@ -263,18 +266,4 @@ function formatRepeat(schedule: ScheduleDTO) {
   }
 
   return 'Does not repeat';
-}
-
-function dayName(day: number) {
-  const names = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-
-  return names[day] ?? '-';
 }

@@ -2,26 +2,18 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
-
 import { ScheduleForm } from './form';
-
 import { scheduleClientApi } from '@/feat/schedule/api.client';
-
+import { toDateInputValue } from '@/feat/schedule/time';
 import type { ScheduleDTO } from '@/feat/schedule/dto';
-
 import type { ScheduleFormValues } from '@/feat/schedule/schema';
-
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
 
 interface ScheduleFormModalProps {
   open: boolean;
-
   schedule?: ScheduleDTO;
-
   rooms: RoomListItemDTO[];
-
   onOpenChange: (open: boolean) => void;
-
   onSuccess: (schedule: ScheduleDTO) => void;
 }
 
@@ -34,33 +26,24 @@ export function ScheduleFormModal({
 }: ScheduleFormModalProps) {
   const [submitting, setSubmitting] = useState(false);
 
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
   const defaultValues: Partial<ScheduleFormValues> = schedule
     ? {
         roomId: schedule.roomId,
-
         deviceId: schedule.deviceId ?? '',
-
         action: schedule.action,
-
-        scheduledDate: toDateInput(schedule.scheduledDate),
-
+        scheduledDate: toDateInputValue(schedule.scheduledDate),
         startTime: schedule.startTime,
-
         endTime: schedule.endTime ?? '',
-
         repeatType: schedule.repeatType,
-
         repeatDays: schedule.repeatDays ?? [],
       }
     : {
         roomId: '',
         deviceId: '',
         action: 'on',
-        scheduledDate: toDateInput(new Date().toISOString()),
+        scheduledDate: toDateInputValue(new Date().toISOString()),
         startTime: '08:00',
         endTime: '',
         repeatType: 'none',
@@ -69,12 +52,10 @@ export function ScheduleFormModal({
 
   const handleSubmit = async (values: ScheduleFormValues) => {
     setSubmitting(true);
-
     try {
       const saved = schedule
         ? await scheduleClientApi.update(schedule.id, values)
         : await scheduleClientApi.create(values);
-
       onSuccess(saved);
     } finally {
       setSubmitting(false);
@@ -88,7 +69,6 @@ export function ScheduleFormModal({
           <h2 className="text-lg font-semibold text-emerald-500">
             {schedule ? 'Edit schedule' : 'Add schedule'}
           </h2>
-
           <button
             type="button"
             aria-label="Close"
@@ -99,7 +79,6 @@ export function ScheduleFormModal({
             <X className="size-5 text-slate-500" />
           </button>
         </div>
-
         <div className="overflow-y-auto px-6 py-5">
           <ScheduleForm
             rooms={rooms}
@@ -113,16 +92,4 @@ export function ScheduleFormModal({
       </div>
     </div>
   );
-}
-
-function toDateInput(value: string) {
-  const date = new Date(value);
-
-  const year = date.getFullYear();
-
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-
-  const day = String(date.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
 }

@@ -1,18 +1,21 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-
-import { Plus, ListFilter, CalendarDays, Trash2 } from 'lucide-react';
-
+import { Plus, CalendarDays, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
-
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import {
   Table,
   TableHeader,
@@ -21,20 +24,18 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-
 import { Pagination } from '@/components/ui/pagination';
-
 import { toast } from '@/lib/toast-store';
 import { formatNumber } from '@/lib/utils';
-
 import { getScheduleColumns } from '@/column/schedule';
-
 import { scheduleClientApi } from '@/feat/schedule/api.client';
-
+import {
+  isCurrentlyActive,
+  isUpcoming,
+  isUpcomingWithin24Hours,
+} from '@/feat/schedule/time';
 import type { ScheduleDTO } from '@/feat/schedule/dto';
-
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
-
 import { ScheduleFormModal } from './_partials/modal';
 import { ScheduleDetailDrawer } from './_partials/detail-drawer';
 
@@ -44,58 +45,30 @@ interface ScheduleClientProps {
 }
 
 type ScheduleTab = 'active' | 'upcoming';
-
-function isUpcoming(schedule: ScheduleDTO) {
-  if (schedule.status !== 'active') {
-    return false;
-  }
-
-  const next = getNextOccurrence(schedule);
-
-  if (!next) {
-    return false;
-  }
-
-  return next.getTime() > Date.now();
-}
+const ALL_COMPONENTS = '__all__';
 
 export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
   const [schedules, setSchedules] = useState<ScheduleDTO[]>(initialData ?? []);
-
   const [selected, setSelected] = useState<Set<string>>(new Set());
-
   const [search, setSearch] = useState('');
-
   const [tab, setTab] = useState<ScheduleTab>('active');
-
   const [page, setPage] = useState(1);
-
   const [rowsPerPage, setRowsPerPage] = useState(10);
-
   const [filterComponent, setFilterComponent] = useState('');
-
   const [modalState, setModalState] = useState<{
     open: boolean;
     schedule?: ScheduleDTO;
-  }>({
-    open: false,
-  });
-
+  }>({ open: false });
   const [detailId, setDetailId] = useState<string | null>(null);
-
   const [deleteTarget, setDeleteTarget] = useState<ScheduleDTO | null>(null);
-
   const [deleting, setDeleting] = useState(false);
-
   const [bulkDeleting, setBulkDeleting] = useState(false);
-
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const components = useMemo(() => {
     const values = schedules
       .map((schedule) => schedule.device?.deviceType)
       .filter((value): value is string => Boolean(value));
-
     return Array.from(new Set(values)).sort();
   }, [schedules]);
 
@@ -103,12 +76,10 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
     () => schedules.filter(isCurrentlyActive),
     [schedules]
   );
-
   const upcomingSchedules = useMemo(
     () => schedules.filter(isUpcoming),
     [schedules]
   );
-
   const upcomingWithin24Hours = useMemo(
     () => schedules.filter(isUpcomingWithin24Hours),
     [schedules]
@@ -118,7 +89,6 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
 
   const filteredSchedules = useMemo(() => {
     const normalized = search.trim().toLowerCase();
-
     return tabSchedules.filter((schedule) => {
       const matchesSearch =
         !normalized ||
@@ -135,7 +105,6 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
 
       const matchesComponent =
         !filterComponent || schedule.device?.deviceType === filterComponent;
-
       return matchesSearch && matchesComponent;
     });
   }, [search, tabSchedules, filterComponent]);
@@ -144,9 +113,7 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
     1,
     Math.ceil(filteredSchedules.length / rowsPerPage)
   );
-
   const safePage = Math.min(page, totalPages);
-
   const paginatedSchedules = filteredSchedules.slice(
     (safePage - 1) * rowsPerPage,
     safePage * rowsPerPage
@@ -155,9 +122,7 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
   const toggleSelected = (id: string) => {
     setSelected((previous) => {
       const next = new Set(previous);
-
       next.has(id) ? next.delete(id) : next.add(id);
-
       return next;
     });
   };
@@ -166,17 +131,9 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
     () =>
       getScheduleColumns({
         isSelected: (id) => selected.has(id),
-
         onToggleSelect: (id) => toggleSelected(id),
-
         onView: (schedule) => setDetailId(schedule.id),
-
-        onEdit: (schedule) =>
-          setModalState({
-            open: true,
-            schedule,
-          }),
-
+        onEdit: (schedule) => setModalState({ open: true, schedule }),
         onDelete: (schedule) => setDeleteTarget(schedule),
       }),
     [selected]
@@ -193,13 +150,11 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
   const togglePageSelection = () => {
     setSelected((previous) => {
       const next = new Set(previous);
-
       if (allSelected) {
         paginatedSchedules.forEach((schedule) => next.delete(schedule.id));
       } else {
         paginatedSchedules.forEach((schedule) => next.add(schedule.id));
       }
-
       return next;
     });
   };
@@ -213,46 +168,30 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
   const handleSave = async (saved: ScheduleDTO) => {
     setSchedules((previous) => {
       const exists = previous.some((item) => item.id === saved.id);
-
-      if (exists) {
+      if (exists)
         return previous.map((item) => (item.id === saved.id ? saved : item));
-      }
-
       return [saved, ...previous];
     });
-
-    setModalState({
-      open: false,
-    });
-
+    setModalState({ open: false });
     toast.success('Schedule saved successfully');
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget) {
-      return;
-    }
-
+    if (!deleteTarget) return;
     setDeleting(true);
-
     try {
       await toast.promise(scheduleClientApi.remove(deleteTarget.id), {
         loading: 'Deleting schedule...',
         success: 'Schedule deleted',
       });
-
       setSchedules((previous) =>
         previous.filter((item) => item.id !== deleteTarget.id)
       );
-
       setSelected((previous) => {
         const next = new Set(previous);
-
         next.delete(deleteTarget.id);
-
         return next;
       });
-
       setDeleteTarget(null);
     } finally {
       setDeleting(false);
@@ -261,30 +200,21 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selected);
-
-    if (!ids.length) {
-      return;
-    }
-
+    if (!ids.length) return;
     setBulkDeleting(true);
-
     try {
       const results = await Promise.allSettled(
         ids.map((id) => scheduleClientApi.remove(id))
       );
-
       const successfulIds = ids.filter(
         (_, index) => results[index].status === 'fulfilled'
       );
-
       const failedCount = results.length - successfulIds.length;
 
       setSchedules((previous) =>
         previous.filter((schedule) => !successfulIds.includes(schedule.id))
       );
-
       setSelected(new Set());
-
       setBulkDeleteOpen(false);
 
       if (failedCount === 0) {
@@ -304,11 +234,7 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
         description="Manage scheduled actions for rooms and electrical devices."
         actions={
           <Button
-            onClick={() =>
-              setModalState({
-                open: true,
-              })
-            }
+            onClick={() => setModalState({ open: true })}
             className="w-[200px]"
           >
             <Plus className="size-4" />
@@ -323,13 +249,11 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
           value={formatNumber(schedules.length)}
           unit="all times"
         />
-
         <AnalyticCard
           title="Active schedule(s)"
           value={formatNumber(activeSchedules.length)}
           unit="Running now"
         />
-
         <AnalyticCard
           title="Upcoming schedule(s)"
           value={formatNumber(upcomingWithin24Hours.length)}
@@ -352,7 +276,6 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
             >
               Active schedule
             </button>
-
             <button
               type="button"
               onClick={() => changeTab('upcoming')}
@@ -377,14 +300,25 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
               placeholder="Search..."
             />
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-[150px] justify-between"
+            {/* <Select
+              value={filterComponent || ALL_COMPONENTS}
+              onValueChange={(value) => {
+                setFilterComponent(value === ALL_COMPONENTS ? '' : value);
+                setPage(1);
+              }}
             >
-              <ListFilter className="size-4" />
-              Filter by role
-            </Button>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Filter by component" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_COMPONENTS}>All components</SelectItem>
+                {components.map((component) => (
+                  <SelectItem key={component} value={component}>
+                    {component}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select> */}
 
             <Button variant="outline" size="icon" className="size-8">
               <CalendarDays className="size-4" />
@@ -419,11 +353,7 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
             action={
               !search && (
                 <Button
-                  onClick={() =>
-                    setModalState({
-                      open: true,
-                    })
-                  }
+                  onClick={() => setModalState({ open: true })}
                   className="w-[200px]"
                 >
                   <Plus className="size-4" />
@@ -443,40 +373,25 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
                       onCheckedChange={togglePageSelection}
                     />
                   </TableHead>
-
                   <TableHead>Room</TableHead>
-
                   <TableHead>Component</TableHead>
-
                   <TableHead>Device EUI</TableHead>
-
                   <TableHead>Start Date</TableHead>
-
                   <TableHead>Time</TableHead>
-
                   <TableHead>Repeat</TableHead>
-
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
-
               <TableBody>
                 {paginatedSchedules.map((schedule) => (
                   <TableRow key={schedule.id}>
                     <TableCell>{columns.checkbox(schedule)}</TableCell>
-
                     <TableCell>{columns.room(schedule)}</TableCell>
-
                     <TableCell>{columns.component(schedule)}</TableCell>
-
                     <TableCell>{columns.deviceEui(schedule)}</TableCell>
-
                     <TableCell>{columns.date(schedule)}</TableCell>
-
                     <TableCell>{columns.time(schedule)}</TableCell>
-
                     <TableCell>{columns.repeat(schedule)}</TableCell>
-
                     <TableCell>{columns.action(schedule)}</TableCell>
                   </TableRow>
                 ))}
@@ -501,11 +416,7 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
         open={modalState.open}
         schedule={modalState.schedule}
         rooms={rooms}
-        onOpenChange={(open) =>
-          setModalState({
-            open,
-          })
-        }
+        onOpenChange={(open) => setModalState({ open })}
         onSuccess={handleSave}
       />
 
@@ -541,172 +452,4 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
       />
     </div>
   );
-}
-
-function isCurrentlyActive(schedule: ScheduleDTO) {
-  if (schedule.status !== 'active') {
-    return false;
-  }
-
-  const now = new Date();
-
-  const date = toLocalDate(schedule.scheduledDate);
-
-  const today = toDateKey(now);
-
-  const scheduleDate = toDateKey(date);
-
-  if (schedule.repeatType === 'none') {
-    if (scheduleDate !== today) {
-      return false;
-    }
-  } else {
-    if (date > startOfDay(now)) {
-      return false;
-    }
-
-    if (schedule.repeatType === 'weekly') {
-      const days = schedule.repeatDays ?? [];
-
-      if (!days.includes(now.getDay())) {
-        return false;
-      }
-    }
-  }
-
-  return isWithinScheduleTime(schedule, now);
-}
-
-function isWithinScheduleTime(schedule: ScheduleDTO, now: Date) {
-  const current = now.getHours() * 60 + now.getMinutes();
-
-  const start = timeToMinutes(schedule.startTime);
-
-  if (schedule.endTime) {
-    const end = timeToMinutes(schedule.endTime);
-
-    if (end <= start) {
-      return current >= start || current <= end;
-    }
-
-    return current >= start && current <= end;
-  }
-
-  return current === start;
-}
-
-function isUpcomingWithin24Hours(schedule: ScheduleDTO) {
-  if (schedule.status !== 'active') {
-    return false;
-  }
-
-  const next = getNextOccurrence(schedule);
-
-  if (!next) {
-    return false;
-  }
-
-  const now = new Date();
-
-  const diff = next.getTime() - now.getTime();
-
-  return diff > 0 && diff <= 24 * 60 * 60 * 1000;
-}
-
-function getNextOccurrence(schedule: ScheduleDTO) {
-  const now = new Date();
-
-  const startDate = toLocalDate(schedule.scheduledDate);
-
-  const startMinutes = timeToMinutes(schedule.startTime);
-
-  const createDate = (date: Date) => {
-    const result = new Date(date);
-
-    result.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
-
-    return result;
-  };
-
-  if (schedule.repeatType === 'none') {
-    const occurrence = createDate(startDate);
-
-    return occurrence > now ? occurrence : null;
-  }
-
-  // Recurring schedule belum mulai
-  // sebelum scheduledDate.
-  if (startDate > startOfDay(now)) {
-    const firstOccurrence = createDate(startDate);
-
-    return firstOccurrence > now ? firstOccurrence : null;
-  }
-
-  if (schedule.repeatType === 'daily') {
-    const today = createDate(startOfDay(now));
-
-    if (today > now) {
-      return today;
-    }
-
-    const tomorrow = new Date(startOfDay(now));
-
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    return createDate(tomorrow);
-  }
-
-  if (schedule.repeatType === 'weekly') {
-    const days = schedule.repeatDays ?? [];
-
-    if (!days.length) {
-      return null;
-    }
-
-    for (let offset = 0; offset < 8; offset += 1) {
-      const candidate = new Date(startOfDay(now));
-
-      candidate.setDate(candidate.getDate() + offset);
-
-      if (candidate < startDate) {
-        continue;
-      }
-
-      if (!days.includes(candidate.getDay())) {
-        continue;
-      }
-
-      const occurrence = createDate(candidate);
-
-      if (occurrence > now) {
-        return occurrence;
-      }
-    }
-  }
-
-  return null;
-}
-
-function timeToMinutes(value: string) {
-  const [hour, minute] = value.split(':').map(Number);
-
-  return hour * 60 + minute;
-}
-
-function toLocalDate(value: string) {
-  const date = new Date(value);
-
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function startOfDay(value: Date) {
-  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
-}
-
-function toDateKey(value: Date) {
-  return [
-    value.getFullYear(),
-    String(value.getMonth() + 1).padStart(2, '0'),
-    String(value.getDate()).padStart(2, '0'),
-  ].join('-');
 }

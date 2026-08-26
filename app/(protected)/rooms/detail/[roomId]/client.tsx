@@ -1,35 +1,47 @@
-"use client";
+'use client';
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, ListFilter } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
-import { AnalyticCard } from "@/components/shared/analytic-card";
-import { SearchInput } from "@/components/shared/search-input";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { formatDate, formatKwh } from "@/lib/utils";
-import { toast } from "@/lib/toast-store";
-import { getRoomDevicesColumns } from "@/column/room-devices";
-import type { RoomDetailDTO, RoomDeviceDTO } from "@/feat/rooms/dto";
-import { DeviceLogDrawer } from "./_partials/device-log-drawer";
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, ListFilter } from 'lucide-react';
+import { PageHeader } from '@/components/shared/page-header';
+import { AnalyticCard } from '@/components/shared/analytic-card';
+import { SearchInput } from '@/components/shared/search-input';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
+import { formatDate, formatKwh } from '@/lib/utils';
+import { toast } from '@/lib/toast-store';
+import { getRoomDevicesColumns } from '@/column/room-devices';
+import type { RoomDetailDTO, RoomDeviceDTO } from '@/feat/rooms/dto';
+import { DeviceLogDrawer } from './_partials/device-log-drawer';
 
 interface RoomDetailClientProps {
   room: RoomDetailDTO;
   initialDevices: RoomDeviceDTO[];
 }
 
-export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps) {
+export function RoomDetailClient({
+  room,
+  initialDevices,
+}: RoomDetailClientProps) {
   const [devices, setDevices] = useState(initialDevices);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [logDevice, setLogDevice] = useState<RoomDeviceDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RoomDeviceDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const filtered = devices.filter((d) => d.tbDeviceId.includes(search) || d.deviceEui.includes(search));
+  const filtered = devices.filter(
+    (d) => d.tbDeviceId.includes(search) || d.deviceEui.includes(search)
+  );
   const online = devices.filter((d) => d.isPowerOn).length;
 
   const handleConfirmDelete = () => {
@@ -39,7 +51,7 @@ export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps
     // belum ada endpoint "remove device dari room" yang di-wire di sini.
     // Delete device sungguhan ada di modul Device (Fase 6, feat/device).
     setDevices((prev) => prev.filter((d) => d.id !== deleteTarget.id));
-    toast.success("Device has been removed from this room");
+    toast.success('Device has been removed from this room');
     setDeleteTarget(null);
     setDeleting(false);
   };
@@ -56,14 +68,18 @@ export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps
           }),
         onTogglePower: (device) =>
           setDevices((prev) =>
-            prev.map((d) => (d.id === device.id ? { ...d, isPowerOn: !d.isPowerOn } : d))
+            prev.map((d) =>
+              d.id === device.id ? { ...d, isPowerOn: !d.isPowerOn } : d
+            )
           ),
         onViewLog: (device) => setLogDevice(device),
         onDelete: (device) => setDeleteTarget(device),
         onIntervalChange: (device, minutes) => {
           if (minutes < 15) return;
           setDevices((prev) =>
-            prev.map((d) => (d.id === device.id ? { ...d, intervalMinutes: minutes } : d))
+            prev.map((d) =>
+              d.id === device.id ? { ...d, intervalMinutes: minutes } : d
+            )
           );
         },
       }),
@@ -87,13 +103,20 @@ export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps
           </h1>
           <div className="flex items-center gap-4 text-xs text-slate-600">
             <span>
-              Created at: <span className="text-slate-950">{room.location}</span>
+              Created at:{' '}
+              <span className="text-slate-950">{room.location}</span>
             </span>
             <span>
-              Created at: <span className="text-slate-950">{formatDate(room.createdAt)}</span>
+              Created at:{' '}
+              <span className="text-slate-950">
+                {formatDate(room.createdAt)}
+              </span>
             </span>
             <span>
-              Last updated: <span className="text-slate-950">{room.lastUpdatedAt ? formatDate(room.lastUpdatedAt) : "-"}</span>
+              Last updated:{' '}
+              <span className="text-slate-950">
+                {room.lastUpdatedAt ? formatDate(room.lastUpdatedAt) : '-'}
+              </span>
             </span>
           </div>
           <p className="text-xs text-slate-600">{room.description}</p>
@@ -101,12 +124,28 @@ export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps
       </div>
 
       <div className="flex w-full items-stretch gap-2.5">
-        <AnalyticCard title="Total usage(24H)" value={formatKwh(room.usage.total24hKwh, 0).replace(" kWh", "")} unit="kWh" />
-        <AnalyticCard title="Avg usage(24H)" value={formatKwh(room.usage.avg24hKwh, 0).replace(" kWh", "")} unit="kWh" />
-        <AnalyticCard title="Peak usage" value={formatKwh(room.usage.peakKwh, 0).replace(" kWh", "")} unit="kWh" tone="red" />
+        <AnalyticCard
+          title="Total usage(24H)"
+          value={formatKwh(room.usage.total24hKwh ?? 0, 0).replace(' kWh', '')}
+          unit="kWh"
+        />
+        <AnalyticCard
+          title="Avg usage(24H)"
+          value={formatKwh(room.usage.avg24hKwh ?? 0, 0).replace(' kWh', '')}
+          unit="kWh"
+        />
+        <AnalyticCard
+          title="Peak usage"
+          value={formatKwh(room.usage.peakKwh ?? 0, 0).replace(' kWh', '')}
+          unit="kWh"
+          tone="red"
+        />
         <AnalyticCard
           title="Highest component"
-          value={formatKwh(room.usage.highestComponent.kwh, 0).replace(" kWh", "")}
+          value={formatKwh(room.usage.highestComponent.kwh, 0).replace(
+            ' kWh',
+            ''
+          )}
           unit={room.usage.highestComponent.name}
           tone="red"
         />
@@ -115,14 +154,25 @@ export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps
       <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
         <div className="flex w-full items-center justify-between">
           <div className="flex flex-col gap-1">
-            <p className="text-lg font-semibold text-emerald-500">{devices.length} device(s)</p>
+            <p className="text-lg font-semibold text-emerald-500">
+              {devices.length} device(s)
+            </p>
             <p className="text-xs text-[#444651]">
-              <span className="text-emerald-500">{online} Online</span> · {devices.length - online} Offline
+              <span className="text-emerald-500">{online} Online</span> ·{' '}
+              {devices.length - online} Offline
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <SearchInput value={search} onChange={setSearch} placeholder="Search device EUI" />
-            <Button variant="outline" size="sm" className="w-[150px] justify-between">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Search device EUI"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-[150px] justify-between"
+            >
               <ListFilter className="size-4" /> Filter by role
             </Button>
           </div>
@@ -133,10 +183,15 @@ export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps
             <TableRow>
               <TableHead className="w-[50px]">
                 <Checkbox
-                  checked={filtered.length > 0 && filtered.every((d) => selected.has(d.id))}
+                  checked={
+                    filtered.length > 0 &&
+                    filtered.every((d) => selected.has(d.id))
+                  }
                   onCheckedChange={() =>
                     setSelected(
-                      filtered.every((d) => selected.has(d.id)) ? new Set() : new Set(filtered.map((d) => d.id))
+                      filtered.every((d) => selected.has(d.id))
+                        ? new Set()
+                        : new Set(filtered.map((d) => d.id))
                     )
                   }
                 />
@@ -165,15 +220,23 @@ export function RoomDetailClient({ room, initialDevices }: RoomDetailClientProps
         </Table>
       </div>
 
-      <DeviceLogDrawer device={logDevice} roomId={room.id} open={!!logDevice} onClose={() => setLogDevice(null)} />
+      <DeviceLogDrawer
+        device={logDevice}
+        roomId={room.id}
+        open={!!logDevice}
+        onClose={() => setLogDevice(null)}
+      />
 
       <ConfirmDialog
         open={!!deleteTarget}
         title="Delete Device"
         description={
           <>
-            Are you sure you want to remove <span className="font-bold">&quot;{deleteTarget?.tbDeviceId}&quot;</span> from
-            this room? This action cannot be undone.
+            Are you sure you want to remove{' '}
+            <span className="font-bold">
+              &quot;{deleteTarget?.tbDeviceId}&quot;
+            </span>{' '}
+            from this room? This action cannot be undone.
           </>
         }
         confirming={deleting}
