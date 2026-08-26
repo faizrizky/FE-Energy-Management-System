@@ -6,20 +6,21 @@ import { gatewaysApi } from '@/feat/gateway/api';
 import { DeviceClient } from './client';
 
 export default async function DevicePage() {
-  const [session, devices, roomsRes, gateways] = await Promise.all([
+  const [session, devices, roomsRes, gatewaysRes] = await Promise.all([
     getSession(),
     devicesApi.list(),
-    roomsApi.list({ page: 1, rowsPerPage: 1000 }),
+    roomsApi.list(),
     gatewaysApi.list(),
   ]);
 
   return (
     <>
       <Header breadcrumb={['Devices']} user={session!} />
+
       <DeviceClient
         initialData={devices}
         rooms={roomsRes.data}
-        gateways={gateways}
+        gateways={gatewaysRes.data}
       />
     </>
   );
