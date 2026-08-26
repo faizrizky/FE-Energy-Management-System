@@ -1,9 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Plus, Router, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, ListFilter, Router } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
-import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
@@ -18,26 +17,25 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
+import { api } from '@/lib/axios';
 import { toast } from '@/lib/toast-store';
 import { formatNumber } from '@/lib/utils';
 import { getGatewayColumns } from '@/column/gateway';
 import { gatewaysClientApi } from '@/feat/gateway/api.client';
-import type { GatewayDTO } from '@/feat/gateway/dto';
+import type { GatewayDTO, GatewayListResponseDTO } from '@/feat/gateway/dto';
+import type { UserSummaryDTO } from '@/feat/user/dto';
 import { GatewayFormModal } from './_partials/modal';
 
 interface GatewayClientProps {
-  initialData: GatewayDTO[];
+  initialData: GatewayListResponseDTO;
+  users: UserSummaryDTO[];
 }
 
-// NOTE: backend GET /gateways has no pagination/search/stats (plain findMany,
-// see gateway.usecase.js#listGateways), jadi search/pagination/summary
-// dihitung client-side dari full list, sama kayak alasan yang udah dicatat
-// di feat/gateway/api.ts.
-export function GatewayClient({ initialData }: GatewayClientProps) {
-  const [gateways, setGateways] = useState<GatewayDTO[]>(initialData ?? []);
+export function GatewayClient({ initialData, users }: GatewayClientProps) {
+  const [data, setData] = useState(initialData);
+  const [page, setPage] = useState(initialData.page);
+  const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{
     open: boolean;
@@ -45,27 +43,39 @@ export function GatewayClient({ initialData }: GatewayClientProps) {
   }>({ open: false });
   const [deleteTarget, setDeleteTarget] = useState<GatewayDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
-  const online = gateways.filter((g) => g.status === 'online').length;
+  const online = data.data.filter((g) => g.status === 'online').length;
 
-  const filtered = useMemo(() => {
-    const normalized = search.trim().toLowerCase();
-    if (!normalized) return gateways;
-    return gateways.filter(
-      (g) =>
-        g.name.toLowerCase().includes(normalized) ||
-        g.eui.toLowerCase().includes(normalized)
-    );
-  }, [gateways, search]);
+  // Server-driven pagination/search sekarang backend-nya support (GET /gateways
+  // sudah terima page/rowsPerPage/search — lihat gateway.usecase.js#listGatewaysPaginated).
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      api
+        .get<GatewayListResponseDTO>('/gateways', {
+          params: { page, rowsPerPage, search: search || undefined },
+        })
+        .then((res) => setData(res.data))
+        .catch((err) =>
+          toast.error(
+            err instanceof Error ? err.message : 'Failed to load gateways'
+          )
+        );
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [page, rowsPerPage, search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
-  const safePage = Math.min(page, totalPages);
-  const paginated = filtered.slice(
-    (safePage - 1) * rowsPerPage,
-    safePage * rowsPerPage
-  );
+  const columns = getGatewayColumns({
+    isSelected: (id) => selected.has(id),
+    onToggleSelect: (id) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+      }),
+    onView: (gateway) => (window.location.href = `/gateway/${gateway.id}`),
+    onEdit: (gateway) => setModalState({ open: true, gateway }),
+    onDelete: (gateway) => setDeleteTarget(gateway),
+  });
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -75,67 +85,26 @@ export function GatewayClient({ initialData }: GatewayClientProps) {
         loading: `Deleting ${deleteTarget.name}...`,
         success: 'Gateway has been deleted',
       });
-      setGateways((prev) => prev.filter((g) => g.id !== deleteTarget.id));
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.filter((g) => g.id !== deleteTarget.id),
+      }));
       setDeleteTarget(null);
     } catch {
-      // toast.promise sudah menampilkan toast.error
+      // toast.promise sudah menampilkan error dari backend
     } finally {
       setDeleting(false);
     }
   };
 
-  const handleConfirmBulkDelete = async () => {
-    const ids = Array.from(selected);
-    setBulkDeleting(true);
-    try {
-      const results = await Promise.allSettled(
-        ids.map((id) => gatewaysClientApi.remove(id))
-      );
-      const successfulIds = ids.filter(
-        (_, index) => results[index].status === 'fulfilled'
-      );
-      const failedCount = results.length - successfulIds.length;
-
-      setGateways((prev) => prev.filter((g) => !successfulIds.includes(g.id)));
-      setSelected(new Set());
-      setBulkDeleteOpen(false);
-
-      if (failedCount === 0) {
-        toast.success(`${successfulIds.length} gateway(s) deleted`);
-      } else {
-        toast.error(`${successfulIds.length} deleted, ${failedCount} failed`);
-      }
-    } finally {
-      setBulkDeleting(false);
-    }
-  };
-
-  const columns = useMemo(
-    () =>
-      getGatewayColumns({
-        isSelected: (id) => selected.has(id),
-        onToggleSelect: (id) =>
-          setSelected((prev) => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-          }),
-        // Belum ada halaman detail gateway; view sementara buka modal edit yang sama.
-        onView: (gateway) => setModalState({ open: true, gateway }),
-        onEdit: (gateway) => setModalState({ open: true, gateway }),
-        onDelete: (gateway) => setDeleteTarget(gateway),
-      }),
-    [selected]
-  );
-
   const allSelected =
-    paginated.length > 0 && paginated.every((g) => selected.has(g.id));
+    data.data.length > 0 && data.data.every((g) => selected.has(g.id));
 
   return (
     <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-y-auto bg-slate-50 p-8">
       <PageHeader
         title="Gateways"
-        description="Manage LoRaWAN gateways and monitor their connectivity."
+        description="Monitor and manage gateway connections across your facility."
         actions={
           <Button
             onClick={() => setModalState({ open: true })}
@@ -146,61 +115,46 @@ export function GatewayClient({ initialData }: GatewayClientProps) {
         }
       />
 
-      <div className="flex w-full items-stretch gap-2.5">
-        <AnalyticCard
-          title="Total gateway(s)"
-          value={formatNumber(gateways.length)}
-          unit="all locations"
-        />
-        <AnalyticCard
-          title="Online"
-          value={formatNumber(online)}
-          unit="gateway(s)"
-        />
-        <AnalyticCard
-          title="Offline"
-          value={formatNumber(gateways.length - online)}
-          unit="gateway(s)"
-          tone="red"
-        />
-      </div>
-
       <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
         <div className="flex w-full items-center justify-between">
-          <p className="text-lg font-semibold text-emerald-500">
-            {formatNumber(filtered.length)} gateway(s)
-          </p>
-          <SearchInput
-            value={search}
-            onChange={(value) => {
-              setSearch(value);
-              setPage(1);
-            }}
-            placeholder="Search by name or EUI..."
-          />
-        </div>
-
-        {selected.size > 0 && (
-          <div className="flex w-full items-center">
+          <div className="flex flex-col gap-1">
+            <p className="text-lg font-semibold text-emerald-500">
+              {formatNumber(data.totalRows)} gateway(s)
+            </p>
+            <div className="flex gap-3 text-xs">
+              <span className="text-emerald-500">{online} Online</span>
+              <span className="text-status-error">
+                {data.data.length - online} Offline
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <SearchInput
+              value={search}
+              onChange={(v) => {
+                setSearch(v);
+                setPage(1);
+              }}
+              placeholder="Search gateway"
+            />
             <Button
-              variant="destructive"
+              variant="outline"
               size="sm"
-              onClick={() => setBulkDeleteOpen(true)}
+              className="w-[150px] justify-between"
             >
-              <Trash2 className="size-4" />
-              Delete ({selected.size})
+              <ListFilter className="size-4" /> Filter
             </Button>
           </div>
-        )}
+        </div>
 
-        {filtered.length === 0 ? (
+        {data.data.length === 0 ? (
           <EmptyState
             icon={Router}
             title={search ? 'No matching gateways' : 'No gateways yet'}
             description={
               search
                 ? `No gateways match "${search}". Try a different search term.`
-                : 'Add your first LoRaWAN gateway to start connecting devices.'
+                : 'Add your first gateway to start connecting devices.'
             }
             action={
               !search && (
@@ -225,7 +179,7 @@ export function GatewayClient({ initialData }: GatewayClientProps) {
                         setSelected(
                           allSelected
                             ? new Set()
-                            : new Set(paginated.map((g) => g.id))
+                            : new Set(data.data.map((g) => g.id))
                         )
                       }
                     />
@@ -233,14 +187,14 @@ export function GatewayClient({ initialData }: GatewayClientProps) {
                   <TableHead>Gateway</TableHead>
                   <TableHead>Model unit</TableHead>
                   <TableHead>Simcard</TableHead>
-                  <TableHead>Installation date</TableHead>
-                  <TableHead>Power source</TableHead>
+                  <TableHead>Installation</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.map((gateway) => (
+                {data.data.map((gateway) => (
                   <TableRow key={gateway.id}>
                     <TableCell>{columns.checkbox(gateway)}</TableCell>
                     <TableCell>{columns.gateway(gateway)}</TableCell>
@@ -256,12 +210,12 @@ export function GatewayClient({ initialData }: GatewayClientProps) {
             </Table>
 
             <Pagination
-              page={safePage}
-              totalPages={totalPages}
+              page={page}
+              totalPages={data.totalPages}
               onPageChange={setPage}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(next) => {
-                setRowsPerPage(next);
+              onRowsPerPageChange={(n) => {
+                setRowsPerPage(n);
                 setPage(1);
               }}
             />
@@ -272,19 +226,25 @@ export function GatewayClient({ initialData }: GatewayClientProps) {
       <GatewayFormModal
         open={modalState.open}
         gateway={modalState.gateway}
+        users={users}
         onOpenChange={(open) => setModalState({ open })}
         onSuccess={(saved) => {
-          setGateways((prev) => {
-            const exists = prev.some((g) => g.id === saved.id);
-            if (exists)
-              return prev.map((g) =>
-                g.id === saved.id ? { ...g, ...saved } : g
-              );
-            return [saved, ...prev];
-          });
-          const wasEditing = !!modalState.gateway;
+          setData((prev) => ({
+            ...prev,
+            data: modalState.gateway
+              ? prev.data.map((g) => (g.id === saved.id ? saved : g))
+              : prev.data,
+          }));
+          toast.success(
+            modalState.gateway
+              ? 'Gateway has been updated'
+              : 'Gateway has been created'
+          );
           setModalState({ open: false });
-          toast.success(wasEditing ? 'Gateway updated' : 'Gateway created');
+          if (!modalState.gateway) {
+            // Item baru — paling gampang refetch page 1 daripada tebak-tebak urutan sort backend.
+            setPage(1);
+          }
         }}
       />
 
@@ -301,16 +261,6 @@ export function GatewayClient({ initialData }: GatewayClientProps) {
         confirming={deleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
-      />
-
-      <ConfirmDialog
-        open={bulkDeleteOpen}
-        title="Delete Gateways"
-        count={selected.size}
-        itemLabel="gateway"
-        confirming={bulkDeleting}
-        onConfirm={handleConfirmBulkDelete}
-        onCancel={() => setBulkDeleteOpen(false)}
       />
     </div>
   );
