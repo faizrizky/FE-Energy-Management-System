@@ -63,7 +63,7 @@ export function ScheduleFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4 backdrop-blur-[10px]">
       <div className="flex max-h-[90vh] w-full max-w-[700px] flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0px_8px_12px_rgba(0,0,0,0.15)]">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <h2 className="text-lg font-semibold text-emerald-500">

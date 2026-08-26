@@ -45,7 +45,7 @@ export function GatewayFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[10px]">
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto gap-4 rounded-xl bg-white p-6 shadow-lg">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-emerald-500">

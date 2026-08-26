@@ -46,7 +46,10 @@ export function ScheduleDetailDrawer({
 
   return (
     <div className="fixed inset-0 z-40">
-      <div className="absolute inset-0 bg-black/10" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/10 backdrop-blur-[10px]"
+        onClick={onClose}
+      />
 
       <aside className="absolute right-0 top-0 flex h-full w-full max-w-[450px] flex-col border-l border-slate-300 bg-white p-6 shadow-[0px_8px_12px_rgba(0,0,0,0.05)]">
         {loading ? (
