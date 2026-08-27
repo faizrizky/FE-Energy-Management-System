@@ -7,7 +7,7 @@ import { GatewayClient } from './client';
 export default async function GatewayPage() {
   const [session, gateways, users] = await Promise.all([
     getSession(),
-    gatewaysApi.list({ page: 1, rowsPerPage: 10 }),
+    gatewaysApi.list(),
     usersApi.list(),
   ]);
 

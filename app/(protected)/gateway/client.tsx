@@ -94,7 +94,7 @@ function GatewayDetailDrawer({
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-white/10 backdrop-blur-[2px]"
+        className="fixed inset-0 z-40 bg-white/10 backdrop-blur-[10px]"
         onClick={onClose}
       />
 
