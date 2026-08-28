@@ -12,6 +12,13 @@ export interface UserColumnHandlers {
   onDelete: (user: UserDTO) => void;
 }
 
+function roleBadgeClass(roleName?: string) {
+  const key = (roleName ?? '').toLowerCase();
+  if (key.includes('admin')) return 'bg-emerald-100 text-emerald-700';
+  if (key.includes('pic')) return 'bg-sky-100 text-sky-700';
+  return 'bg-blue-100 text-blue-700';
+}
+
 export function getUserColumns({
   onToggleSelect,
   isSelected,
@@ -26,20 +33,25 @@ export function getUserColumns({
         onCheckedChange={() => onToggleSelect(user.id)}
       />
     ),
+
     user: (user: UserDTO) => (
       <div className="flex flex-col gap-0.5 py-1">
-        <span>{user.fullName}</span>
-        <span className="text-[10px] text-slate-500">@{user.username}</span>
+        <span className="font-medium text-slate-950">{user.fullName}</span>
+        <span className="text-[10px] text-slate-500">{user.phone || '-'}</span>
+        <span className="text-[10px] text-slate-500">{user.email}</span>
       </div>
     ),
-    email: (user: UserDTO) => (
-      <span className="text-slate-500">{user.email}</span>
+    address: (user: UserDTO) => (
+      <span className="text-slate-500">{user.address || '-'}</span>
     ),
     role: (user: UserDTO) => (
-      <span className="text-slate-500">{user.role?.name ?? '-'}</span>
-    ),
-    phone: (user: UserDTO) => (
-      <span className="text-slate-500">{user.phone || '-'}</span>
+      <span
+        className={`inline-flex items-center rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${roleBadgeClass(
+          user.role?.name
+        )}`}
+      >
+        {user.role?.name ?? '-'}
+      </span>
     ),
     lastActive: (user: UserDTO) => (
       <span className="text-slate-500">

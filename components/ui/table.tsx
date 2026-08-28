@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
@@ -66,5 +67,40 @@ export function TableCell({
 }: React.TdHTMLAttributes<HTMLTableCellElement>) {
   return (
     <td className={cn('px-4 text-xs text-neutral-950', className)} {...props} />
+  );
+}
+
+export interface SortableTableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
+  sortKey: string;
+  activeKey: string | null;
+  direction: 'asc' | 'desc';
+  onSort: (key: string) => void;
+}
+
+export function SortableTableHead({
+  sortKey,
+  activeKey,
+  direction,
+  onSort,
+  className,
+  children,
+  ...props
+}: SortableTableHeadProps) {
+  const isActive = activeKey === sortKey;
+  return (
+    <TableHead className={cn('select-none', className)} {...props}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="flex items-center gap-1 hover:text-emerald-600"
+      >
+        {children}
+        {isActive && direction === 'asc' && <ChevronUp className="size-3.5" />}
+        {isActive && direction === 'desc' && (
+          <ChevronDown className="size-3.5" />
+        )}
+        {!isActive && <ChevronsUpDown className="size-3.5 opacity-40" />}
+      </button>
+    </TableHead>
   );
 }

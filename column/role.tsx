@@ -1,6 +1,5 @@
-import { Eye, Pencil, Trash2, Lock } from 'lucide-react';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { TableActionButton } from '@/components/shared/table-action-button';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { RoleDTO } from '@/feat/role/dto';
 
@@ -27,26 +26,14 @@ export function getRoleColumns({
       />
     ),
     role: (role: RoleDTO) => (
-      <div className="flex flex-col gap-0.5 py-1">
-        <span>{role.name}</span>
-        {role.description && (
-          <span className="text-[10px] text-slate-500">{role.description}</span>
-        )}
-      </div>
+      <span className="font-medium text-slate-950">{role.name}</span>
+    ),
+    users: (role: RoleDTO) => (
+      <span className="text-slate-500">{role._count?.users ?? 0}</span>
     ),
     permissionCount: (role: RoleDTO) => (
-      <span className="text-slate-500">
-        {role.permissions?.length ?? 0} permission(s)
-      </span>
+      <span className="text-slate-500">{role.permissions?.length ?? 0}</span>
     ),
-    type: (role: RoleDTO) =>
-      role.isSystem ? (
-        <Badge variant="neutral" className="gap-1">
-          <Lock className="size-3" /> System
-        </Badge>
-      ) : (
-        <Badge variant="success">Custom</Badge>
-      ),
     action: (role: RoleDTO) => (
       <div className="flex items-center gap-2">
         <TableActionButton
@@ -57,6 +44,7 @@ export function getRoleColumns({
         <TableActionButton
           icon={Pencil}
           aria-label={`Edit ${role.name}`}
+          disabled={role.isSystem}
           onClick={() => onEdit(role)}
         />
         <TableActionButton

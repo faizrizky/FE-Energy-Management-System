@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { roleFormSchema, type RoleFormValues } from '@/feat/role/schema';
 import type { PermissionDTO } from '@/feat/role/dto';
+import { moduleLabel, permissionLabel } from '@/feat/role/permissionLabels';
 
 interface RoleFormProps {
   permissions: PermissionDTO[];
@@ -62,7 +63,11 @@ export function RoleForm({
         />
       </Field>
 
-      <Field label="Description" error={errors.description?.message}>
+      <Field
+        label="Description"
+        hint="Optional field"
+        error={errors.description?.message}
+      >
         <textarea
           {...register('description')}
           rows={2}
@@ -93,7 +98,7 @@ export function RoleForm({
           name="permissionIds"
           control={control}
           render={({ field }) => (
-            <div className="flex max-h-[320px] flex-col gap-3 overflow-y-auto rounded-xl border border-slate-300 p-4">
+            <div className="grid grid-cols-2 gap-4">
               {groupedPermissions.map(([module, modulePermissions]) => {
                 const moduleIds = modulePermissions.map((p) => p.id);
                 const allChecked = moduleIds.every((id) =>
@@ -101,17 +106,13 @@ export function RoleForm({
                 );
 
                 const toggleModule = () => {
-                  if (allChecked) {
-                    field.onChange(
-                      field.value.filter(
-                        (id: string) => !moduleIds.includes(id)
-                      )
-                    );
-                  } else {
-                    field.onChange(
-                      Array.from(new Set([...field.value, ...moduleIds]))
-                    );
-                  }
+                  field.onChange(
+                    allChecked
+                      ? field.value.filter(
+                          (id: string) => !moduleIds.includes(id)
+                        )
+                      : Array.from(new Set([...field.value, ...moduleIds]))
+                  );
                 };
 
                 const togglePermission = (id: string) => {
@@ -123,17 +124,23 @@ export function RoleForm({
                 };
 
                 return (
-                  <div key={module} className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
-                      <Checkbox
-                        checked={allChecked}
-                        onCheckedChange={toggleModule}
-                      />
-                      <span className="text-sm font-semibold capitalize text-emerald-700">
-                        {module}
+                  <div
+                    key={module}
+                    className="rounded-xl border border-neutral-300 p-4 shadow-[0px_8px_12px_rgba(0,0,0,0.05)]"
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-950">
+                        {moduleLabel(module)}
                       </span>
+                      <label className="flex items-center gap-2 text-xs text-slate-500">
+                        Select All
+                        <Checkbox
+                          checked={allChecked}
+                          onCheckedChange={toggleModule}
+                        />
+                      </label>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 pl-1">
+                    <div className="flex flex-col gap-2">
                       {modulePermissions.map((permission) => (
                         <label
                           key={permission.id}
@@ -145,9 +152,10 @@ export function RoleForm({
                               togglePermission(permission.id)
                             }
                           />
-                          <span className="capitalize">
-                            {permission.action.replace(/_/g, ' ')}
-                          </span>
+                          {permissionLabel(
+                            permission.module,
+                            permission.action
+                          )}
                         </label>
                       ))}
                     </div>
@@ -174,15 +182,20 @@ export function RoleForm({
 function Field({
   label,
   error,
+  hint,
   children,
 }: {
   label: string;
   error?: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-slate-950">{label}</label>
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium text-slate-950">{label}</label>
+        {hint && <span className="text-xs text-slate-400">{hint}</span>}
+      </div>
       {children}
       {error && <span className="text-xs text-status-error">{error}</span>}
     </div>

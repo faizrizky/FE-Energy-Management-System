@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, ListFilter, DoorOpen } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
@@ -16,11 +16,13 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  SortableTableHead,
 } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { api } from '@/lib/axios';
 import { toast } from '@/lib/toast-store';
 import { formatNumber } from '@/lib/utils';
+import { useTableSort } from '@/lib/use-table-sort';
 import { getRoomsColumns } from '@/column/rooms';
 import { roomsClientApi } from '@/feat/rooms/api.client';
 import type {
@@ -172,6 +174,11 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
     [selected]
   );
 
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(data.data, {
+    name: (r) => r.name,
+    usage: (r) => r.totalUsage24hKwh,
+  });
+
   const allSelected =
     data.data.length > 0 && data.data.every((r) => selected.has(r.id));
 
@@ -292,21 +299,36 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
                         setSelected(
                           allSelected
                             ? new Set()
-                            : new Set(data.data.map((r) => r.id))
+                            : new Set(sorted.map((r) => r.id))
                         )
                       }
                     />
                   </TableHead>
-                  <TableHead>Room</TableHead>
+                  <SortableTableHead
+                    sortKey="name"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Role
+                  </SortableTableHead>
                   <TableHead>Gateway</TableHead>
                   <TableHead>Device</TableHead>
-                  <TableHead>Total usage(24H)</TableHead>
+                  <SortableTableHead
+                    sortKey="usage"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Total usage(24H)
+                  </SortableTableHead>
+
                   <TableHead>Status</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.data.map((room) => (
+                {sorted.map((room) => (
                   <TableRow key={room.id}>
                     <TableCell>{columns.checkbox(room)}</TableCell>
                     <TableCell>{columns.room(room)}</TableCell>

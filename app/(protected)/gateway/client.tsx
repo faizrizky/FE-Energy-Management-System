@@ -16,11 +16,13 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  SortableTableHead,
 } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { api } from '@/lib/axios';
 import { toast } from '@/lib/toast-store';
 import { formatNumber } from '@/lib/utils';
+import { useTableSort } from '@/lib/use-table-sort';
 import { getGatewayColumns } from '@/column/gateway';
 import { gatewaysClientApi } from '@/feat/gateway/api.client';
 
@@ -325,11 +327,15 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
 
       setDeleteTarget(null);
     } catch {
-      // toast.promise already handles backend error
     } finally {
       setDeleting(false);
     }
   };
+
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(data.data, {
+    name: (g) => g.name,
+    status: (g) => g.status,
+  });
 
   const allSelected =
     data.data.length > 0 &&
@@ -430,13 +436,20 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
                           setSelected(
                             allSelected
                               ? new Set()
-                              : new Set(data.data.map((gateway) => gateway.id))
+                              : new Set(sorted.map((gateway) => gateway.id))
                           )
                         }
                       />
                     </TableHead>
 
-                    <TableHead>Gateway</TableHead>
+                    <SortableTableHead
+                      sortKey="name"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Gateway
+                    </SortableTableHead>
 
                     <TableHead>Model unit</TableHead>
 
@@ -446,14 +459,21 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
 
                     <TableHead>Source</TableHead>
 
-                    <TableHead>Status</TableHead>
+                    <SortableTableHead
+                      sortKey="status"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Status
+                    </SortableTableHead>
 
                     <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
-                  {data.data.map((gateway) => (
+                  {sorted.map((gateway) => (
                     <TableRow key={gateway.id}>
                       <TableCell>{columns.checkbox(gateway)}</TableCell>
 

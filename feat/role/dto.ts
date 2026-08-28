@@ -14,4 +14,5 @@ export interface RoleDTO {
   description: string | null;
   isSystem: boolean;
   permissions?: RolePermissionDTO[];
+  _count?: { users: number };
 }

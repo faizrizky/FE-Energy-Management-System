@@ -10,23 +10,18 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
-import {
   Table,
   TableHeader,
   TableBody,
   TableRow,
   TableHead,
   TableCell,
+  SortableTableHead,
 } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { toast } from '@/lib/toast-store';
 import { formatNumber } from '@/lib/utils';
+import { useTableSort } from '@/lib/use-table-sort';
 import { getScheduleColumns } from '@/column/schedule';
 import { scheduleClientApi } from '@/feat/schedule/api.client';
 import {
@@ -45,8 +40,6 @@ interface ScheduleClientProps {
 }
 
 type ScheduleTab = 'active' | 'upcoming';
-const ALL_COMPONENTS = '__all__';
-
 export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
   const [schedules, setSchedules] = useState<ScheduleDTO[]>(initialData ?? []);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -65,12 +58,12 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
-  const components = useMemo(() => {
-    const values = schedules
-      .map((schedule) => schedule.device?.deviceType)
-      .filter((value): value is string => Boolean(value));
-    return Array.from(new Set(values)).sort();
-  }, [schedules]);
+  //   const components = useMemo(() => {
+  //     const values = schedules
+  //       .map((schedule) => schedule.device?.deviceType)
+  //       .filter((value): value is string => Boolean(value));
+  //     return Array.from(new Set(values)).sort();
+  //   }, [schedules]);
 
   const activeSchedules = useMemo(
     () => schedules.filter(isCurrentlyActive),
@@ -137,6 +130,18 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
         onDelete: (schedule) => setDeleteTarget(schedule),
       }),
     [selected]
+  );
+
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(
+    filteredSchedules,
+    {
+      room: (s) => s.room?.name ?? '',
+      component: (s) => s.device?.deviceType ?? '',
+      deviceEui: (s) => s.device?.eui ?? '',
+      date: (s) => new Date(s.scheduledDate).getTime(),
+      time: (s) => s.startTime,
+      repeat: (s) => s.repeatType,
+    }
   );
 
   const allSelected =
@@ -373,17 +378,60 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
                       onCheckedChange={togglePageSelection}
                     />
                   </TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Component</TableHead>
-                  <TableHead>Device EUI</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Repeat</TableHead>
+                  <SortableTableHead
+                    sortKey="room"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Room
+                  </SortableTableHead>
+
+                  <SortableTableHead
+                    sortKey="component"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Component
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="deviceEui"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Device EUI
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="date"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Start Date
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="time"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Time
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="repeat"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Repeat
+                  </SortableTableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedSchedules.map((schedule) => (
+                {sorted.map((schedule) => (
                   <TableRow key={schedule.id}>
                     <TableCell>{columns.checkbox(schedule)}</TableCell>
                     <TableCell>{columns.room(schedule)}</TableCell>

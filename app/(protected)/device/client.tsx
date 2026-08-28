@@ -16,10 +16,12 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  SortableTableHead,
 } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { toast } from '@/lib/toast-store';
 import { formatNumber } from '@/lib/utils';
+import { useTableSort } from '@/lib/use-table-sort';
 import { getDeviceColumns } from '@/column/device';
 import { devicesClientApi } from '@/feat/device/api.client';
 import type { DeviceDTO } from '@/feat/device/dto';
@@ -149,6 +151,16 @@ export function DeviceClient({
     [selected]
   );
 
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(filtered, {
+    name: (d) => d.name,
+    component: (d) => d.deviceType,
+    room: (d) => d.room?.name ?? '',
+    gateway: (d) => d.gateway?.name ?? '',
+    tbDeviceId: (d) => d.tbDeviceId,
+    inverval: (d) => d.intervalMinutes,
+    status: (d) => d.status,
+  });
+
   const allSelected =
     paginated.length > 0 && paginated.every((d) => selected.has(d.id));
 
@@ -246,23 +258,73 @@ export function DeviceClient({
                         setSelected(
                           allSelected
                             ? new Set()
-                            : new Set(paginated.map((d) => d.id))
+                            : new Set(sorted.map((d) => d.id))
                         )
                       }
                     />
                   </TableHead>
-                  <TableHead>Device</TableHead>
-                  <TableHead>Component</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Gateway</TableHead>
-                  <TableHead>ThingsBoard ID</TableHead>
-                  <TableHead>Interval</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableTableHead
+                    sortKey="name"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Role
+                  </SortableTableHead>
+
+                  <SortableTableHead
+                    sortKey="component"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Component
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="room"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Room
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="gateway"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Gateway
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="tbDeviceId"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    ThingsBoard ID
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="inverval"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Interval
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="status"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Status
+                  </SortableTableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.map((device) => (
+                {sorted.map((device) => (
                   <TableRow key={device.id}>
                     <TableCell>{columns.checkbox(device)}</TableCell>
                     <TableCell>{columns.device(device)}</TableCell>
@@ -299,9 +361,6 @@ export function DeviceClient({
         gateways={gateways}
         onOpenChange={(open) => setModalState({ open })}
         onSuccess={(saved) => {
-          // Backend createDevice/updateDevice tidak return relasi room/gateway
-          // (lihat device.usecase.js) — enrich pakai data rooms/gateways yang
-          // sudah di-load di halaman ini, biar tabel langsung akurat.
           const room = rooms.find((r) => r.id === saved.roomId);
           const gateway = gateways.find((g) => g.id === saved.gatewayId);
           const enriched: DeviceDTO = {

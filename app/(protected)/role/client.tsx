@@ -16,9 +16,11 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  SortableTableHead,
 } from '@/components/ui/table';
 import { toast } from '@/lib/toast-store';
 import { formatNumber } from '@/lib/utils';
+import { useTableSort } from '@/lib/use-table-sort';
 import { getRoleColumns } from '@/column/role';
 import { rolesClientApi } from '@/feat/role/api.client';
 import type { RoleDTO, PermissionDTO } from '@/feat/role/dto';
@@ -52,8 +54,12 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
     return roles.filter((r) => r.name.toLowerCase().includes(normalized));
   }, [roles, search]);
 
-  // Cuma role non-system yang boleh masuk bulk delete, biar gak ke-select
-  // diam-diam terus dihapus barengan role custom lain.
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(filtered, {
+    name: (r) => r.name,
+    users: (r) => r._count?.users ?? 0,
+    permissions: (r) => r.permissions?.length ?? 0,
+  });
+
   const deletableSelected = Array.from(selected).filter(
     (id) => !roles.find((r) => r.id === id)?.isSystem
   );
@@ -69,8 +75,6 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
       setRoles((prev) => prev.filter((r) => r.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch {
-      // Kemungkinan gagal kalau masih ada user yang pakai role ini
-      // (FK RESTRICT di schema.prisma) — toast.promise sudah menampilkan pesan errornya.
     } finally {
       setDeleting(false);
     }
@@ -211,24 +215,45 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
                       setSelected(
                         allSelected
                           ? new Set()
-                          : new Set(filtered.map((r) => r.id))
+                          : new Set(sorted.map((r) => r.id))
                       )
                     }
                   />
                 </TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Permissions</TableHead>
-                <TableHead>Type</TableHead>
+                <SortableTableHead
+                  sortKey="name"
+                  activeKey={sortKey}
+                  direction={direction}
+                  onSort={toggleSort}
+                >
+                  Role
+                </SortableTableHead>
+                <SortableTableHead
+                  sortKey="users"
+                  activeKey={sortKey}
+                  direction={direction}
+                  onSort={toggleSort}
+                >
+                  Users
+                </SortableTableHead>
+                <SortableTableHead
+                  sortKey="permissions"
+                  activeKey={sortKey}
+                  direction={direction}
+                  onSort={toggleSort}
+                >
+                  Permission
+                </SortableTableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((role) => (
+              {sorted.map((role) => (
                 <TableRow key={role.id}>
                   <TableCell>{columns.checkbox(role)}</TableCell>
                   <TableCell>{columns.role(role)}</TableCell>
+                  <TableCell>{columns.users(role)}</TableCell>
                   <TableCell>{columns.permissionCount(role)}</TableCell>
-                  <TableCell>{columns.type(role)}</TableCell>
                   <TableCell>{columns.action(role)}</TableCell>
                 </TableRow>
               ))}

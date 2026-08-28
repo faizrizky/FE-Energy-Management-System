@@ -16,10 +16,12 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  SortableTableHead,
 } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { toast } from '@/lib/toast-store';
 import { formatNumber } from '@/lib/utils';
+import { useTableSort } from '@/lib/use-table-sort';
 import { getUserColumns } from '@/column/user';
 import { usersClientApi } from '@/feat/user/api.client';
 import type { UserDTO } from '@/feat/user/dto';
@@ -67,9 +69,17 @@ export function UserClient({ initialData, roles }: UserClientProps) {
     );
   }, [users, search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(filtered, {
+    fullName: (u) => u.fullName,
+    address: (u) => u.address ?? '',
+    role: (u) => u.role?.name ?? '',
+    lastActiveAt: (u) =>
+      u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : null,
+  });
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / rowsPerPage));
   const safePage = Math.min(page, totalPages);
-  const paginated = filtered.slice(
+  const paginated = sorted.slice(
     (safePage - 1) * rowsPerPage,
     safePage * rowsPerPage
   );
@@ -204,7 +214,7 @@ export function UserClient({ initialData, roles }: UserClientProps) {
             description={
               search
                 ? `No users match "${search}". Try a different search term.`
-                : 'Add your first user and assign them a role.'
+                : 'Create your user to manage room, gateway, and device.'
             }
             action={
               !search && (
@@ -234,12 +244,38 @@ export function UserClient({ initialData, roles }: UserClientProps) {
                       }
                     />
                   </TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Last active</TableHead>
-                  <TableHead>Action</TableHead>
+                  <SortableTableHead
+                    sortKey="fullName"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Name
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="address"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Address
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="role"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Role
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="lastActiveAt"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Last active
+                  </SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -247,9 +283,8 @@ export function UserClient({ initialData, roles }: UserClientProps) {
                   <TableRow key={user.id}>
                     <TableCell>{columns.checkbox(user)}</TableCell>
                     <TableCell>{columns.user(user)}</TableCell>
-                    <TableCell>{columns.email(user)}</TableCell>
+                    <TableCell>{columns.address(user)}</TableCell>
                     <TableCell>{columns.role(user)}</TableCell>
-                    <TableCell>{columns.phone(user)}</TableCell>
                     <TableCell>{columns.lastActive(user)}</TableCell>
                     <TableCell>{columns.action(user)}</TableCell>
                   </TableRow>

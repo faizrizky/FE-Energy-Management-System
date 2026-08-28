@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import type { ReactNode } from "react";
-import { Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import type { ReactNode } from 'react';
+import { Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -22,9 +22,9 @@ export function ConfirmDialog({
   title,
   description,
   count,
-  itemLabel = "item",
+  itemLabel = 'item',
   confirmLabel,
-  cancelLabel = "No, cancel",
+  cancelLabel = 'No, cancel',
   confirming,
   onConfirm,
   onCancel,
@@ -35,20 +35,21 @@ export function ConfirmDialog({
     description ??
     (count !== undefined ? (
       <>
-        Are you sure you want to delete{" "}
+        Are you sure you want to delete{' '}
         <span className="font-bold">
           {count} selected {itemLabel}
-          {count === 1 ? "" : "s"}
+          {count === 1 ? '' : 's'}
         </span>
         ? This action cannot be undone.
       </>
     ) : null);
 
   const resolvedConfirmLabel =
-    confirmLabel ?? (count && count > 1 ? `Yes, Delete (${count})` : "Yes, Delete");
+    confirmLabel ??
+    (count && count > 1 ? `Yes, Delete (${count})` : 'Yes, Delete');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4 backdrop-blur-[10px]">
       <div className="flex w-full max-w-[400px] flex-col gap-6 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_8px_12px_rgba(0,0,0,0.15)]">
         <div className="flex flex-col items-center gap-4">
           <div className="flex size-8 items-center justify-center rounded-md border border-status-error bg-white">
@@ -61,11 +62,21 @@ export function ConfirmDialog({
         </div>
 
         <div className="flex items-start gap-3">
-          <Button variant="outline" className="flex-1" onClick={onCancel} disabled={confirming}>
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={onCancel}
+            disabled={confirming}
+          >
             {cancelLabel}
           </Button>
-          <Button variant="destructiveSolid" className="flex-1" onClick={onConfirm} disabled={confirming}>
-            {confirming ? "Deleting..." : resolvedConfirmLabel}
+          <Button
+            variant="destructiveSolid"
+            className="flex-1"
+            onClick={onConfirm}
+            disabled={confirming}
+          >
+            {confirming ? 'Deleting...' : resolvedConfirmLabel}
           </Button>
         </div>
       </div>
