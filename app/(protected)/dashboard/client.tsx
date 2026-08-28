@@ -1,32 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { CalendarSearch } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { SearchInput } from '@/components/shared/search-input';
+import { SegmentTabs } from '@/components/shared/segment-tabs';
 import { EnergyUsageTimelineTab } from './_partials/energy-usage-timeline';
 import { TopRiskyRoomsTab } from './_partials/top-risky-rooms';
 import { ActiveSchedulesTab } from './_partials/active-schedules';
-import { CalendarSearch } from 'lucide-react';
+import type {
+  EnergyUsageTimelineDTO,
+  RiskyRoomDTO,
+} from '@/feat/dashboard/dto';
+import type { ScheduleDTO } from '@/feat/schedule/dto';
 
 const TABS = [
-  {
-    value: 'energy-usage-timeline',
-    label: 'Energy Usage Timeline',
-  },
-  {
-    value: 'top-5-risky-rooms',
-    label: 'Top 5 Risky Rooms',
-  },
-  {
-    value: 'active-schedules',
-    label: 'Active Schedules',
-  },
+  { value: 'energy-usage-timeline', label: 'Energy Usage Timeline' },
+  { value: 'top-5-risky-rooms', label: 'Top 5 Risky Rooms' },
+  { value: 'active-schedules', label: 'Active Schedules' },
 ] as const;
 
 export function DashboardSearch() {
   const [search, setSearch] = useState('');
-
   return (
     <PageHeader
       title="Dashboard"
@@ -47,36 +42,37 @@ export function DashboardSearch() {
   );
 }
 
-export function DashboardTabs() {
+interface DashboardTabsProps {
+  timelineByRange: Record<string, EnergyUsageTimelineDTO>;
+  riskyByRange: Record<string, RiskyRoomDTO[]>;
+  schedules: ScheduleDTO[];
+}
+
+export function DashboardTabs({
+  timelineByRange,
+  riskyByRange,
+  schedules,
+}: DashboardTabsProps) {
   const [tab, setTab] = useState<(typeof TABS)[number]['value']>(
     'energy-usage-timeline'
   );
 
   return (
-    <Tabs
-      value={tab}
-      onValueChange={(value) => setTab(value as typeof tab)}
-      className="flex w-full flex-col gap-4"
-    >
-      <TabsList>
-        {TABS.map((t) => (
-          <TabsTrigger key={t.value} value={t.value}>
-            {t.label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-
-      <TabsContent value="energy-usage-timeline">
-        <EnergyUsageTimelineTab />
-      </TabsContent>
-
-      <TabsContent value="top-5-risky-rooms">
-        <TopRiskyRoomsTab />
-      </TabsContent>
-
-      <TabsContent value="active-schedules">
-        <ActiveSchedulesTab />
-      </TabsContent>
-    </Tabs>
+    <div className="flex w-full flex-col gap-4">
+      <SegmentTabs
+        value={tab}
+        onValueChange={setTab}
+        options={TABS.map((t) => ({ value: t.value, label: t.label }))}
+      />
+      {tab === 'energy-usage-timeline' && (
+        <EnergyUsageTimelineTab dataByRange={timelineByRange} />
+      )}
+      {tab === 'top-5-risky-rooms' && (
+        <TopRiskyRoomsTab dataByRange={riskyByRange} />
+      )}
+      {tab === 'active-schedules' && (
+        <ActiveSchedulesTab schedules={schedules} />
+      )}
+    </div>
   );
 }

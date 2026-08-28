@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { CalendarSearch } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableHeader,
@@ -11,10 +10,10 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  SortableTableHead,
 } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/lib/axios';
 import { formatKwh } from '@/lib/utils';
+import { useTableSort } from '@/lib/use-table-sort';
 import type { RiskyRoomDTO } from '@/feat/dashboard/dto';
 
 const RANGES = [
@@ -24,20 +23,20 @@ const RANGES = [
   { value: 'last_year', label: 'Last year' },
 ] as const;
 
-export function TopRiskyRoomsTab() {
-  const [range, setRange] = useState<(typeof RANGES)[number]['value']>('today');
-  const [rooms, setRooms] = useState<RiskyRoomDTO[] | null>(null);
+interface TopRiskyRoomsTabProps {
+  dataByRange: Record<string, RiskyRoomDTO[]>;
+}
 
-  // useEffect(() => {
-  //   let cancelled = false;
-  //   setRooms(null);
-  //   api
-  //     .get<RiskyRoomDTO[]>("/dashboard/top-risky-rooms", { params: { range } })
-  //     .then((res) => !cancelled && setRooms(res.data));
-  //   return () => {
-  //     cancelled = true;
-  //   };
-  // }, [range]);
+export function TopRiskyRoomsTab({ dataByRange }: TopRiskyRoomsTabProps) {
+  const [range, setRange] = useState<(typeof RANGES)[number]['value']>('today');
+  const rooms = dataByRange[range] ?? [];
+
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(rooms, {
+    name: (r) => r.name,
+    peak: (r) => r.peakUsageKwh,
+    avg: (r) => r.avgUsageKwh,
+    total: (r) => r.totalUsageKwh,
+  });
 
   return (
     <Card className="flex w-full flex-col items-end gap-4 p-6">
@@ -46,43 +45,74 @@ export function TopRiskyRoomsTab() {
           Top 5 risky room
         </p>
         <div className="flex items-center gap-2">
-          <Tabs
-            value={range}
-            onValueChange={(v) => setRange(v as typeof range)}
-          >
-            <TabsList>
-              {RANGES.map((r) => (
-                <TabsTrigger
-                  key={r.value}
-                  value={r.value}
-                  className="w-[100px]"
-                >
-                  {r.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-1 rounded-lg border border-slate-400 bg-white p-1">
+            {RANGES.map((r) => (
+              <button
+                key={r.value}
+                type="button"
+                onClick={() => setRange(r.value)}
+                className={[
+                  'rounded-md px-3 py-1 text-sm font-medium transition-colors',
+                  range === r.value
+                    ? 'bg-emerald-500 text-white'
+                    : 'text-slate-500 hover:bg-slate-50',
+                ].join(' ')}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
           <button className="flex size-8 items-center justify-center rounded-md border border-slate-400 bg-slate-50">
             <CalendarSearch className="size-4 text-slate-600" />
           </button>
         </div>
       </div>
 
-      {!rooms ? (
-        <Skeleton className="h-[280px] w-full" />
+      {rooms.length === 0 ? (
+        <p className="w-full py-10 text-center text-sm text-slate-500">
+          No data available.
+        </p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Room</TableHead>
+              <SortableTableHead
+                sortKey="name"
+                activeKey={sortKey}
+                direction={direction}
+                onSort={toggleSort}
+              >
+                Room
+              </SortableTableHead>
               <TableHead>Highest component</TableHead>
-              <TableHead>Peak usage</TableHead>
-              <TableHead>Avg usage</TableHead>
-              <TableHead>Total usage</TableHead>
+              <SortableTableHead
+                sortKey="peak"
+                activeKey={sortKey}
+                direction={direction}
+                onSort={toggleSort}
+              >
+                Peak usage
+              </SortableTableHead>
+              <SortableTableHead
+                sortKey="avg"
+                activeKey={sortKey}
+                direction={direction}
+                onSort={toggleSort}
+              >
+                Avg usage
+              </SortableTableHead>
+              <SortableTableHead
+                sortKey="total"
+                activeKey={sortKey}
+                direction={direction}
+                onSort={toggleSort}
+              >
+                Total usage
+              </SortableTableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rooms.map((room) => (
+            {sorted.map((room) => (
               <TableRow key={room.id}>
                 <TableCell>
                   <div className="flex flex-col gap-0.5 py-1">

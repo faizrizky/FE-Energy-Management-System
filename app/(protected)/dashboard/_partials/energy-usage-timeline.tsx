@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   LineChart,
   Line,
@@ -12,9 +12,6 @@ import {
 } from 'recharts';
 import { CalendarSearch } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/lib/axios';
 import { formatKwh } from '@/lib/utils';
 import type { EnergyUsageTimelineDTO } from '@/feat/dashboard/dto';
 
@@ -25,24 +22,15 @@ const RANGES = [
   { value: 'last_year', label: 'Last year' },
 ] as const;
 
-export function EnergyUsageTimelineTab() {
-  const [range, setRange] = useState<(typeof RANGES)[number]['value']>('today');
-  const [data, setData] = useState<EnergyUsageTimelineDTO | null>(null);
-  const [loading, setLoading] = useState(true);
+interface EnergyUsageTimelineTabProps {
+  dataByRange: Record<string, EnergyUsageTimelineDTO>;
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    api
-      .get<EnergyUsageTimelineDTO>(`/dashboard/energy-usage-timeline`, {
-        params: { range },
-      })
-      .then((res) => !cancelled && setData(res.data))
-      .finally(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [range]);
+export function EnergyUsageTimelineTab({
+  dataByRange,
+}: EnergyUsageTimelineTabProps) {
+  const [range, setRange] = useState<(typeof RANGES)[number]['value']>('today');
+  const data = dataByRange[range];
 
   return (
     <Card className="flex w-full flex-col items-end gap-4 p-6">
@@ -51,30 +39,33 @@ export function EnergyUsageTimelineTab() {
           Energy usage timeline
         </p>
         <div className="flex items-center gap-2">
-          <Tabs
-            value={range}
-            onValueChange={(v) => setRange(v as typeof range)}
-          >
-            <TabsList>
-              {RANGES.map((r) => (
-                <TabsTrigger
-                  key={r.value}
-                  value={r.value}
-                  className="w-[100px]"
-                >
-                  {r.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-1 rounded-lg border border-slate-400 bg-white p-1">
+            {RANGES.map((r) => (
+              <button
+                key={r.value}
+                type="button"
+                onClick={() => setRange(r.value)}
+                className={[
+                  'rounded-md px-3 py-1 text-sm font-medium transition-colors',
+                  range === r.value
+                    ? 'bg-emerald-500 text-white'
+                    : 'text-slate-500 hover:bg-slate-50',
+                ].join(' ')}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
           <button className="flex size-10 items-center justify-center rounded-md border border-slate-400 bg-slate-50">
             <CalendarSearch className="size-4 text-slate-600" />
           </button>
         </div>
       </div>
 
-      {loading || !data ? (
-        <Skeleton className="h-[280px] w-full" />
+      {!data ? (
+        <p className="w-full py-10 text-center text-sm text-slate-500">
+          No data available.
+        </p>
       ) : (
         <>
           <div className="flex w-full gap-2 text-sm">
@@ -87,7 +78,7 @@ export function EnergyUsageTimelineTab() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={data.points}
-                margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                margin={{ top: 20, right: 8, left: 0, bottom: 0 }}
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -112,6 +103,20 @@ export function EnergyUsageTimelineTab() {
                   stroke="#10b981"
                   strokeWidth={2}
                   dot={{ r: 4, fill: '#10b981' }}
+                  label={(props: any) => {
+                    const { x, y, value } = props;
+                    return (
+                      <text
+                        x={x}
+                        y={y - 10}
+                        fill="#10b981"
+                        fontSize={11}
+                        textAnchor="middle"
+                      >
+                        {value} kWh
+                      </text>
+                    );
+                  }}
                 />
               </LineChart>
             </ResponsiveContainer>
