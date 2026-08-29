@@ -1,17 +1,29 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-const PROTECTED_PREFIXES = ["/dashboard", "/rooms", "/schedule", "/gateway", "/device", "/user", "/role", "/report"];
+const PROTECTED_PREFIXES = [
+  '/dashboard',
+  '/rooms',
+  '/schedule',
+  '/gateway',
+  '/device',
+  '/user',
+  '/role',
+  '/report',
+  '/alarm',
+];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isProtected = PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isProtected = PROTECTED_PREFIXES.some((prefix) =>
+    pathname.startsWith(prefix)
+  );
   if (!isProtected) return NextResponse.next();
 
-  const token = request.cookies.get("ems_token")?.value;
+  const token = request.cookies.get('ems_token')?.value;
   if (!token) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirectTo", pathname);
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirectTo', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -19,5 +31,15 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/rooms/:path*", "/schedule/:path*", "/gateway/:path*", "/device/:path*", "/user/:path*", "/role/:path*", "/report/:path*"],
+  matcher: [
+    '/dashboard/:path*',
+    '/rooms/:path*',
+    '/schedule/:path*',
+    '/gateway/:path*',
+    '/device/:path*',
+    '/user/:path*',
+    '/role/:path*',
+    '/report/:path*',
+    '/alarm/:path*',
+  ],
 };
