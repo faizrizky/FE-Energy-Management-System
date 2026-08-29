@@ -8,38 +8,29 @@ import {
   dayName,
 } from '@/feat/schedule/time';
 
-interface ScheduleDetailDrawerProps {
-  // Row that was clicked is already the full record — parent hands it
-  // straight over. No id + fetch, no loading state, no useEffect.
+interface ScheduleDetailModalProps {
+  // Row yang diklik udah full record — parent kasih langsung.
+  // Gak ada id + fetch, gak ada loading state, gak ada useEffect.
   schedule: ScheduleDTO | null;
   onClose: () => void;
 }
 
-export function ScheduleDetailDrawer({
+export function ScheduleDetailModal({
   schedule,
   onClose,
-}: ScheduleDetailDrawerProps) {
+}: ScheduleDetailModalProps) {
   if (!schedule) return null;
 
   return (
-    <div className="fixed inset-0 z-40">
-      <div
-        className="absolute inset-0 bg-black/10 backdrop-blur-[10px]"
-        onClick={onClose}
-      />
-
-      <aside className="absolute right-0 top-0 flex h-full w-full max-w-[450px] flex-col border-l border-slate-300 bg-white p-6 shadow-[0px_8px_12px_rgba(0,0,0,0.05)]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4 backdrop-blur-[10px]">
+      <div className="flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0px_8px_12px_rgba(0,0,0,0.15)]">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+          <div className="flex flex-col gap-2">
             <h2 className="text-lg font-semibold text-emerald-500">
-              {schedule.room?.name ?? 'Schedule'}{' '}
-              {schedule.device?.deviceType
-                ? schedule.device.deviceType
-                : 'Room'}
+              {schedule.room?.name ?? schedule.roomId}{' '}
+              {schedule.device?.deviceType ?? 'Room'}
             </h2>
-            <div className="mt-2">
-              <StatusBadge status={schedule.status} />
-            </div>
+            <StatusBadge status={schedule.status} />
           </div>
           <button
             type="button"
@@ -51,9 +42,7 @@ export function ScheduleDetailDrawer({
           </button>
         </div>
 
-        <div className="my-5 h-px bg-slate-200" />
-
-        <div className="flex flex-col gap-6 overflow-y-auto">
+        <div className="flex flex-col gap-6 overflow-y-auto px-6 py-5">
           <section>
             <p className="mb-3 text-xs text-slate-600">Basic information</p>
             <div className="flex flex-col gap-3 rounded-xl border border-neutral-300 p-4 text-sm shadow-[0px_8px_12px_rgba(0,0,0,0.05)]">
@@ -121,7 +110,7 @@ export function ScheduleDetailDrawer({
             </div>
           </section>
         </div>
-      </aside>
+      </div>
     </div>
   );
 }
@@ -140,7 +129,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span
       className={[
-        'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium',
+        'inline-flex w-fit items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium',
         active
           ? 'border-emerald-500 text-emerald-500'
           : 'border-slate-400 text-slate-500',

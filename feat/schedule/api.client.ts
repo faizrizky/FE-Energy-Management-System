@@ -1,6 +1,6 @@
 import { api } from '@/lib/axios';
 
-import type { ScheduleDTO, ScheduleDeviceDTO } from './dto';
+import type { ScheduleDTO } from './dto';
 
 import type { ScheduleFormValues } from './schema';
 
@@ -37,9 +37,4 @@ export const scheduleClientApi = {
 
   remove: (scheduleId: string) =>
     api.delete(`/schedules/${scheduleId}`).then(() => undefined),
-
-  getRoomDevices: (roomId: string) =>
-    api
-      .get<ScheduleDeviceDTO[]>(`/rooms/${roomId}/devices`)
-      .then((res) => res.data),
 };

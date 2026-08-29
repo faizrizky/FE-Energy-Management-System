@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, Plus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,67 +13,35 @@ import {
   type ScheduleFormValues,
 } from '@/feat/schedule/schema';
 
-import { scheduleClientApi } from '@/feat/schedule/api.client';
-
 import { ApiError } from '@/lib/axios';
 
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
-import type { ScheduleDeviceDTO, ScheduleDTO } from '@/feat/schedule/dto';
+import type { DeviceDTO } from '@/feat/device/dto';
+import type { ScheduleDTO } from '@/feat/schedule/dto';
 
 interface ScheduleFormProps {
   rooms: RoomListItemDTO[];
-
+  devices: DeviceDTO[];
   defaultValues?: Partial<ScheduleFormValues>;
-
   schedule?: ScheduleDTO;
-
   onSubmit: (values: ScheduleFormValues) => Promise<void>;
-
   onCancel: () => void;
-
   submitting?: boolean;
 }
 
 const DAYS = [
-  {
-    value: 1,
-    label: 'Monday',
-    short: 'Mon',
-  },
-  {
-    value: 2,
-    label: 'Tuesday',
-    short: 'Tue',
-  },
-  {
-    value: 3,
-    label: 'Wednesday',
-    short: 'Wed',
-  },
-  {
-    value: 4,
-    label: 'Thursday',
-    short: 'Thu',
-  },
-  {
-    value: 5,
-    label: 'Friday',
-    short: 'Fri',
-  },
-  {
-    value: 6,
-    label: 'Saturday',
-    short: 'Sat',
-  },
-  {
-    value: 0,
-    label: 'Sunday',
-    short: 'Sun',
-  },
+  { value: 1, label: 'Monday', short: 'Mon' },
+  { value: 2, label: 'Tuesday', short: 'Tue' },
+  { value: 3, label: 'Wednesday', short: 'Wed' },
+  { value: 4, label: 'Thursday', short: 'Thu' },
+  { value: 5, label: 'Friday', short: 'Fri' },
+  { value: 6, label: 'Saturday', short: 'Sat' },
+  { value: 0, label: 'Sunday', short: 'Sun' },
 ];
 
 export function ScheduleForm({
   rooms,
+  devices,
   defaultValues,
   onSubmit,
   onCancel,
@@ -86,11 +54,9 @@ export function ScheduleForm({
     setValue,
     setError,
     clearErrors,
-    getValues,
     formState: { errors },
   } = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleFormSchema),
-
     defaultValues: {
       roomId: '',
       deviceId: '',
@@ -105,81 +71,25 @@ export function ScheduleForm({
   });
 
   const roomId = watch('roomId');
-
   const repeatType = watch('repeatType');
-
   const repeatDays = watch('repeatDays');
 
-  const [devices, setDevices] = useState<ScheduleDeviceDTO[]>([]);
+  // Devices already came down from the server component — filtering by
+  // room is a plain derived value, no fetch and no effect needed.
+  const roomDevices = useMemo(
+    () => devices.filter((device) => device.roomId === roomId),
+    [devices, roomId]
+  );
 
-  const [loadingDevices, setLoadingDevices] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!roomId) {
-      setDevices([]);
-
-      setValue('deviceId', '');
-
-      return;
-    }
-
-    setLoadingDevices(true);
-
-    clearErrors('deviceId');
-
-    scheduleClientApi
-      .getRoomDevices(roomId)
-      .then((result) => {
-        if (cancelled) {
-          return;
-        }
-
-        setDevices(result);
-
-        const currentDeviceId = getValues('deviceId');
-
-        if (
-          currentDeviceId &&
-          !result.some((device) => device.id === currentDeviceId)
-        ) {
-          setValue('deviceId', '');
-        }
-      })
-      .catch(() => {
-        if (cancelled) {
-          return;
-        }
-
-        setDevices([]);
-
-        setError('deviceId', {
-          type: 'server',
-          message: 'Could not load devices for this room.',
-        });
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoadingDevices(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [roomId, setValue, setError, clearErrors, getValues]);
+  const roomRegister = register('roomId');
 
   const toggleDay = (day: number) => {
     const current = repeatDays ?? [];
-
     if (current.includes(day)) {
       setValue(
         'repeatDays',
         current.filter((value) => value !== day),
-        {
-          shouldValidate: true,
-        }
+        { shouldValidate: true }
       );
     } else {
       setValue(
@@ -194,7 +104,6 @@ export function ScheduleForm({
 
   const submit = async (values: ScheduleFormValues) => {
     clearErrors('root');
-
     try {
       await onSubmit(values);
     } catch (error) {
@@ -204,23 +113,13 @@ export function ScheduleForm({
           message:
             error.message || 'This schedule conflicts with another schedule.',
         });
-
         return;
       }
-
       if (error instanceof Error) {
-        setError('root', {
-          type: 'server',
-          message: error.message,
-        });
-
+        setError('root', { type: 'server', message: error.message });
         return;
       }
-
-      setError('root', {
-        type: 'server',
-        message: 'Failed to save schedule.',
-      });
+      setError('root', { type: 'server', message: 'Failed to save schedule.' });
     }
   };
 
@@ -233,7 +132,6 @@ export function ScheduleForm({
               ? 'Schedule conflict'
               : 'Unable to save schedule'}
           </p>
-
           <p className="mt-1">{errors.root.message}</p>
         </div>
       )}
@@ -248,11 +146,17 @@ export function ScheduleForm({
         >
           <SelectField>
             <select
-              {...register('roomId')}
+              {...roomRegister}
+              onChange={(e) => {
+                roomRegister.onChange(e);
+                // Room changed -> previously chosen device may no longer
+                // belong to this room, so reset it. Done inline on the
+                // event, not in a useEffect.
+                setValue('deviceId', '');
+              }}
               className="h-11 w-full appearance-none rounded-lg border border-slate-400 bg-white px-3 pr-10 text-sm text-slate-950 outline-none shadow-[0_1px_2px_rgba(0,0,0,0.1)] focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             >
               <option value="">Choose room</option>
-
               {rooms.map((room) => (
                 <option key={room.id} value={room.id}>
                   {room.name}
@@ -270,12 +174,11 @@ export function ScheduleForm({
           <SelectField>
             <select
               {...register('deviceId')}
-              disabled={!roomId || loadingDevices}
+              disabled={!roomId}
               className="h-11 w-full appearance-none rounded-lg border border-slate-400 bg-white px-3 pr-10 text-sm text-slate-950 outline-none shadow-[0_1px_2px_rgba(0,0,0,0.1)] disabled:bg-slate-50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             >
               <option value="">Whole room</option>
-
-              {devices.map((device) => (
+              {roomDevices.map((device) => (
                 <option key={device.id} value={device.id}>
                   {device.eui} - {device.name}
                 </option>
@@ -294,7 +197,6 @@ export function ScheduleForm({
               className="h-11 w-full appearance-none rounded-lg border border-slate-400 bg-white px-3 pr-10 text-sm text-slate-950 outline-none shadow-[0_1px_2px_rgba(0,0,0,0.1)] focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             >
               <option value="on">Turn ON</option>
-
               <option value="off">Turn OFF</option>
             </select>
           </SelectField>
@@ -343,7 +245,6 @@ export function ScheduleForm({
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between py-2">
           <p className="text-sm font-medium text-neutral-500">Repeat?</p>
-
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -357,10 +258,7 @@ export function ScheduleForm({
                     shouldValidate: true,
                   }
                 );
-
-                if (repeatType === 'none') {
-                  setValue('repeatDays', []);
-                }
+                if (repeatType === 'none') setValue('repeatDays', []);
               }}
               className={[
                 'relative h-6 w-11 rounded-full transition',
@@ -374,7 +272,6 @@ export function ScheduleForm({
                 ].join(' ')}
               />
             </button>
-
             <span className="text-sm text-emerald-700">
               {repeatType !== 'none' ? 'Repeat on' : 'Repeat off'}
             </span>
@@ -387,45 +284,34 @@ export function ScheduleForm({
             title="Does not repeat"
             description="Runs once"
             onClick={() =>
-              setValue('repeatType', 'none', {
-                shouldValidate: true,
-              })
+              setValue('repeatType', 'none', { shouldValidate: true })
             }
           />
-
           <RepeatOption
             active={repeatType === 'daily'}
             title="Every day"
             description="Runs every day"
             onClick={() =>
-              setValue('repeatType', 'daily', {
-                shouldValidate: true,
-              })
+              setValue('repeatType', 'daily', { shouldValidate: true })
             }
           />
-
           <RepeatOption
             active={repeatType === 'weekly'}
             title="Every week"
             description="Choose days"
             onClick={() =>
-              setValue('repeatType', 'weekly', {
-                shouldValidate: true,
-              })
+              setValue('repeatType', 'weekly', { shouldValidate: true })
             }
           />
         </div>
       </div>
 
-      {/* WEEKLY DAYS */}
       {repeatType === 'weekly' && (
         <div className="rounded-xl border border-emerald-500 bg-emerald-50 p-4 shadow-[0_8px_12px_rgba(0,0,0,0.05)]">
           <p className="mb-3 text-sm font-medium text-emerald-500">Repeat on</p>
-
           <div className="grid grid-cols-4 gap-2">
             {DAYS.map((day) => {
               const selected = repeatDays.includes(day.value);
-
               return (
                 <button
                   key={day.value}
@@ -443,7 +329,6 @@ export function ScheduleForm({
               );
             })}
           </div>
-
           {errors.repeatDays?.message && (
             <p className="mt-2 text-xs text-red-500">
               {errors.repeatDays.message}
@@ -452,7 +337,6 @@ export function ScheduleForm({
         </div>
       )}
 
-      {/* FOOTER */}
       <div className="mt-2 flex items-center justify-end gap-2 border-t border-slate-200 pt-4">
         <Button
           type="button"
@@ -463,14 +347,12 @@ export function ScheduleForm({
         >
           Cancel
         </Button>
-
         <Button
           type="submit"
           disabled={submitting}
           className="h-11 w-[200px] rounded-lg bg-emerald-500 px-4 text-sm font-medium text-white hover:bg-emerald-600"
         >
           <Plus className="size-4" />
-
           {submitting ? 'Saving...' : 'Save schedule'}
         </Button>
       </div>
@@ -495,12 +377,9 @@ function Field({
     <div className="flex flex-col gap-1">
       <label className="text-sm font-medium leading-5 text-slate-950">
         {label}
-
         {required && <span className="ml-1 text-red-500">*</span>}
       </label>
-
       {children}
-
       {error ? (
         <span className="text-xs leading-[18px] text-red-500">{error}</span>
       ) : hint ? (
@@ -514,7 +393,6 @@ function SelectField({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative w-full">
       {children}
-
       <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-700" />
     </div>
   );
@@ -550,7 +428,6 @@ function RepeatOption({
       >
         {title}
       </span>
-
       <span className="mt-1 text-[10px] leading-[18px] text-slate-950">
         {description}
       </span>

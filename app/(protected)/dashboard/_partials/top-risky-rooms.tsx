@@ -62,7 +62,7 @@ export function TopRiskyRoomsTab({ dataByRange }: TopRiskyRoomsTabProps) {
               </button>
             ))}
           </div>
-          <button className="flex size-8 items-center justify-center rounded-md border border-slate-400 bg-slate-50">
+          <button className="flex size-9 items-center justify-center rounded-md border border-slate-400 bg-slate-50">
             <CalendarSearch className="size-4 text-slate-600" />
           </button>
         </div>

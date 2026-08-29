@@ -31,16 +31,23 @@ import {
 } from '@/feat/schedule/time';
 import type { ScheduleDTO } from '@/feat/schedule/dto';
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
+import type { DeviceDTO } from '@/feat/device/dto';
 import { ScheduleFormModal } from './_partials/modal';
-import { ScheduleDetailDrawer } from './_partials/detail-drawer';
+import { ScheduleDetailModal } from './_partials/detail-modal';
 
 interface ScheduleClientProps {
   initialData: ScheduleDTO[];
   rooms: RoomListItemDTO[];
+  devices: DeviceDTO[];
 }
 
 type ScheduleTab = 'active' | 'upcoming';
-export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
+
+export function ScheduleClient({
+  initialData,
+  rooms,
+  devices,
+}: ScheduleClientProps) {
   const [schedules, setSchedules] = useState<ScheduleDTO[]>(initialData ?? []);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
@@ -52,18 +59,15 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
     open: boolean;
     schedule?: ScheduleDTO;
   }>({ open: false });
-  const [detailId, setDetailId] = useState<string | null>(null);
+  // The row itself is already the full record — no reason to store just an id
+  // and make the modal fetch it again.
+  const [detailSchedule, setDetailSchedule] = useState<ScheduleDTO | null>(
+    null
+  );
   const [deleteTarget, setDeleteTarget] = useState<ScheduleDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-
-  //   const components = useMemo(() => {
-  //     const values = schedules
-  //       .map((schedule) => schedule.device?.deviceType)
-  //       .filter((value): value is string => Boolean(value));
-  //     return Array.from(new Set(values)).sort();
-  //   }, [schedules]);
 
   const activeSchedules = useMemo(
     () => schedules.filter(isCurrentlyActive),
@@ -125,7 +129,7 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
       getScheduleColumns({
         isSelected: (id) => selected.has(id),
         onToggleSelect: (id) => toggleSelected(id),
-        onView: (schedule) => setDetailId(schedule.id),
+        onView: (schedule) => setDetailSchedule(schedule),
         onEdit: (schedule) => setModalState({ open: true, schedule }),
         onDelete: (schedule) => setDeleteTarget(schedule),
       }),
@@ -305,26 +309,6 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
               placeholder="Search..."
             />
 
-            {/* <Select
-              value={filterComponent || ALL_COMPONENTS}
-              onValueChange={(value) => {
-                setFilterComponent(value === ALL_COMPONENTS ? '' : value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Filter by component" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_COMPONENTS}>All components</SelectItem>
-                {components.map((component) => (
-                  <SelectItem key={component} value={component}>
-                    {component}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select> */}
-
             <Button variant="outline" size="icon" className="size-8">
               <CalendarDays className="size-4" />
             </Button>
@@ -464,13 +448,14 @@ export function ScheduleClient({ initialData, rooms }: ScheduleClientProps) {
         open={modalState.open}
         schedule={modalState.schedule}
         rooms={rooms}
+        devices={devices}
         onOpenChange={(open) => setModalState({ open })}
         onSuccess={handleSave}
       />
 
-      <ScheduleDetailDrawer
-        scheduleId={detailId}
-        onClose={() => setDetailId(null)}
+      <ScheduleDetailModal
+        schedule={detailSchedule}
+        onClose={() => setDetailSchedule(null)}
       />
 
       <ConfirmDialog

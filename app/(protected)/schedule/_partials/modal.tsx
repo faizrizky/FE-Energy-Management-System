@@ -8,11 +8,13 @@ import { toDateInputValue } from '@/feat/schedule/time';
 import type { ScheduleDTO } from '@/feat/schedule/dto';
 import type { ScheduleFormValues } from '@/feat/schedule/schema';
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
+import type { DeviceDTO } from '@/feat/device/dto';
 
 interface ScheduleFormModalProps {
   open: boolean;
   schedule?: ScheduleDTO;
   rooms: RoomListItemDTO[];
+  devices: DeviceDTO[];
   onOpenChange: (open: boolean) => void;
   onSuccess: (schedule: ScheduleDTO) => void;
 }
@@ -21,6 +23,7 @@ export function ScheduleFormModal({
   open,
   schedule,
   rooms,
+  devices,
   onOpenChange,
   onSuccess,
 }: ScheduleFormModalProps) {
@@ -82,6 +85,7 @@ export function ScheduleFormModal({
         <div className="overflow-y-auto px-6 py-5">
           <ScheduleForm
             rooms={rooms}
+            devices={devices}
             defaultValues={defaultValues}
             schedule={schedule}
             onSubmit={handleSubmit}
