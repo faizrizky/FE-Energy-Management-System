@@ -27,7 +27,7 @@ import { usersClientApi } from '@/feat/user/api.client';
 import type { UserDTO } from '@/feat/user/dto';
 import type { RoleDTO } from '@/feat/role/dto';
 import { UserFormModal } from './_partials/modal';
-import { UserDetailDrawer } from './_partials/detail-drawer';
+import { UserDetailModal } from './_partials/detail-modal';
 
 interface UserClientProps {
   initialData: UserDTO[];
@@ -161,24 +161,6 @@ export function UserClient({ initialData, roles }: UserClientProps) {
         }
       />
 
-      {/* <div className="flex w-full items-stretch gap-2.5">
-        <AnalyticCard
-          title="Total user(s)"
-          value={formatNumber(users.length)}
-          unit="all roles"
-        />
-        <AnalyticCard
-          title="Active roles"
-          value={formatNumber(roles.length)}
-          unit="configured"
-        />
-        <AnalyticCard
-          title="Active today"
-          value={formatNumber(activeRecently)}
-          unit="last 24h"
-        />
-      </div> */}
-
       <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
         <div className="flex w-full items-center justify-between">
           <p className="text-lg font-semibold text-emerald-500">
@@ -276,6 +258,7 @@ export function UserClient({ initialData, roles }: UserClientProps) {
                   >
                     Last active
                   </SortableTableHead>
+                  <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -323,7 +306,11 @@ export function UserClient({ initialData, roles }: UserClientProps) {
         }}
       />
 
-      <UserDetailDrawer user={detailUser} onClose={() => setDetailUser(null)} />
+      <UserDetailModal
+        user={detailUser}
+        roles={roles}
+        onClose={() => setDetailUser(null)}
+      />
 
       <ConfirmDialog
         open={!!deleteTarget}

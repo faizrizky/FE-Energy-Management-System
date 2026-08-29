@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { ChevronDown, Eye, EyeOff, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { userFormSchema, type UserFormValues } from '@/feat/user/schema';
@@ -91,7 +91,7 @@ export function UserForm({
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Field label="Choose role" error={errors.roleId?.message}>
           <SelectField>
             <select
@@ -164,7 +164,8 @@ export function UserForm({
         </Button>
         {!readOnly && (
           <Button type="submit" disabled={submitting}>
-            {submitting ? 'Saving...' : 'Save user'}
+            {!isEdit && <Plus className="size-4" />}
+            {submitting ? 'Saving...' : isEdit ? 'Save user' : 'Add user'}
           </Button>
         )}
       </div>
