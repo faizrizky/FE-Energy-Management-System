@@ -20,12 +20,24 @@ import {
 import { formatDate, formatKwh } from '@/lib/utils';
 import { toast } from '@/lib/toast-store';
 import { getRoomDevicesColumns } from '@/column/room-devices';
-import type { RoomDetailDTO, RoomDeviceDTO } from '@/feat/rooms/dto';
-import { DeviceLogDrawer } from './_partials/device-log-drawer';
+import { roomsClientApi } from '@/feat/rooms/api.client';
+import type {
+  RoomDetailDTO,
+  RoomDeviceDTO,
+  RoomDeviceLogEntryDTO,
+} from '@/feat/rooms/dto';
+import { DeviceLogModal } from './_partials/device-log-modal';
 
 interface RoomDetailClientProps {
   room: RoomDetailDTO;
   initialDevices: RoomDeviceDTO[];
+}
+
+interface LogModalState {
+  open: boolean;
+  device: RoomDeviceDTO | null;
+  logs: RoomDeviceLogEntryDTO[] | null;
+  loading: boolean;
 }
 
 export function RoomDetailClient({
@@ -35,7 +47,12 @@ export function RoomDetailClient({
   const [devices, setDevices] = useState(initialDevices);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [logDevice, setLogDevice] = useState<RoomDeviceDTO | null>(null);
+  const [logModal, setLogModal] = useState<LogModalState>({
+    open: false,
+    device: null,
+    logs: null,
+    loading: false,
+  });
   const [deleteTarget, setDeleteTarget] = useState<RoomDeviceDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -56,6 +73,25 @@ export function RoomDetailClient({
     setDeleting(false);
   };
 
+  // Fetch triggered directly by the click, not by a reactive effect on
+  // (open, device). Modal opens immediately in its loading state, gets
+  // filled in once the request resolves.
+  const openDeviceLog = async (device: RoomDeviceDTO) => {
+    setLogModal({ open: true, device, logs: null, loading: true });
+    try {
+      const logs = await roomsClientApi.getDeviceLog(room.id, device.id);
+      setLogModal({ open: true, device, logs, loading: false });
+    } catch (err) {
+      setLogModal({ open: true, device, logs: [], loading: false });
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to load device log'
+      );
+    }
+  };
+
+  const closeDeviceLog = () =>
+    setLogModal({ open: false, device: null, logs: null, loading: false });
+
   const columns = useMemo(
     () =>
       getRoomDevicesColumns({
@@ -72,7 +108,7 @@ export function RoomDetailClient({
               d.id === device.id ? { ...d, isPowerOn: !d.isPowerOn } : d
             )
           ),
-        onViewLog: (device) => setLogDevice(device),
+        onViewLog: openDeviceLog,
         onDelete: (device) => setDeleteTarget(device),
         onIntervalChange: (device, minutes) => {
           if (minutes < 15) return;
@@ -220,11 +256,12 @@ export function RoomDetailClient({
         </Table>
       </div>
 
-      <DeviceLogDrawer
-        device={logDevice}
-        roomId={room.id}
-        open={!!logDevice}
-        onClose={() => setLogDevice(null)}
+      <DeviceLogModal
+        device={logModal.device}
+        logs={logModal.logs}
+        loading={logModal.loading}
+        open={logModal.open}
+        onClose={closeDeviceLog}
       />
 
       <ConfirmDialog

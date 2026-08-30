@@ -149,9 +149,6 @@ export function ScheduleForm({
               {...roomRegister}
               onChange={(e) => {
                 roomRegister.onChange(e);
-                // Room changed -> previously chosen device may no longer
-                // belong to this room, so reset it. Done inline on the
-                // event, not in a useEffect.
                 setValue('deviceId', '');
               }}
               className="h-11 w-full appearance-none rounded-lg border border-slate-400 bg-white px-3 pr-10 text-sm text-slate-950 outline-none shadow-[0_1px_2px_rgba(0,0,0,0.1)] focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"

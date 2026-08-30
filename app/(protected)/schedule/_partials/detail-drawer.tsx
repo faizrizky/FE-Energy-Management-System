@@ -9,8 +9,6 @@ import {
 } from '@/feat/schedule/time';
 
 interface ScheduleDetailDrawerProps {
-  // Row that was clicked is already the full record — parent hands it
-  // straight over. No id + fetch, no loading state, no useEffect.
   schedule: ScheduleDTO | null;
   onClose: () => void;
 }

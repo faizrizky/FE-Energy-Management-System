@@ -24,14 +24,22 @@ export interface RoomSummaryDTO {
   totalDevices: { total: number; online: number; offline: number };
 }
 
-export interface RoomDetailDTO {
+/** Shape returned by create/update — matches prisma.room row, no usage stats. */
+export interface RoomDTO {
   id: string;
   name: string;
   location: string;
-  description: string;
-  createdAt: string;
-  lastUpdatedAt: string | null;
+  picName: string | null;
+  picPhone: string | null;
+  description: string | null;
   isCritical: boolean;
+  imageUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoomDetailDTO extends RoomDTO {
+  lastUpdatedAt: string | null;
   usage: {
     total24hKwh: number;
     avg24hKwh: number;

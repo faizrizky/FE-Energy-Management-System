@@ -9,8 +9,6 @@ import {
 } from '@/feat/schedule/time';
 
 interface ScheduleDetailModalProps {
-  // Row yang diklik udah full record — parent kasih langsung.
-  // Gak ada id + fetch, gak ada loading state, gak ada useEffect.
   schedule: ScheduleDTO | null;
   onClose: () => void;
 }

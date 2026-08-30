@@ -87,8 +87,6 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
     loading: boolean;
   }>({ open: false, gateway: null, loading: false });
 
-  // Timer buat debounce pencarian — dipegang di ref, dipanggil langsung dari
-  // handler onChange search input. Bukan reaksi ke state via useEffect.
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const online = data.data.filter(

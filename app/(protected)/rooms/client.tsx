@@ -29,16 +29,19 @@ import type {
   RoomListItemDTO,
   RoomListResponseDTO,
   RoomSummaryDTO,
+  RoomDTO,
 } from '@/feat/rooms/dto';
+import type { UserSummaryDTO } from '@/feat/user/dto';
 import { RoomFormModal } from './_partials/modal';
 import { Trash2 } from 'lucide-react';
 
 interface RoomsClientProps {
   summary: RoomSummaryDTO;
   initialData: RoomListResponseDTO;
+  users: UserSummaryDTO[];
 }
 
-export function RoomsClient({ summary, initialData }: RoomsClientProps) {
+export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const [data, setData] = useState<RoomListResponseDTO>(
     initialData ?? {
       data: [],
@@ -54,8 +57,10 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{
     open: boolean;
-    room?: RoomListItemDTO;
-  }>({ open: false });
+    room?: RoomDTO;
+  }>({
+    open: false,
+  });
   const [deleteTarget, setDeleteTarget] = useState<RoomListItemDTO | null>(
     null
   );
@@ -90,10 +95,22 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
           search: nextSearch || undefined,
         },
       });
-
       setData(res.data);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load rooms');
+    }
+  };
+
+  // Room list rows don't carry picName/picPhone/description — fetch the
+  // full record on click, not reactively. Modal opens once it resolves.
+  const openEdit = async (room: RoomListItemDTO) => {
+    try {
+      const detail = await roomsClientApi.getById(room.id);
+      setModalState({ open: true, room: detail });
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to load room detail'
+      );
     }
   };
 
@@ -168,7 +185,7 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
           }
         },
         onView: (room) => (window.location.href = `/rooms/detail/${room.id}`),
-        onEdit: (room) => setModalState({ open: true, room }),
+        onEdit: openEdit,
         onDelete: (room) => setDeleteTarget(room),
       }),
     [selected]
@@ -310,7 +327,7 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
                     direction={direction}
                     onSort={toggleSort}
                   >
-                    Role
+                    Room
                   </SortableTableHead>
                   <TableHead>Gateway</TableHead>
                   <TableHead>Device</TableHead>
@@ -322,7 +339,6 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
                   >
                     Total usage(24H)
                   </SortableTableHead>
-
                   <TableHead>Status</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
@@ -363,6 +379,7 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
       <RoomFormModal
         open={modalState.open}
         room={modalState.room}
+        users={users}
         onOpenChange={(open) => setModalState({ open })}
         onSuccess={(saved) => {
           setData((prev) => ({
@@ -376,6 +393,11 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
               : prev.data,
           }));
           setModalState({ open: false });
+          toast.success(modalState.room ? 'Room updated' : 'Room created');
+          if (!modalState.room) {
+            setPage(1);
+            loadRooms(1, rowsPerPage, search);
+          }
         }}
       />
 
@@ -392,6 +414,16 @@ export function RoomsClient({ summary, initialData }: RoomsClientProps) {
         confirming={deleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title="Delete Rooms"
+        count={selected.size}
+        itemLabel="room"
+        confirming={bulkDeleting}
+        onConfirm={handleConfirmBulkDelete}
+        onCancel={() => setBulkDeleteOpen(false)}
       />
     </div>
   );
