@@ -15,6 +15,7 @@ import {
   SidebarNavItem,
   type NavItem,
 } from '@/components/shared/sidebar-nav-item';
+import { logoutAction } from '@/feat/auth/actions';
 
 interface NavGroup {
   label: string;
@@ -83,7 +84,10 @@ export function Sidebar() {
       </div>
 
       <div className="flex flex-col p-2">
-        <button className="flex h-8 w-full items-center gap-2 rounded-md p-2 text-sm text-red-700 hover:bg-red-50">
+        <button
+          onClick={() => logoutAction()}
+          className="flex h-8 w-full items-center gap-2 rounded-md p-2 text-sm text-red-700 hover:bg-red-50"
+        >
           <LogOut className="size-4" />
           Log out
         </button>
