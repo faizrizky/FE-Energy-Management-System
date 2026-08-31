@@ -23,22 +23,27 @@ const TABS = [
 export function DashboardSearch() {
   const [search, setSearch] = useState('');
   return (
-    <PageHeader
-      title="Dashboard"
-      description="Monitor energy usage and system status across your facility."
-      actions={
-        <div className="flex items-center gap-2">
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search room"
-          />
-          <button className="flex size-8 items-center justify-center rounded-md border border-slate-400 bg-white">
-            <CalendarSearch className="size-4 text-slate-600" />
-          </button>
-        </div>
-      }
-    />
+    <div className="flex w-full flex-col items-start gap-3 md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-1">
+        <h1 className="font-display text-[36px] font-bold leading-[44px] tracking-[-0.72px] text-emerald-500">
+          Dashboard
+        </h1>
+        <p className="text-sm text-slate-600">
+          Monitor energy usage and system status across your facility.
+        </p>
+      </div>
+      <div className="flex w-full items-center gap-2 md:w-auto">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search room"
+          className="flex-1 md:flex-none"
+        />
+        <button className="flex size-11 shrink-0 items-center justify-center rounded-md border border-slate-400 bg-white md:size-8">
+          <CalendarSearch className="size-4 text-slate-600" />
+        </button>
+      </div>
+    </div>
   );
 }
 

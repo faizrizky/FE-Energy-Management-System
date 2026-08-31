@@ -10,7 +10,7 @@ export function Table({ className, wrapperClassName, ...props }: TableProps) {
   return (
     <div
       className={cn(
-        'w-full overflow-hidden rounded-lg border border-slate-200',
+        'w-full overflow-x-auto rounded-lg border border-slate-200',
         wrapperClassName
       )}
     >

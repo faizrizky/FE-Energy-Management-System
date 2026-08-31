@@ -30,12 +30,14 @@ export async function Header({ breadcrumb, user }: HeaderProps) {
     <header className="flex h-16 w-full items-center justify-between border-b border-emerald-100 bg-white/95 px-4 lg:px-8 backdrop-blur-md">
       <div className="flex items-center gap-2">
         <MobileMenuButton />
-        <BreadcrumbNav items={['EMS', ...breadcrumb]} />
+        <div className="hidden md:block">
+          <BreadcrumbNav items={['EMS', ...breadcrumb]} />
+        </div>
       </div>
 
       <div className="flex items-center gap-3 py-4">
         <NotificationBell alarms={alarms} />
-        <div className="h-6 w-px bg-slate-200" />
+        <div className="hidden h-6 w-px bg-slate-200 md:block" />
         <div className="flex items-center gap-2 p-2">
           <Avatar>
             <AvatarImage src="/avatar-placeholder.png" alt={user.name} />
@@ -43,7 +45,7 @@ export async function Header({ breadcrumb, user }: HeaderProps) {
               {user.name.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col whitespace-nowrap text-sm">
+          <div className="hidden flex-col whitespace-nowrap text-sm md:flex">
             <span className="text-emerald-500">{user.name}</span>
             <span className="text-xs text-slate-600">{user.email}</span>
           </div>

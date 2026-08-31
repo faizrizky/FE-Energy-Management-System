@@ -30,7 +30,8 @@ export function NotificationBell({ alarms }: NotificationBellProps) {
 
       <DropdownMenuContent
         align="end"
-        className="w-[380px] max-w-[90vw] items-stretch gap-2 p-2"
+        collisionPadding={16}
+        className="w-[320px] max-w-[calc(100vw-2rem)] items-stretch gap-2 p-2 md:w-[380px]"
       >
         {alarms.length === 0 ? (
           <p className="px-3 py-4 text-center text-sm text-slate-500">
