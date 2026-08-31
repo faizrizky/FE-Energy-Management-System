@@ -1,7 +1,19 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Download, FolderKanban } from 'lucide-react';
+import {
+  Download,
+  FolderKanban,
+  ChevronDown,
+  FileText,
+  FileSpreadsheet,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
@@ -53,7 +65,9 @@ export function ReportClient({
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<null | 'csv' | 'xlsx' | 'pdf'>(
+    null
+  );
 
   const filtered = useMemo(() => {
     const normalized = search.trim().toLowerCase();
@@ -80,17 +94,20 @@ export function ReportClient({
 
   const columns = getReportColumns();
 
-  const handleExport = async () => {
-    setExporting(true);
+  const handleExport = async (format: 'csv' | 'xlsx' | 'pdf') => {
+    setExporting(format);
     try {
-      const blob = await reportClientApi.exportCsv(range);
-      downloadBlob(blob, `energy-report-${range.from}_to_${range.to}.csv`);
+      const blob = await reportClientApi.export(range, format);
+      downloadBlob(
+        blob,
+        `energy-report-${range.from}_to_${range.to}.${format}`
+      );
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Failed to export report'
       );
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   };
 
@@ -100,14 +117,29 @@ export function ReportClient({
         title="Reports"
         description="View, analyze, and export energy and operational reports across all managed facilities."
         actions={
-          <Button
-            onClick={handleExport}
-            disabled={exporting}
-            className="w-[170px]"
-          >
-            <Download className="size-4" />
-            {exporting ? 'Exporting...' : 'Export as CSV'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={!!exporting} className="w-[170px]">
+                <Download className="size-4" />
+                {exporting ? 'Exporting...' : 'Export'}
+                <ChevronDown className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-[160px] items-stretch"
+            >
+              <DropdownMenuItem onClick={() => handleExport('csv')}>
+                <FileText className="size-4" /> Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('xlsx')}>
+                <FileSpreadsheet className="size-4" /> Export as Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                <FileText className="size-4" /> Export as PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         }
       />
 
