@@ -244,7 +244,7 @@ export function ScheduleClient({
         actions={
           <Button
             onClick={() => setModalState({ open: true })}
-            className="w-[200px]"
+            className="w-full md:w-[200px]"
           >
             <Plus className="size-4" />
             Add schedule
@@ -252,7 +252,7 @@ export function ScheduleClient({
         }
       />
 
-      <div className="flex w-full items-stretch gap-2.5">
+      <div className="grid w-full grid-cols-1 gap-2.5 md:grid-cols-3">
         <AnalyticCard
           title="Total schedule(s)"
           value={formatNumber(schedules.length)}
@@ -271,13 +271,13 @@ export function ScheduleClient({
       </div>
 
       <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
-        <div className="flex w-full items-center justify-between">
-          <div className="flex h-8 items-start gap-1 rounded-lg border border-slate-400 bg-white p-1">
+        <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex w-full items-center gap-1 rounded-lg border border-slate-400 bg-white p-1 md:w-auto">
             <button
               type="button"
               onClick={() => changeTab('active')}
               className={[
-                'flex h-6 w-[150px] shrink-0 items-center justify-center rounded-md px-2 py-1.5 font-medium text-[14px] leading-none',
+                'flex-1 rounded-md self-stretch text-sm font-medium transition-colors md:flex-none md:w-[150px] md:py-1.5',
                 tab === 'active'
                   ? 'bg-emerald-500 text-emerald-50 shadow-[0px_1px_1px_rgba(0,0,0,0.03)]'
                   : 'bg-transparent text-slate-500',
@@ -289,7 +289,7 @@ export function ScheduleClient({
               type="button"
               onClick={() => changeTab('upcoming')}
               className={[
-                'flex h-6 w-[150px] shrink-0 items-center justify-center rounded-md px-2 py-1.5 text-[14px] leading-none',
+                'flex-1 rounded-md self-stretch text-sm font-medium transition-colors md:flex-none md:w-[150px] md:py-1.5',
                 tab === 'upcoming'
                   ? 'bg-emerald-500 font-medium text-emerald-50 shadow-[0px_1px_1px_rgba(0,0,0,0.03)]'
                   : 'bg-transparent font-normal text-neutral-300',
@@ -299,7 +299,7 @@ export function ScheduleClient({
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 md:w-auto">
             <SearchInput
               value={search}
               onChange={(value) => {
@@ -307,9 +307,13 @@ export function ScheduleClient({
                 setPage(1);
               }}
               placeholder="Search..."
+              className="flex-1 md:flex-none"
             />
-
-            <Button variant="outline" size="icon" className="size-8">
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-11 shrink-0 rounded-md md:size-8"
+            >
               <CalendarDays className="size-4" />
             </Button>
           </div>

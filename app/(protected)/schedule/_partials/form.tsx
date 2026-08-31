@@ -137,7 +137,7 @@ export function ScheduleForm({
       )}
 
       {/* ROOM + DEVICE */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field
           label="Choose room"
           required
@@ -186,7 +186,7 @@ export function ScheduleForm({
       </div>
 
       {/* ACTION + DATE */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field label="Action" required error={errors.action?.message}>
           <SelectField>
             <select
@@ -214,7 +214,7 @@ export function ScheduleForm({
       </div>
 
       {/* TIME */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field label="Start time" required error={errors.startTime?.message}>
           <Input
             type="time"
@@ -275,7 +275,7 @@ export function ScheduleForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
           <RepeatOption
             active={repeatType === 'none'}
             title="Does not repeat"
@@ -306,7 +306,7 @@ export function ScheduleForm({
       {repeatType === 'weekly' && (
         <div className="rounded-xl border border-emerald-500 bg-emerald-50 p-4 shadow-[0_8px_12px_rgba(0,0,0,0.05)]">
           <p className="mb-3 text-sm font-medium text-emerald-500">Repeat on</p>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
             {DAYS.map((day) => {
               const selected = repeatDays.includes(day.value);
               return (
@@ -315,7 +315,7 @@ export function ScheduleForm({
                   type="button"
                   onClick={() => toggleDay(day.value)}
                   className={[
-                    'rounded-lg border px-3 py-2 text-xs font-medium transition',
+                    'rounded-lg border px-3 py-3 text-xs font-medium transition',
                     selected
                       ? 'border-emerald-500 bg-emerald-500 text-white'
                       : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-400',

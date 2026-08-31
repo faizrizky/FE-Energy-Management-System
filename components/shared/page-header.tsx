@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 interface PageHeaderProps {
   title: string;
@@ -8,10 +8,19 @@ interface PageHeaderProps {
   className?: string;
 }
 
-/** Green display title + slate description used at the top of every page. */
-export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  description,
+  actions,
+  className,
+}: PageHeaderProps) {
   return (
-    <div className={cn("flex w-full items-end justify-between", className)}>
+    <div
+      className={cn(
+        'flex w-full flex-col items-start gap-3 md:flex-row md:items-end md:justify-between',
+        className
+      )}
+    >
       <div className="flex flex-col gap-1">
         <h1 className="font-display text-[36px] font-bold leading-[44px] tracking-[-0.72px] text-emerald-500">
           {title}

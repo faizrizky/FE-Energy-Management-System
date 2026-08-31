@@ -76,7 +76,7 @@ export function ScheduleDetailModal({
 
           <section>
             <p className="mb-3 text-xs text-slate-600">Timing & recurrence</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
               <div className="rounded-xl border border-neutral-300 p-4 shadow-[0px_8px_12px_rgba(0,0,0,0.05)]">
                 <p className="text-sm font-medium text-neutral-500">
                   Execution time
