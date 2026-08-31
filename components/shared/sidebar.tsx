@@ -20,6 +20,7 @@ import { logoutAction } from '@/feat/auth/actions';
 interface NavGroup {
   label: string;
   items: NavItem[];
+  onClick?: () => void;
 }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -51,7 +52,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   return (
     <aside className="flex h-full w-[250px] shrink-0 flex-col justify-between overflow-hidden border-r border-emerald-200 bg-white p-2">
       <div className="flex flex-col gap-2">
@@ -76,7 +77,11 @@ export function Sidebar() {
             </p>
             <div className="flex flex-col gap-1">
               {group.items.map((item) => (
-                <SidebarNavItem key={item.href} {...item} />
+                <SidebarNavItem
+                  key={item.href}
+                  {...item}
+                  onClick={onNavigate}
+                />
               ))}
             </div>
           </div>

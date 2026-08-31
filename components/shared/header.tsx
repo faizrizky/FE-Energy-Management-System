@@ -4,6 +4,7 @@ import { NotificationBell } from '@/components/shared/notification-bell';
 import { alarmApi } from '@/feat/alarm/api';
 import type { AlarmDTO } from '@/feat/alarm/dto';
 import type { SessionUser } from '@/lib/auth';
+import { MobileMenuButton } from '@/components/shared/mobile-menu-button';
 
 interface HeaderProps {
   breadcrumb: string[];
@@ -26,8 +27,11 @@ export async function Header({ breadcrumb, user }: HeaderProps) {
   const alarms = await loadRecentAlarms();
 
   return (
-    <header className="flex h-16 w-full items-center justify-between border-b border-emerald-100 bg-white/95 px-8 backdrop-blur-md">
-      <BreadcrumbNav items={['EMS', ...breadcrumb]} />
+    <header className="flex h-16 w-full items-center justify-between border-b border-emerald-100 bg-white/95 px-4 lg:px-8 backdrop-blur-md">
+      <div className="flex items-center gap-2">
+        <MobileMenuButton />
+        <BreadcrumbNav items={['EMS', ...breadcrumb]} />
+      </div>
 
       <div className="flex items-center gap-3 py-4">
         <NotificationBell alarms={alarms} />

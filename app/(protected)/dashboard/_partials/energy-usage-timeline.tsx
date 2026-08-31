@@ -33,20 +33,20 @@ export function EnergyUsageTimelineTab({
   const data = dataByRange[range];
 
   return (
-    <Card className="flex w-full flex-col items-end gap-4 p-6">
+    <Card className="flex w-full flex-col items-end gap-4 p-2 md:p-6">
       <div className="flex w-full items-center justify-between">
         <p className="text-lg font-semibold text-emerald-500">
           Energy usage timeline
         </p>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-lg border border-slate-400 bg-white p-1">
+          <div className="flex w-full flex-col gap-1 rounded-lg border border-slate-400 bg-white p-1 md:w-auto md:flex-row md:items-center">
             {RANGES.map((r) => (
               <button
                 key={r.value}
                 type="button"
                 onClick={() => setRange(r.value)}
                 className={[
-                  'rounded-md px-3 py-1 text-sm font-medium transition-colors',
+                  'h-11 rounded-md px-3 py-1 text-xs font-medium transition-colors md:h-auto md:text-sm',
                   range === r.value
                     ? 'bg-emerald-500 text-white'
                     : 'text-slate-500 hover:bg-slate-50',

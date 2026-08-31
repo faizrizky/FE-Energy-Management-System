@@ -51,14 +51,15 @@ export default async function DashboardPage() {
   return (
     <>
       <Header breadcrumb={['Dashboard']} user={session!} />
-      <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-y-auto bg-slate-50 p-8">
+      <div className="flex w-full flex-1 flex-col items-start gap-2.5 overflow-y-auto bg-slate-100 p-4 md:gap-8 md:bg-slate-50 md:p-8">
         <DashboardSearch />
-        <div className="flex w-full items-start gap-2.5">
+        <div className="grid w-full grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-3 lg:gap-2.5">
           <AnalyticCard
             title="Energy usage"
             value={formatKwh(summary.energyUsage.totalKwh)}
             icon={Zap}
             helperText={`+${summary.energyUsage.changePercentFromYesterday}% from yesterday`}
+            className="md:row-span-2 lg:row-span-1"
           />
           <AnalyticCard
             title="Gateway(s)"
