@@ -43,7 +43,7 @@ export function DeviceLogModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4 backdrop-blur-[10px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4 backdrop-blur-[5px]">
       <div className="flex max-h-[85vh] w-full max-w-[600px] flex-col gap-6 rounded-xl border border-slate-300 bg-white p-6 shadow-[0px_8px_12px_rgba(0,0,0,0.15)]">
         <div className="flex items-start justify-between">
           <div className="flex flex-col gap-1">

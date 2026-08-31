@@ -10,14 +10,16 @@ export interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  onClick?: () => void;
 }
 
-export function SidebarNavItem({ label, href, icon: Icon }: NavItem) {
+export function SidebarNavItem({ label, href, icon: Icon, onClick }: NavItem) {
   const pathname = usePathname();
   const isActive = pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <Link
+      onClick={onClick}
       href={href}
       className={cn(
         'flex h-8 w-full items-center gap-2 rounded-md p-2 text-sm transition-colors',

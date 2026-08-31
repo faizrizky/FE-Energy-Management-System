@@ -9,7 +9,7 @@ function MobileDrawer() {
   return (
     <div className="fixed inset-0 z-50 flex lg:hidden">
       <div
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 backdrop-blur-[5px]"
         onClick={() => setOpen(false)}
       />
       <div className="relative">

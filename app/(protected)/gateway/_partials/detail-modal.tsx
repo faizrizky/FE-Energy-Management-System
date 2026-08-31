@@ -15,7 +15,7 @@ export function GatewayDetailModal({
   onClose,
 }: GatewayDetailModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4 backdrop-blur-[10px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4 backdrop-blur-[5px]">
       <div className="flex w-full max-w-[450px] flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0px_8px_12px_rgba(0,0,0,0.15)]">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
           <div className="min-w-0">

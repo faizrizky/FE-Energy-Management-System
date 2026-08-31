@@ -63,7 +63,7 @@ export function DeviceFormModal({
         flex items-center justify-center
         bg-[rgba(10,10,10,0.5)]
         p-4
-        backdrop-blur-[10px]
+        backdrop-blur-[5px]
       "
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !submitting) {

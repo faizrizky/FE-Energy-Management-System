@@ -22,7 +22,7 @@ export function ScheduleDetailDrawer({
   return (
     <div className="fixed inset-0 z-40">
       <div
-        className="absolute inset-0 bg-black/10 backdrop-blur-[10px]"
+        className="absolute inset-0 bg-black/10 backdrop-blur-[5px]"
         onClick={onClose}
       />
 

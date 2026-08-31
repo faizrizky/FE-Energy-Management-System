@@ -49,7 +49,7 @@ export function ConfirmDialog({
     (count && count > 1 ? `Yes, Delete (${count})` : 'Yes, Delete');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4 backdrop-blur-[10px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4 backdrop-blur-[5px]">
       <div className="flex w-full max-w-[400px] flex-col gap-6 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_8px_12px_rgba(0,0,0,0.15)]">
         <div className="flex flex-col items-center gap-4">
           <div className="flex size-8 items-center justify-center rounded-md border border-status-error bg-white">
