@@ -154,7 +154,7 @@ export function UserClient({ initialData, roles }: UserClientProps) {
         actions={
           <Button
             onClick={() => setModalState({ open: true })}
-            className="w-[200px]"
+            className="w-full md:w-[200px]"
           >
             <Plus className="size-4" /> Add user
           </Button>
@@ -162,18 +162,21 @@ export function UserClient({ initialData, roles }: UserClientProps) {
       />
 
       <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
-        <div className="flex w-full items-center justify-between">
+        <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <p className="text-lg font-semibold text-emerald-500">
             {formatNumber(filtered.length)} user(s)
           </p>
-          <SearchInput
-            value={search}
-            onChange={(value) => {
-              setSearch(value);
-              setPage(1);
-            }}
-            placeholder="Search by name, username, or email..."
-          />
+
+          <div className="min-w-0 flex-1 md:flex-none">
+            <SearchInput
+              value={search}
+              onChange={(value) => {
+                setSearch(value);
+                setPage(1);
+              }}
+              placeholder="Search by name, username, or email..."
+            />
+          </div>
         </div>
 
         {selected.size > 0 && (

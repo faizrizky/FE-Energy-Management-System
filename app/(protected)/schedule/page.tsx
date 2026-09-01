@@ -21,7 +21,7 @@ export default async function SchedulePage() {
       <ScheduleClient
         initialData={schedules}
         rooms={rooms.data}
-        devices={devices}
+        devices={devices.data}
       />
     </>
   );

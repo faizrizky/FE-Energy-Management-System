@@ -300,15 +300,17 @@ export function ScheduleClient({
           </div>
 
           <div className="flex w-full items-center gap-2 md:w-auto">
-            <SearchInput
-              value={search}
-              onChange={(value) => {
-                setSearch(value);
-                setPage(1);
-              }}
-              placeholder="Search..."
-              className="flex-1 md:flex-none"
-            />
+            <div className="min-w-0 flex-1 md:flex-none">
+              <SearchInput
+                value={search}
+                onChange={(value) => {
+                  setSearch(value);
+                  setPage(1);
+                }}
+                placeholder="Search..."
+                className="flex-1 md:flex-none"
+              />
+            </div>
             <Button
               variant="outline"
               size="icon"

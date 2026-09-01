@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, Lock, Eye, EyeOff, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { toast } from "@/lib/toast-store";
-import { loginFormSchema, type LoginFormValues } from "@/feat/auth/schema";
-import { loginAction } from "@/feat/auth/actions";
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Mail, Lock, Eye, EyeOff, Bolt } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/lib/toast-store';
+import { loginFormSchema, type LoginFormValues } from '@/feat/auth/schema';
+import { loginAction } from '@/feat/auth/actions';
 
 interface LoginClientProps {
   redirectTo: string;
@@ -25,14 +25,14 @@ export function LoginClient({ redirectTo }: LoginClientProps) {
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: '', password: '' },
   });
 
   const onSubmit = (values: LoginFormValues) => {
     startTransition(async () => {
       const result = await loginAction(values);
       if (!result.success) {
-        toast.error(result.message ?? "Login failed");
+        toast.error(result.message ?? 'Login failed');
         return;
       }
       router.replace(redirectTo);
@@ -48,9 +48,11 @@ export function LoginClient({ redirectTo }: LoginClientProps) {
 
         <div className="relative flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-500">
-            <Zap className="size-5 text-white" />
+            <Bolt className="size-5 text-white" />
           </div>
-          <p className="font-display text-2xl font-semibold text-emerald-500">EMS</p>
+          <p className="font-display text-2xl font-semibold text-emerald-500">
+            EMS
+          </p>
         </div>
 
         <div className="relative flex flex-col gap-4">
@@ -60,20 +62,30 @@ export function LoginClient({ redirectTo }: LoginClientProps) {
             Smarter Savings.
           </h1>
           <p className="text-sm leading-5 text-emerald-200">
-            Monitor real-time demand, automate critical schedules, and drive down operational waste
-            across your entire facility footprint with intelligent gateway telemetry.
+            Monitor real-time demand, automate critical schedules, and drive
+            down operational waste across your entire facility footprint with
+            intelligent gateway telemetry.
           </p>
         </div>
 
-        <p className="relative text-xs leading-[18px] text-emerald-200">EMS Enterprise v0.1</p>
+        <p className="relative text-xs leading-[18px] text-emerald-200">
+          EMS Enterprise v0.1
+        </p>
       </div>
 
       {/* Form_Section */}
       <div className="flex min-h-screen w-full flex-1 items-center justify-center border-l border-slate-200 bg-white p-8 lg:w-[560px] lg:flex-none lg:p-20">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex w-full max-w-[380px] flex-col gap-9">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex w-full max-w-[380px] flex-col gap-9"
+        >
           <div className="flex flex-col gap-2">
-            <h2 className="font-display text-[32px] font-bold text-emerald-500">Welcome Back</h2>
-            <p className="text-sm text-slate-600">Sign in to manage your facility&apos;s energy network.</p>
+            <h2 className="font-display text-[32px] font-bold text-emerald-500">
+              Welcome Back
+            </h2>
+            <p className="text-sm text-slate-600">
+              Sign in to manage your facility&apos;s energy network.
+            </p>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -86,7 +98,7 @@ export function LoginClient({ redirectTo }: LoginClientProps) {
                   autoComplete="username"
                   aria-invalid={!!errors.email}
                   className="flex-1 bg-transparent text-sm text-slate-950 outline-none placeholder:text-slate-400"
-                  {...register("email")}
+                  {...register('email')}
                 />
               </div>
             </Field>
@@ -95,27 +107,31 @@ export function LoginClient({ redirectTo }: LoginClientProps) {
               <div className="flex h-11 items-center gap-1 rounded-md border border-slate-400 bg-white px-3 shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)]">
                 <Lock className="size-4 shrink-0 text-slate-400" />
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="Type your password here ..."
                   autoComplete="current-password"
                   aria-invalid={!!errors.password}
                   className="flex-1 bg-transparent text-sm text-slate-950 outline-none placeholder:text-slate-400"
-                  {...register("password")}
+                  {...register('password')}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="shrink-0 text-slate-400 hover:text-slate-600"
                 >
-                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  {showPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
                 </button>
               </div>
             </Field>
           </div>
 
           <Button type="submit" disabled={isPending} className="w-full">
-            {isPending ? "Signing in..." : "Sign In"}
+            {isPending ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
       </div>
@@ -123,7 +139,15 @@ export function LoginClient({ redirectTo }: LoginClientProps) {
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1 text-sm font-medium text-slate-950">

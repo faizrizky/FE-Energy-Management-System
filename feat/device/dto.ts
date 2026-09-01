@@ -26,3 +26,25 @@ export interface DeviceDTO {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface DeviceListResponseDTO {
+  data: DeviceDTO[];
+  page: number;
+  rowsPerPage: number;
+  totalRows: number;
+  totalPages: number;
+}
+
+export interface DeviceDeviceSummaryDTO {
+  id: string;
+  eui: string;
+  name: string;
+  deviceType: string | null;
+  status: string;
+  roomId: string;
+  gatewayId: string;
+}
+
+export interface DeviceDetailDTO extends DeviceDTO {
+  devices: DeviceDeviceSummaryDTO[];
+}

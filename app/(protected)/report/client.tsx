@@ -7,6 +7,7 @@ import {
   ChevronDown,
   FileText,
   FileSpreadsheet,
+  CalendarDays,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -119,7 +120,7 @@ export function ReportClient({
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button disabled={!!exporting} className="w-[170px]">
+              <Button disabled={!!exporting} className="w-full md:w-[200px]">
                 <Download className="size-4" />
                 {exporting ? 'Exporting...' : 'Export'}
                 <ChevronDown className="size-4" />
@@ -143,7 +144,7 @@ export function ReportClient({
         }
       />
 
-      <div className="flex w-full items-stretch gap-2.5">
+      <div className="grid w-full grid-cols-1 gap-2.5 md:grid-cols-3">
         <AnalyticCard
           title="Energy usage"
           value={formatKwh(summary.energyUsage.totalKwh, 1).replace(' kWh', '')}
@@ -163,18 +164,29 @@ export function ReportClient({
       </div>
 
       <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
-        <div className="flex w-full items-center justify-between">
+        <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <p className="text-lg font-semibold text-emerald-500">
             {formatNumber(filtered.length)} report(s)
           </p>
-          <SearchInput
-            value={search}
-            onChange={(value) => {
-              setSearch(value);
-              setPage(1);
-            }}
-            placeholder="Search by device, room..."
-          />
+          <div className="flex w-full items-center gap-2 md:w-auto">
+            <div className="min-w-0 flex-1 md:flex-none">
+              <SearchInput
+                value={search}
+                onChange={(value) => {
+                  setSearch(value);
+                  setPage(1);
+                }}
+                placeholder="Search by device, room..."
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-11 shrink-0 rounded-md md:size-8"
+            >
+              <CalendarDays className="size-4" />
+            </Button>
+          </div>
         </div>
 
         {sorted.length === 0 ? (

@@ -1,10 +1,10 @@
-import { Eye, Pencil, Trash2 } from "lucide-react";
-import { StatusDot } from "@/components/shared/status-dot";
-import { TableActionButton } from "@/components/shared/table-action-button";
-import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import { formatKwh } from "@/lib/utils";
-import type { RoomListItemDTO } from "@/feat/rooms/dto";
+import { Eye, Pencil, Trash2 } from 'lucide-react';
+import { StatusDot } from '@/components/shared/status-dot';
+import { TableActionButton } from '@/components/shared/table-action-button';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { formatKwh } from '@/lib/utils';
+import type { RoomListItemDTO } from '@/feat/rooms/dto';
 
 export interface RoomsColumnHandlers {
   onToggleSelect: (id: string) => void;
@@ -30,7 +30,10 @@ export function getRoomsColumns({
 }: RoomsColumnHandlers) {
   return {
     checkbox: (room: RoomListItemDTO) => (
-      <Checkbox checked={isSelected(room.id)} onCheckedChange={() => onToggleSelect(room.id)} />
+      <Checkbox
+        checked={isSelected(room.id)}
+        onCheckedChange={() => onToggleSelect(room.id)}
+      />
     ),
     room: (room: RoomListItemDTO) => (
       <div className="flex flex-col gap-0.5 py-1">
@@ -38,23 +41,42 @@ export function getRoomsColumns({
         <span className="text-[10px] text-slate-500">{room.location}</span>
       </div>
     ),
-    gateway: (room: RoomListItemDTO) => <span className="text-slate-500">{room.gatewayId}</span>,
+    gateway: (room: RoomListItemDTO) => (
+      <span className="text-slate-500">{room.gatewayId}</span>
+    ),
     device: (room: RoomListItemDTO) => (
       <div className="flex items-center gap-2">
-        {room.devicesOnline > 0 && <StatusDot label={room.devicesOnline} tone="success" />}
-        {room.devicesOffline > 0 && <StatusDot label={room.devicesOffline} tone="error" />}
+        {room.devicesOnline > 0 && (
+          <StatusDot label={room.devicesOnline} tone="success" />
+        )}
+        {room.devicesOffline > 0 && (
+          <StatusDot label={room.devicesOffline} tone="error" />
+        )}
       </div>
     ),
     usage: (room: RoomListItemDTO) => (
-      <span className="text-slate-500">{formatKwh(room.totalUsage24hKwh, 0)}</span>
+      <span className="text-slate-500">
+        {formatKwh(room.totalUsage24hKwh, 0)}
+      </span>
     ),
     status: (room: RoomListItemDTO) => (
-      <Switch checked={room.isPowerOn} onCheckedChange={() => onTogglePower(room)} />
+      <Switch
+        checked={room.isPowerOn}
+        onCheckedChange={() => onTogglePower(room)}
+      />
     ),
     action: (room: RoomListItemDTO) => (
       <div className="flex items-center gap-2">
-        <TableActionButton icon={Eye} aria-label={`View ${room.name}`} onClick={() => onView(room)} />
-        <TableActionButton icon={Pencil} aria-label={`Edit ${room.name}`} onClick={() => onEdit(room)} />
+        <TableActionButton
+          icon={Eye}
+          aria-label={`View ${room.name}`}
+          onClick={() => onView(room)}
+        />
+        <TableActionButton
+          icon={Pencil}
+          aria-label={`Edit ${room.name}`}
+          onClick={() => onEdit(room)}
+        />
         <TableActionButton
           icon={Trash2}
           tone="destructive"

@@ -78,7 +78,7 @@ export default async function ReportPage() {
     devicesApi.list(),
   ]);
 
-  const rows = aggregateReadings(readings, devices);
+  const rows = aggregateReadings(readings, devices.data);
 
   return (
     <>

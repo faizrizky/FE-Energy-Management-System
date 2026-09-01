@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Plus, ListFilter, DoorOpen } from 'lucide-react';
+import { Plus, ListFilter, DoorOpen, CalendarDays } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
@@ -207,14 +207,14 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
         actions={
           <Button
             onClick={() => setModalState({ open: true })}
-            className="w-[200px]"
+            className="w-full md:w-[200px]"
           >
             <Plus className="size-4" /> Add room
           </Button>
         }
       />
 
-      <div className="flex w-full items-stretch gap-2.5">
+      <div className="grid w-full grid-cols-1 gap-2.5 md:grid-cols-3">
         <AnalyticCard
           title="Total room(s)"
           value={formatNumber(safeSummary.totalRooms)}
@@ -251,22 +251,25 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
       </div>
 
       <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
-        <div className="flex w-full items-center justify-between">
+        <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <p className="text-lg font-semibold text-emerald-500">
             {formatNumber(data.totalRows ?? 0)} room(s)
           </p>
-          <div className="flex items-center gap-2">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Search..."
-            />
+
+          <div className="flex w-full items-center gap-2 md:w-auto">
+            <div className="min-w-0 flex-1 md:flex-none">
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder="Search..."
+              />
+            </div>
             <Button
               variant="outline"
-              size="sm"
-              className="w-[150px] justify-between"
+              size="icon"
+              className="size-11 shrink-0 rounded-md md:size-8"
             >
-              <ListFilter className="size-4" /> Filter by role
+              <CalendarDays className="size-4" />
             </Button>
           </div>
         </div>

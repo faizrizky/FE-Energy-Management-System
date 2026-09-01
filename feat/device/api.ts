@@ -1,18 +1,22 @@
 import { http } from '@/lib/http';
-import type { DeviceDTO } from './dto';
+import type { DeviceDTO, DeviceListResponseDTO } from './dto';
 
 export interface DeviceListParams {
-  roomId?: string;
-  gatewayId?: string;
+  page?: number;
+  rowsPerPage?: number;
+  search?: string;
 }
 
 export const devicesApi = {
-  list: ({ roomId, gatewayId }: DeviceListParams = {}) => {
-    const query = new URLSearchParams();
-    if (roomId) query.set('roomId', roomId);
-    if (gatewayId) query.set('gatewayId', gatewayId);
-    const suffix = query.toString() ? `?${query.toString()}` : '';
-    return http<DeviceDTO[]>(`/devices${suffix}`, { next: { revalidate: 15 } });
+  list: ({ page = 1, rowsPerPage = 10, search }: DeviceListParams = {}) => {
+    const query = new URLSearchParams({
+      page: String(page),
+      rowsPerPage: String(rowsPerPage),
+      ...(search ? { search } : {}),
+    });
+    return http<DeviceListResponseDTO>(`/devices?${query.toString()}`, {
+      next: { revalidate: 15 },
+    });
   },
 
   getById: (id: string) =>

@@ -9,8 +9,11 @@ export default async function DevicePage() {
   const [session, devices, roomsRes, gatewaysRes] = await Promise.all([
     getSession(),
     devicesApi.list(),
-    roomsApi.list(),
-    gatewaysApi.list(),
+    roomsApi.list({ page: 1, rowsPerPage: 1000 }),
+    gatewaysApi.list({
+      page: 1,
+      rowsPerPage: 1000,
+    }),
   ]);
 
   return (

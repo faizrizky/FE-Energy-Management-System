@@ -1,8 +1,20 @@
 import { api } from '@/lib/axios';
-import type { DeviceDTO } from './dto';
+import type { DeviceDTO, DeviceListResponseDTO } from './dto';
 import type { DeviceFormValues } from './schema';
 
+export interface DeviceListParams {
+  page?: number;
+  rowsPerPage?: number;
+  search?: string;
+}
+
 export const devicesClientApi = {
+  list: ({ page = 1, rowsPerPage = 10, search }: DeviceListParams = {}) =>
+    api
+      .get<DeviceListResponseDTO>('/devices', {
+        params: { page, rowsPerPage, search: search || undefined },
+      })
+      .then((res) => res.data),
   create: (payload: DeviceFormValues) =>
     api
       .post<DeviceDTO>('/devices', {

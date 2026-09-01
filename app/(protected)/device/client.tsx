@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Plus, Smartphone, Trash2 } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import { CalendarDays, Plus, Smartphone, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
@@ -24,26 +24,27 @@ import { formatNumber } from '@/lib/utils';
 import { useTableSort } from '@/lib/use-table-sort';
 import { getDeviceColumns } from '@/column/device';
 import { devicesClientApi } from '@/feat/device/api.client';
-import type { DeviceDTO } from '@/feat/device/dto';
+import type { DeviceDTO, DeviceListResponseDTO } from '@/feat/device/dto';
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
 import type { GatewayDTO } from '@/feat/gateway/dto';
 import { DeviceFormModal } from './_partials/modal';
 
 interface DeviceClientProps {
-  initialData: DeviceDTO[];
+  initialData: DeviceListResponseDTO;
   rooms: RoomListItemDTO[];
   gateways: GatewayDTO[];
 }
+const SEARCH_DEBOUNCE_MS = 250;
 
 export function DeviceClient({
   initialData,
   rooms,
   gateways,
 }: DeviceClientProps) {
-  const [devices, setDevices] = useState<DeviceDTO[]>(initialData ?? []);
+  const [data, setData] = useState(initialData);
+  const [page, setPage] = useState(initialData.page);
+  const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{
     open: boolean;
@@ -54,35 +55,59 @@ export function DeviceClient({
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
-  const online = devices.filter((d) => d.status === 'on').length;
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filtered = useMemo(() => {
-    const normalized = search.trim().toLowerCase();
-    if (!normalized) return devices;
-    return devices.filter(
-      (d) =>
-        d.name.toLowerCase().includes(normalized) ||
-        d.eui.toLowerCase().includes(normalized) ||
-        (d.room?.name ?? '').toLowerCase().includes(normalized)
-    );
-  }, [devices, search]);
+  const online = data.data.filter((d) => d.status === 'on').length;
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
-  const safePage = Math.min(page, totalPages);
-  const paginated = filtered.slice(
-    (safePage - 1) * rowsPerPage,
-    safePage * rowsPerPage
+  const loadDevices = useCallback(
+    async (nextPage: number, nextRowsPerPage: number, nextSearch: string) => {
+      try {
+        const result = await devicesClientApi.list({
+          page: nextPage,
+          rowsPerPage: nextRowsPerPage,
+          search: nextSearch,
+        });
+        setData(result);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : 'Failed to load devices'
+        );
+      }
+    },
+    []
   );
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      loadDevices(1, rowsPerPage, value);
+    }, SEARCH_DEBOUNCE_MS);
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+    loadDevices(nextPage, rowsPerPage, search);
+  };
+
+  const handleRowsPerPageChange = (nextRowsPerPage: number) => {
+    setRowsPerPage(nextRowsPerPage);
+    setPage(1);
+    loadDevices(1, nextRowsPerPage, search);
+  };
 
   const handleTogglePower = async (device: DeviceDTO) => {
     const nextState = device.status !== 'on';
     try {
       await devicesClientApi.setPower(device.id, nextState);
-      setDevices((prev) =>
-        prev.map((d) =>
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.map((d) =>
           d.id === device.id ? { ...d, status: nextState ? 'on' : 'off' } : d
-        )
-      );
+        ),
+      }));
     } catch (err) {
       toast.error(
         err instanceof Error
@@ -100,7 +125,10 @@ export function DeviceClient({
         loading: `Deleting ${deleteTarget.name}...`,
         success: 'Device has been deleted',
       });
-      setDevices((prev) => prev.filter((d) => d.id !== deleteTarget.id));
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.filter((d) => d.id !== deleteTarget.id),
+      }));
       setDeleteTarget(null);
     } catch {
     } finally {
@@ -120,7 +148,10 @@ export function DeviceClient({
       );
       const failedCount = results.length - successfulIds.length;
 
-      setDevices((prev) => prev.filter((d) => !successfulIds.includes(d.id)));
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.filter((d) => !successfulIds.includes(d.id)),
+      }));
       setSelected(new Set());
       setBulkDeleteOpen(false);
 
@@ -134,24 +165,20 @@ export function DeviceClient({
     }
   };
 
-  const columns = useMemo(
-    () =>
-      getDeviceColumns({
-        isSelected: (id) => selected.has(id),
-        onToggleSelect: (id) =>
-          setSelected((prev) => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-          }),
-        onTogglePower: handleTogglePower,
-        onEdit: (device) => setModalState({ open: true, device }),
-        onDelete: (device) => setDeleteTarget(device),
+  const columns = getDeviceColumns({
+    isSelected: (id) => selected.has(id),
+    onToggleSelect: (id) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
       }),
-    [selected]
-  );
+    onTogglePower: handleTogglePower,
+    onEdit: (device) => setModalState({ open: true, device }),
+    onDelete: (device) => setDeleteTarget(device),
+  });
 
-  const { sorted, sortKey, direction, toggleSort } = useTableSort(filtered, {
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(data.data, {
     name: (d) => d.name,
     component: (d) => d.deviceType,
     room: (d) => d.room?.name ?? '',
@@ -162,7 +189,7 @@ export function DeviceClient({
   });
 
   const allSelected =
-    paginated.length > 0 && paginated.every((d) => selected.has(d.id));
+    sorted.length > 0 && sorted.every((d) => selected.has(d.id));
 
   return (
     <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-y-auto bg-slate-50 p-8">
@@ -172,17 +199,17 @@ export function DeviceClient({
         actions={
           <Button
             onClick={() => setModalState({ open: true })}
-            className="w-[200px]"
+            className="w-full md:w-[200px]"
           >
             <Plus className="size-4" /> Add device
           </Button>
         }
       />
 
-      <div className="flex w-full items-stretch gap-2.5">
+      <div className="grid w-full grid-cols-1 gap-2.5 md:grid-cols-3">
         <AnalyticCard
           title="Total device(s)"
-          value={formatNumber(devices.length)}
+          value={formatNumber(data.totalRows)}
           unit="all rooms"
         />
         <AnalyticCard
@@ -192,25 +219,34 @@ export function DeviceClient({
         />
         <AnalyticCard
           title="Off"
-          value={formatNumber(devices.length - online)}
+          value={formatNumber(data.data.length - online)}
           unit="device(s)"
           tone="red"
         />
       </div>
 
       <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
-        <div className="flex w-full items-center justify-between">
+        <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <p className="text-lg font-semibold text-emerald-500">
-            {formatNumber(filtered.length)} device(s)
+            {formatNumber(data.data.length)} device(s)
           </p>
-          <SearchInput
-            value={search}
-            onChange={(value) => {
-              setSearch(value);
-              setPage(1);
-            }}
-            placeholder="Search by name, EUI, or room..."
-          />
+          <div className="flex w-full items-center gap-2 md:w-auto">
+            <div className="min-w-0 flex-1 md:flex-none">
+              <SearchInput
+                value={search}
+                onChange={handleSearchChange}
+                placeholder="Search by name, EUI, or room..."
+                className="flex-1 md:flex-none"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-11 shrink-0 rounded-md md:size-8"
+            >
+              <CalendarDays className="size-4" />
+            </Button>
+          </div>
         </div>
 
         {selected.size > 0 && (
@@ -226,7 +262,7 @@ export function DeviceClient({
           </div>
         )}
 
-        {filtered.length === 0 ? (
+        {data.data.length === 0 ? (
           <EmptyState
             icon={Smartphone}
             title={search ? 'No matching devices' : 'No devices yet'}
@@ -341,14 +377,11 @@ export function DeviceClient({
             </Table>
 
             <Pagination
-              page={safePage}
-              totalPages={totalPages}
-              onPageChange={setPage}
+              page={page}
+              totalPages={data.totalPages}
+              onPageChange={handlePageChange}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(next) => {
-                setRowsPerPage(next);
-                setPage(1);
-              }}
+              onRowsPerPageChange={handleRowsPerPageChange}
             />
           </>
         )}
@@ -373,11 +406,22 @@ export function DeviceClient({
               : (saved.gateway ?? null),
           };
 
-          setDevices((prev) => {
-            const exists = prev.some((d) => d.id === enriched.id);
-            if (exists)
-              return prev.map((d) => (d.id === enriched.id ? enriched : d));
-            return [enriched, ...prev];
+          setData((prev) => {
+            const exists = prev.data.some((d) => d.id === enriched.id);
+
+            if (exists) {
+              return {
+                ...prev,
+                data: prev.data.map((d) =>
+                  d.id === enriched.id ? enriched : d
+                ),
+              };
+            }
+
+            return {
+              ...prev,
+              data: [enriched, ...prev.data],
+            };
           });
 
           const wasEditing = !!modalState.device;

@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  LayoutDashboard,
+  Bolt,
   CalendarDays,
   DoorOpen,
   Router,
@@ -27,7 +27,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Platform management',
     items: [
-      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { label: 'Dashboard', href: '/dashboard', icon: Bolt },
       { label: 'Schedule', href: '/schedule', icon: CalendarDays },
       { label: 'Rooms', href: '/rooms', icon: DoorOpen },
     ],
@@ -54,12 +54,12 @@ const NAV_GROUPS: NavGroup[] = [
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   return (
-    <aside className="flex h-full w-[250px] shrink-0 flex-col justify-between overflow-hidden border-r border-emerald-200 bg-white p-2">
+    <aside className="flex h-screen w-[250px] shrink-0 flex-col justify-between overflow-hidden border-r border-emerald-200 bg-white p-2">
       <div className="flex flex-col gap-2">
         <div className="flex flex-col p-2">
           <div className="flex flex-col p-2">
             <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-500">
-              <LayoutDashboard className="size-4 text-white " />
+              <Bolt className="size-4 text-white " />
             </div>
           </div>
           <div className="flex flex-col p-2">
