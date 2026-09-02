@@ -32,7 +32,7 @@ export default async function DashboardPage() {
     dashboardApi.getTopRiskyRooms('last_week'),
     dashboardApi.getTopRiskyRooms('last_month'),
     dashboardApi.getTopRiskyRooms('last_year'),
-    scheduleApi.list(), // <- sumber sama kaya Schedule page, bukan endpoint dashboard sendiri
+    scheduleApi.list(),
   ]);
 
   const timelineByRange = {
@@ -58,7 +58,12 @@ export default async function DashboardPage() {
             title="Energy usage"
             value={formatKwh(summary.energyUsage.totalKwh)}
             icon={Zap}
-            helperText={`+${summary.energyUsage.changePercentFromYesterday}% from yesterday`}
+            helperText={
+              <span className="flex items-center gap-1">
+                <Zap className="size-3.5" />+
+                {summary.energyUsage.changePercentFromYesterday}% from yesterday
+              </span>
+            }
             className="md:row-span-2 lg:row-span-1"
           />
           <AnalyticCard
@@ -85,7 +90,7 @@ export default async function DashboardPage() {
         <DashboardTabs
           timelineByRange={timelineByRange}
           riskyByRange={riskyByRange}
-          schedules={schedules}
+          schedules={schedules.data}
         />
       </div>
     </>

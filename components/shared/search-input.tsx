@@ -24,15 +24,16 @@ export function SearchInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-sm text-slate-950 outline-none placeholder:text-slate-500"
+          className="flex-1 md:flex-none bg-transparent text-sm text-slate-950 outline-none placeholder:text-slate-500"
         />
         {value && (
           <button
             type="button"
             onClick={() => onChange('')}
             aria-label="Clear search"
+            className="size-11 shrink-0 rounded-md md:size-8"
           >
-            <X className="size-4 text-slate-500" />
+            <X className="size-11 shrink-0 rounded-md md:size-8" />
           </button>
         )}
       </div>

@@ -8,7 +8,7 @@ export default async function RoomsPage() {
   const [session, summary, firstPage, users] = await Promise.all([
     getSession(),
     roomsApi.getSummary(),
-    roomsApi.list(),
+    roomsApi.list({ page: 1, rowsPerPage: 10 }),
     usersApi.list(),
   ]);
 

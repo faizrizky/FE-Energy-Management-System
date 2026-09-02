@@ -9,9 +9,14 @@ export function toDateInputValue(value: string): string {
 /** Format tampilan tanggal panjang, dibaca dari komponen UTC (bukan local time). */
 export function formatScheduleDate(value: string): string {
   const d = new Date(value);
+
+  if (Number.isNaN(d.getTime())) {
+    return '-';
+  }
+
   return new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    day: 'numeric',
+    day: '2-digit',
+    month: 'short',
     year: 'numeric',
     timeZone: 'UTC',
   }).format(d);

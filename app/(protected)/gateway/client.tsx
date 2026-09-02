@@ -18,6 +18,7 @@ import {
   TableCell,
   SortableTableHead,
 } from '@/components/ui/table';
+import { TableToolbar } from '@/components/shared/table-toolbar';
 import { Pagination } from '@/components/ui/pagination';
 import { toast } from '@/lib/toast-store';
 import { formatNumber } from '@/lib/utils';
@@ -34,6 +35,7 @@ import type {
 import type { UserSummaryDTO } from '@/feat/user/dto';
 import { GatewayFormModal } from './_partials/modal';
 import { GatewayDetailModal } from './_partials/detail-modal';
+import { StatusDot } from '@/components/shared/status-dot';
 
 interface GatewayClientProps {
   initialData: GatewayListResponseDTO;
@@ -41,31 +43,6 @@ interface GatewayClientProps {
 }
 
 const SEARCH_DEBOUNCE_MS = 250;
-
-function GatewayStatus({ status }: { status?: string | null }) {
-  const online = status?.toLowerCase() === 'online';
-
-  return (
-    <div className="flex items-center gap-2">
-      <span
-        className={[
-          'size-2 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.4)]',
-          online
-            ? 'bg-emerald-500'
-            : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]',
-        ].join(' ')}
-      />
-      <span
-        className={[
-          'text-xs',
-          online ? 'text-emerald-500' : 'text-red-500',
-        ].join(' ')}
-      >
-        {online ? 'Online' : 'Offline'}
-      </span>
-    </div>
-  );
-}
 
 export function GatewayClient({ initialData, users }: GatewayClientProps) {
   const [data, setData] = useState(initialData);
@@ -208,33 +185,33 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
           }
         />
 
-        <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
-          <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <TableToolbar
+          summary={
             <div className="flex flex-col gap-1">
               <p className="text-lg font-semibold text-emerald-500">
                 {formatNumber(data.totalRows)} gateway(s)
               </p>
-              <div className="flex gap-3 text-xs">
-                <span className="flex items-center gap-1.5 text-emerald-500">
-                  <span className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                  {online} Online
-                </span>
-                <span className="flex items-center gap-1.5 text-red-500">
-                  <span className="size-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
-                  {data.data.length - online} Offline
-                </span>
+
+              <div className="flex gap-3">
+                <StatusDot label={`${online} Online`} tone="success" />
+
+                <StatusDot
+                  label={`${data.data.length - online} Offline`}
+                  tone="error"
+                />
               </div>
             </div>
-
-            <div className="flex w-full items-center gap-2 md:w-auto">
+          }
+          actions={
+            <>
               <div className="min-w-0 flex-1 md:flex-none">
                 <SearchInput
                   value={search}
                   onChange={handleSearchChange}
                   placeholder="Search gateway..."
-                  className="flex-1 md:flex-none"
                 />
               </div>
+
               <Button
                 variant="outline"
                 size="icon"
@@ -242,9 +219,9 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
               >
                 <CalendarDays className="size-4" />
               </Button>
-            </div>
-          </div>
-
+            </>
+          }
+        >
           {data.data.length === 0 ? (
             <EmptyState
               icon={Router}
@@ -283,6 +260,7 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
                         }
                       />
                     </TableHead>
+
                     <SortableTableHead
                       sortKey="name"
                       activeKey={sortKey}
@@ -291,10 +269,12 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
                     >
                       Gateway
                     </SortableTableHead>
+
                     <TableHead>Model unit</TableHead>
                     <TableHead>Simcard</TableHead>
                     <TableHead>Installation</TableHead>
                     <TableHead>Source</TableHead>
+
                     <SortableTableHead
                       sortKey="status"
                       activeKey={sortKey}
@@ -303,21 +283,41 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
                     >
                       Status
                     </SortableTableHead>
+
                     <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
+
                 <TableBody>
                   {sorted.map((gateway) => (
                     <TableRow key={gateway.id}>
                       <TableCell>{columns.checkbox(gateway)}</TableCell>
+
                       <TableCell>{columns.gateway(gateway)}</TableCell>
+
                       <TableCell>{columns.modelUnit(gateway)}</TableCell>
+
                       <TableCell>{columns.simcard(gateway)}</TableCell>
+
                       <TableCell>{columns.installation(gateway)}</TableCell>
+
                       <TableCell>{columns.source(gateway)}</TableCell>
+
                       <TableCell>
-                        <GatewayStatus status={gateway.status} />
+                        <StatusDot
+                          label={
+                            gateway.status?.toLowerCase() === 'online'
+                              ? 'Online'
+                              : 'Offline'
+                          }
+                          tone={
+                            gateway.status?.toLowerCase() === 'online'
+                              ? 'success'
+                              : 'error'
+                          }
+                        />
                       </TableCell>
+
                       <TableCell>{columns.action(gateway)}</TableCell>
                     </TableRow>
                   ))}
@@ -333,7 +333,7 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
               />
             </>
           )}
-        </div>
+        </TableToolbar>
 
         <GatewayFormModal
           open={modalState.open}

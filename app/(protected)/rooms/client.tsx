@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Plus, ListFilter, DoorOpen, CalendarDays } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
@@ -34,12 +34,15 @@ import type {
 import type { UserSummaryDTO } from '@/feat/user/dto';
 import { RoomFormModal } from './_partials/modal';
 import { Trash2 } from 'lucide-react';
+import { TableToolbar } from '@/components/shared/table-toolbar';
 
 interface RoomsClientProps {
   summary: RoomSummaryDTO;
   initialData: RoomListResponseDTO;
   users: UserSummaryDTO[];
 }
+
+const SEARCH_DEBOUNCE_MS = 250;
 
 export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const [data, setData] = useState<RoomListResponseDTO>(
@@ -67,6 +70,7 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const [deleting, setDeleting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const safeSummary: RoomSummaryDTO = {
     totalRooms: summary?.totalRooms ?? 0,
@@ -101,8 +105,6 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
     }
   };
 
-  // Room list rows don't carry picName/picPhone/description — fetch the
-  // full record on click, not reactively. Modal opens once it resolves.
   const openEdit = async (room: RoomListItemDTO) => {
     try {
       const detail = await roomsClientApi.getById(room.id);
@@ -110,6 +112,46 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Failed to load room detail'
+      );
+    }
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      loadRooms(1, rowsPerPage, value);
+    }, SEARCH_DEBOUNCE_MS);
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+    loadRooms(nextPage, rowsPerPage, search);
+  };
+
+  const handleRowsPerPageChange = (nextRowsPerPage: number) => {
+    setRowsPerPage(nextRowsPerPage);
+    setPage(1);
+    loadRooms(1, nextRowsPerPage, search);
+  };
+
+  const handleTogglePower = async (room: RoomListItemDTO) => {
+    const nextState = room.isPowerOn !== true;
+    try {
+      await roomsClientApi.setPower(room.id, nextState);
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.map((d) =>
+          d.id === room.id ? { ...d, status: nextState ? 'on' : 'off' } : d
+        ),
+      }));
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : 'Could not change device power state'
       );
     }
   };
@@ -157,39 +199,23 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
     }
   };
 
-  const columns = useMemo(
-    () =>
-      getRoomsColumns({
-        isSelected: (id) => selected.has(id),
-        onToggleSelect: (id) =>
-          setSelected((prev) => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-          }),
-        onTogglePower: async (room) => {
-          try {
-            await roomsClientApi.setPower(room.id, !room.isPowerOn);
-            setData((prev) => ({
-              ...prev,
-              data: prev.data.map((r) =>
-                r.id === room.id ? { ...r, isPowerOn: !r.isPowerOn } : r
-              ),
-            }));
-          } catch (err) {
-            toast.error(
-              err instanceof Error
-                ? err.message
-                : 'Could not change room power state'
-            );
-          }
-        },
-        onView: (room) => (window.location.href = `/rooms/detail/${room.id}`),
-        onEdit: openEdit,
-        onDelete: (room) => setDeleteTarget(room),
+  const columns = getRoomsColumns({
+    isSelected: (id) => selected.has(id),
+
+    onToggleSelect: (id) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
       }),
-    [selected]
-  );
+
+    onTogglePower: handleTogglePower,
+    onView: (room) => (window.location.href = `/rooms/detail/${room.id}`),
+
+    onEdit: openEdit,
+
+    onDelete: (room) => setDeleteTarget(room),
+  });
 
   const { sorted, sortKey, direction, toggleSort } = useTableSort(data.data, {
     name: (r) => r.name,
@@ -250,30 +276,30 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
         />
       </div>
 
-      <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
-        <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <p className="text-lg font-semibold text-emerald-500">
-            {formatNumber(data.totalRows ?? 0)} room(s)
-          </p>
-
-          <div className="flex w-full items-center gap-2 md:w-auto">
+      <TableToolbar
+        summary={
+          <div className="flex flex-col gap-1">
+            <p className="text-lg font-semibold text-emerald-500">
+              {formatNumber(data.totalRows ?? 0)} room(s)
+            </p>
+          </div>
+        }
+        actions={
+          <>
             <div className="min-w-0 flex-1 md:flex-none">
               <SearchInput
                 value={search}
-                onChange={setSearch}
-                placeholder="Search..."
+                onChange={handleSearchChange}
+                placeholder="Search gateway..."
               />
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 shrink-0 rounded-md md:size-8"
-            >
+
+            <Button variant="outline" size="icon">
               <CalendarDays className="size-4" />
             </Button>
-          </div>
-        </div>
-
+          </>
+        }
+      >
         {selected.size > 0 && (
           <div className="flex w-full items-center">
             <Button
@@ -364,20 +390,13 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
             <Pagination
               page={page}
               totalPages={data.totalPages}
-              onPageChange={(nextPage) => {
-                setPage(nextPage);
-                loadRooms(nextPage, rowsPerPage, search);
-              }}
+              onPageChange={handlePageChange}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(nextRowsPerPage) => {
-                setRowsPerPage(nextRowsPerPage);
-                setPage(1);
-                loadRooms(1, nextRowsPerPage, search);
-              }}
+              onRowsPerPageChange={handleRowsPerPageChange}
             />
           </>
         )}
-      </div>
+      </TableToolbar>
 
       <RoomFormModal
         open={modalState.open}

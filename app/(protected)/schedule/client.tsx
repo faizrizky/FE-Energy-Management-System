@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Plus, CalendarDays, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
@@ -29,17 +29,21 @@ import {
   isUpcoming,
   isUpcomingWithin24Hours,
 } from '@/feat/schedule/time';
-import type { ScheduleDTO } from '@/feat/schedule/dto';
+import type { ScheduleDTO, ScheduleListResponseDTO } from '@/feat/schedule/dto';
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
 import type { DeviceDTO } from '@/feat/device/dto';
 import { ScheduleFormModal } from './_partials/modal';
 import { ScheduleDetailModal } from './_partials/detail-modal';
+import { TableToolbar } from '@/components/shared/table-toolbar';
+import { api } from '@/lib/axios';
 
 interface ScheduleClientProps {
-  initialData: ScheduleDTO[];
+  initialData: ScheduleListResponseDTO;
   rooms: RoomListItemDTO[];
   devices: DeviceDTO[];
 }
+
+const SEARCH_DEBOUNCE_MS = 250;
 
 type ScheduleTab = 'active' | 'upcoming';
 
@@ -48,19 +52,24 @@ export function ScheduleClient({
   rooms,
   devices,
 }: ScheduleClientProps) {
-  const [schedules, setSchedules] = useState<ScheduleDTO[]>(initialData ?? []);
+  const [data, setData] = useState<ScheduleListResponseDTO>(
+    initialData ?? {
+      data: [],
+      page: 1,
+      rowsPerPage: 10,
+      totalRows: 0,
+      totalPages: 1,
+    }
+  );
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(initialData.page);
+  const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<ScheduleTab>('active');
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [filterComponent, setFilterComponent] = useState('');
   const [modalState, setModalState] = useState<{
     open: boolean;
     schedule?: ScheduleDTO;
   }>({ open: false });
-  // The row itself is already the full record — no reason to store just an id
-  // and make the modal fetch it again.
   const [detailSchedule, setDetailSchedule] = useState<ScheduleDTO | null>(
     null
   );
@@ -68,53 +77,100 @@ export function ScheduleClient({
   const [deleting, setDeleting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const activeSchedules = useMemo(
-    () => schedules.filter(isCurrentlyActive),
-    [schedules]
-  );
-  const upcomingSchedules = useMemo(
-    () => schedules.filter(isUpcoming),
-    [schedules]
-  );
-  const upcomingWithin24Hours = useMemo(
-    () => schedules.filter(isUpcomingWithin24Hours),
-    [schedules]
-  );
+  const loadSchedules = async (
+    nextPage = page,
+    nextRowsPerPage = rowsPerPage,
+    nextSearch = search
+  ) => {
+    try {
+      const res = await api.get<ScheduleListResponseDTO>('/schedules', {
+        params: {
+          page: nextPage,
+          rowsPerPage: nextRowsPerPage,
+          search: nextSearch || undefined,
+        },
+      });
 
-  const tabSchedules = tab === 'active' ? activeSchedules : upcomingSchedules;
+      setData(res.data);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to load schedules'
+      );
+    }
+  };
 
-  const filteredSchedules = useMemo(() => {
-    const normalized = search.trim().toLowerCase();
-    return tabSchedules.filter((schedule) => {
-      const matchesSearch =
-        !normalized ||
-        [
-          schedule.room?.name,
-          schedule.room?.location,
-          schedule.device?.name,
-          schedule.device?.eui,
-          schedule.device?.deviceType,
-          schedule.action,
-        ]
-          .filter(Boolean)
-          .some((value) => value!.toLowerCase().includes(normalized));
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
 
-      const matchesComponent =
-        !filterComponent || schedule.device?.deviceType === filterComponent;
-      return matchesSearch && matchesComponent;
-    });
-  }, [search, tabSchedules, filterComponent]);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      loadSchedules(1, rowsPerPage, value);
+    }, SEARCH_DEBOUNCE_MS);
+  };
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredSchedules.length / rowsPerPage)
-  );
-  const safePage = Math.min(page, totalPages);
-  const paginatedSchedules = filteredSchedules.slice(
-    (safePage - 1) * rowsPerPage,
-    safePage * rowsPerPage
-  );
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+    loadSchedules(nextPage, rowsPerPage, search);
+  };
+
+  const handleRowsPerPageChange = (nextRowsPerPage: number) => {
+    setRowsPerPage(nextRowsPerPage);
+    setPage(1);
+    loadSchedules(1, nextRowsPerPage, search);
+  };
+
+  const activeSchedules = data.data.filter(isCurrentlyActive);
+  const upcomingWithin24Hours = data.data.filter(isUpcomingWithin24Hours);
+  // const activeSchedules = useMemo(
+  //   () => schedules.filter(isCurrentlyActive),
+  //   [schedules]
+  // );
+  // const upcomingSchedules = useMemo(
+  //   () => schedules.filter(isUpcoming),
+  //   [schedules]
+  // );
+  // const upcomingWithin24Hours = useMemo(
+  //   () => schedules.filter(isUpcomingWithin24Hours),
+  //   [schedules]
+  // );
+
+  const tabSchedules =
+    tab === 'active' ? activeSchedules : upcomingWithin24Hours;
+
+  // const filteredSchedules = useMemo(() => {
+  //   const normalized = search.trim().toLowerCase();
+  //   return tabSchedules.filter((schedule) => {
+  //     const matchesSearch =
+  //       !normalized ||
+  //       [
+  //         schedule.room?.name,
+  //         schedule.room?.location,
+  //         schedule.device?.name,
+  //         schedule.device?.eui,
+  //         schedule.device?.deviceType,
+  //         schedule.action,
+  //       ]
+  //         .filter(Boolean)
+  //         .some((value) => value!.toLowerCase().includes(normalized));
+
+  //     const matchesComponent =
+  //       !filterComponent || schedule.device?.deviceType === filterComponent;
+  //     return matchesSearch && matchesComponent;
+  //   });
+  // }, [search, tabSchedules, filterComponent]);
+
+  // const totalPages = Math.max(
+  //   1,
+  //   Math.ceil(filteredSchedules.length / rowsPerPage)
+  // );
+  // const safePage = Math.min(page, totalPages);
+  // const paginatedSchedules = filteredSchedules.slice(
+  //   (safePage - 1) * rowsPerPage,
+  //   safePage * rowsPerPage
+  // );
 
   const toggleSelected = (id: string) => {
     setSelected((previous) => {
@@ -124,35 +180,40 @@ export function ScheduleClient({
     });
   };
 
-  const columns = useMemo(
-    () =>
-      getScheduleColumns({
-        isSelected: (id) => selected.has(id),
-        onToggleSelect: (id) => toggleSelected(id),
-        onView: (schedule) => setDetailSchedule(schedule),
-        onEdit: (schedule) => setModalState({ open: true, schedule }),
-        onDelete: (schedule) => setDeleteTarget(schedule),
-      }),
-    [selected]
-  );
+  const columns = getScheduleColumns({
+    isSelected: (id) => selected.has(id),
 
-  const { sorted, sortKey, direction, toggleSort } = useTableSort(
-    filteredSchedules,
-    {
-      room: (s) => s.room?.name ?? '',
-      component: (s) => s.device?.deviceType ?? '',
-      deviceEui: (s) => s.device?.eui ?? '',
-      date: (s) => new Date(s.scheduledDate).getTime(),
-      time: (s) => s.startTime,
-      repeat: (s) => s.repeatType,
-    }
-  );
+    onToggleSelect: (id) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+      }),
+
+    onView: (schedule) => setDetailSchedule(schedule),
+
+    onEdit: (schedule) =>
+      setModalState({
+        open: true,
+        schedule,
+      }),
+
+    onDelete: (schedule) => setDeleteTarget(schedule),
+  });
+
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(data.data, {
+    room: (s) => s.room?.name ?? '',
+    component: (s) => s.device?.deviceType ?? '',
+    deviceEui: (s) => s.device?.eui ?? '',
+    date: (s) => new Date(s.scheduledDate).getTime(),
+    time: (s) => s.startTime,
+    repeat: (s) => s.repeatType,
+  });
 
   const allSelected =
-    paginatedSchedules.length > 0 &&
-    paginatedSchedules.every((schedule) => selected.has(schedule.id));
+    sorted.length > 0 && sorted.every((schedule) => selected.has(schedule.id));
 
-  const selectedSchedules = schedules.filter((schedule) =>
+  const selectedSchedules = data.data.filter((schedule) =>
     selected.has(schedule.id)
   );
 
@@ -160,9 +221,9 @@ export function ScheduleClient({
     setSelected((previous) => {
       const next = new Set(previous);
       if (allSelected) {
-        paginatedSchedules.forEach((schedule) => next.delete(schedule.id));
+        data.data.forEach((schedule) => next.delete(schedule.id));
       } else {
-        paginatedSchedules.forEach((schedule) => next.add(schedule.id));
+        data.data.forEach((schedule) => next.add(schedule.id));
       }
       return next;
     });
@@ -175,12 +236,7 @@ export function ScheduleClient({
   };
 
   const handleSave = async (saved: ScheduleDTO) => {
-    setSchedules((previous) => {
-      const exists = previous.some((item) => item.id === saved.id);
-      if (exists)
-        return previous.map((item) => (item.id === saved.id ? saved : item));
-      return [saved, ...previous];
-    });
+    await loadSchedules(page, rowsPerPage, search);
     setModalState({ open: false });
     toast.success('Schedule saved successfully');
   };
@@ -193,9 +249,7 @@ export function ScheduleClient({
         loading: 'Deleting schedule...',
         success: 'Schedule deleted',
       });
-      setSchedules((previous) =>
-        previous.filter((item) => item.id !== deleteTarget.id)
-      );
+      await loadSchedules(page, rowsPerPage, search);
       setSelected((previous) => {
         const next = new Set(previous);
         next.delete(deleteTarget.id);
@@ -220,9 +274,8 @@ export function ScheduleClient({
       );
       const failedCount = results.length - successfulIds.length;
 
-      setSchedules((previous) =>
-        previous.filter((schedule) => !successfulIds.includes(schedule.id))
-      );
+      await loadSchedules(page, rowsPerPage, search);
+
       setSelected(new Set());
       setBulkDeleteOpen(false);
 
@@ -255,7 +308,7 @@ export function ScheduleClient({
       <div className="grid w-full grid-cols-1 gap-2.5 md:grid-cols-3">
         <AnalyticCard
           title="Total schedule(s)"
-          value={formatNumber(schedules.length)}
+          value={formatNumber(data.totalRows)}
           unit="all times"
         />
         <AnalyticCard
@@ -270,8 +323,8 @@ export function ScheduleClient({
         />
       </div>
 
-      <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
-        <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <TableToolbar
+        summary={
           <div className="flex w-full items-center gap-1 rounded-lg border border-slate-400 bg-white p-1 md:w-auto">
             <button
               type="button"
@@ -285,6 +338,7 @@ export function ScheduleClient({
             >
               Active schedule
             </button>
+
             <button
               type="button"
               onClick={() => changeTab('upcoming')}
@@ -298,19 +352,18 @@ export function ScheduleClient({
               Upcoming schedule
             </button>
           </div>
-
+        }
+        actions={
           <div className="flex w-full items-center gap-2 md:w-auto">
             <div className="min-w-0 flex-1 md:flex-none">
               <SearchInput
                 value={search}
-                onChange={(value) => {
-                  setSearch(value);
-                  setPage(1);
-                }}
+                onChange={handleSearchChange}
                 placeholder="Search..."
                 className="flex-1 md:flex-none"
               />
             </div>
+
             <Button
               variant="outline"
               size="icon"
@@ -319,8 +372,8 @@ export function ScheduleClient({
               <CalendarDays className="size-4" />
             </Button>
           </div>
-        </div>
-
+        }
+      >
         {selected.size > 0 && (
           <div className="flex w-full items-center">
             <Button
@@ -334,7 +387,7 @@ export function ScheduleClient({
           </div>
         )}
 
-        {filteredSchedules.length === 0 ? (
+        {data.data.length === 0 ? (
           <EmptyState
             icon={CalendarDays}
             title={search ? 'No matching schedule' : 'No schedule'}
@@ -368,6 +421,7 @@ export function ScheduleClient({
                       onCheckedChange={togglePageSelection}
                     />
                   </TableHead>
+
                   <SortableTableHead
                     sortKey="room"
                     activeKey={sortKey}
@@ -385,6 +439,7 @@ export function ScheduleClient({
                   >
                     Component
                   </SortableTableHead>
+
                   <SortableTableHead
                     sortKey="deviceEui"
                     activeKey={sortKey}
@@ -393,6 +448,7 @@ export function ScheduleClient({
                   >
                     Device EUI
                   </SortableTableHead>
+
                   <SortableTableHead
                     sortKey="date"
                     activeKey={sortKey}
@@ -401,6 +457,7 @@ export function ScheduleClient({
                   >
                     Start Date
                   </SortableTableHead>
+
                   <SortableTableHead
                     sortKey="time"
                     activeKey={sortKey}
@@ -409,6 +466,7 @@ export function ScheduleClient({
                   >
                     Time
                   </SortableTableHead>
+
                   <SortableTableHead
                     sortKey="repeat"
                     activeKey={sortKey}
@@ -417,11 +475,13 @@ export function ScheduleClient({
                   >
                     Repeat
                   </SortableTableHead>
+
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
-                {sorted.map((schedule) => (
+                {data.data.map((schedule) => (
                   <TableRow key={schedule.id}>
                     <TableCell>{columns.checkbox(schedule)}</TableCell>
                     <TableCell>{columns.room(schedule)}</TableCell>
@@ -437,18 +497,15 @@ export function ScheduleClient({
             </Table>
 
             <Pagination
-              page={safePage}
-              totalPages={totalPages}
-              onPageChange={setPage}
+              page={page}
+              totalPages={data.totalPages}
+              onPageChange={handlePageChange}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(nextRows) => {
-                setRowsPerPage(nextRows);
-                setPage(1);
-              }}
+              onRowsPerPageChange={handleRowsPerPageChange}
             />
           </>
         )}
-      </div>
+      </TableToolbar>
 
       <ScheduleFormModal
         open={modalState.open}

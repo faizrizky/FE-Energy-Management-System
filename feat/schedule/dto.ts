@@ -1,9 +1,6 @@
-export type ScheduleAction = "on" | "off";
+export type ScheduleAction = 'on' | 'off';
 
-export type ScheduleRepeatType =
-  | "none"
-  | "daily"
-  | "weekly";
+export type ScheduleRepeatType = 'none' | 'daily' | 'weekly';
 
 export interface ScheduleRoomDTO {
   id: string;
@@ -57,4 +54,8 @@ export interface ScheduleDTO {
 
 export interface ScheduleListResponseDTO {
   data: ScheduleDTO[];
+  page: number;
+  rowsPerPage: number;
+  totalRows: number;
+  totalPages: number;
 }

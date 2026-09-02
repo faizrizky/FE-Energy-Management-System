@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { CalendarSearch } from 'lucide-react';
-import { PageHeader } from '@/components/shared/page-header';
 import { SearchInput } from '@/components/shared/search-input';
 import { SegmentTabs } from '@/components/shared/segment-tabs';
 import { EnergyUsageTimelineTab } from './_partials/energy-usage-timeline';
