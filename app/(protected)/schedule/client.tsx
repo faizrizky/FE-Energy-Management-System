@@ -31,7 +31,6 @@ import type { DeviceDTO } from '@/feat/device/dto';
 import { ScheduleFormModal } from './_partials/modal';
 import { ScheduleDetailModal } from './_partials/detail-modal';
 import { TableToolbar } from '@/components/shared/table-toolbar';
-import { api } from '@/lib/axios';
 
 interface ScheduleClientProps {
   initialData: ScheduleListResponseDTO;
@@ -78,20 +77,16 @@ export function ScheduleClient({
   const loadSchedules = async (
     nextPage = page,
     nextRowsPerPage = rowsPerPage,
-    nextSearch = search,
-    nextTab = tab
+    nextSearch = search
   ) => {
     try {
-      const res = await api.get<ScheduleListResponseDTO>('/schedules', {
-        params: {
-          page: nextPage,
-          rowsPerPage: nextRowsPerPage,
-          search: nextSearch || undefined,
-          tab: nextTab,
-        },
+      const result = await scheduleClientApi.list({
+        page: nextPage,
+        rowsPerPage: nextRowsPerPage,
+        search: nextSearch,
       });
 
-      setData(res.data);
+      setData(result);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Failed to load schedules'
@@ -105,19 +100,19 @@ export function ScheduleClient({
 
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      loadSchedules(1, rowsPerPage, value, tab);
+      loadSchedules(1, rowsPerPage, value);
     }, SEARCH_DEBOUNCE_MS);
   };
 
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
-    loadSchedules(nextPage, rowsPerPage, search, tab);
+    loadSchedules(nextPage, rowsPerPage, search);
   };
 
   const handleRowsPerPageChange = (nextRowsPerPage: number) => {
     setRowsPerPage(nextRowsPerPage);
     setPage(1);
-    loadSchedules(1, nextRowsPerPage, search, tab);
+    loadSchedules(1, nextRowsPerPage, search);
   };
 
   const activeSchedules = data.data.filter(isCurrentlyActive);
@@ -234,7 +229,7 @@ export function ScheduleClient({
     setTab(nextTab);
     setPage(1);
     setSelected(new Set());
-    loadSchedules(1, rowsPerPage, search, nextTab);
+    loadSchedules(1, rowsPerPage, search);
   };
 
   const handleSave = async (saved: ScheduleDTO) => {
