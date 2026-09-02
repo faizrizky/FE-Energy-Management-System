@@ -13,7 +13,6 @@ export default async function SchedulePage() {
     scheduleApi.list({
       page: 1,
       rowsPerPage: 10,
-      tab: 'active',
     }),
     roomsApi.list({ page: 1, rowsPerPage: 10 }),
     devicesApi.list(),

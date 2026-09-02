@@ -1,15 +1,32 @@
 import { api } from '@/lib/axios';
 
-import type { ScheduleDTO } from './dto';
+import type { ScheduleDTO, ScheduleListResponseDTO } from './dto';
 
 import type { ScheduleFormValues } from './schema';
 
+export interface ScheduleListParams {
+  roomId?: string;
+  page?: number;
+  rowsPerPage?: number;
+  search?: string;
+}
+
 export const scheduleClientApi = {
-  list: (roomId?: string) =>
+  list: ({
+    roomId,
+    page = 1,
+    rowsPerPage = 10,
+    search,
+  }: ScheduleListParams = {}) =>
     api
-      .get<
-        ScheduleDTO[]
-      >(roomId ? `/schedules?roomId=${encodeURIComponent(roomId)}` : '/schedules')
+      .get<ScheduleListResponseDTO>('/schedules', {
+        params: {
+          roomId,
+          page,
+          rowsPerPage,
+          search: search || undefined,
+        },
+      })
       .then((res) => res.data),
 
   getById: (scheduleId: string) =>

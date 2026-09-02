@@ -24,11 +24,7 @@ import { formatNumber } from '@/lib/utils';
 import { useTableSort } from '@/lib/use-table-sort';
 import { getScheduleColumns } from '@/column/schedule';
 import { scheduleClientApi } from '@/feat/schedule/api.client';
-import {
-  isCurrentlyActive,
-  isUpcoming,
-  isUpcomingWithin24Hours,
-} from '@/feat/schedule/time';
+import { isCurrentlyActive, isUpcoming } from '@/feat/schedule/time';
 import type { ScheduleDTO, ScheduleListResponseDTO } from '@/feat/schedule/dto';
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
 import type { DeviceDTO } from '@/feat/device/dto';
