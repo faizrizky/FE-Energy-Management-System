@@ -1,7 +1,8 @@
 'use client';
 
 import {
-  Bolt,
+  LineChart,
+  Zap,
   CalendarDays,
   DoorOpen,
   Router,
@@ -27,7 +28,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Platform management',
     items: [
-      { label: 'Dashboard', href: '/dashboard', icon: Bolt },
+      { label: 'Dashboard', href: '/dashboard', icon: LineChart },
       { label: 'Schedule', href: '/schedule', icon: CalendarDays },
       { label: 'Rooms', href: '/rooms', icon: DoorOpen },
     ],
@@ -59,7 +60,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
         <div className="flex flex-col p-2">
           <div className="flex flex-col p-2">
             <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-500">
-              <Bolt className="size-4 text-white " />
+              <Zap className="size-4 text-white " />
             </div>
           </div>
           <div className="flex flex-col p-2">

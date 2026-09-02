@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Mail, Lock, Eye, EyeOff, Bolt } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast-store';
 import { loginFormSchema, type LoginFormValues } from '@/feat/auth/schema';
@@ -48,7 +48,7 @@ export function LoginClient({ redirectTo }: LoginClientProps) {
 
         <div className="relative flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-500">
-            <Bolt className="size-5 text-white" />
+            <Zap className="size-5 text-white" />
           </div>
           <p className="font-display text-2xl font-semibold text-emerald-500">
             EMS

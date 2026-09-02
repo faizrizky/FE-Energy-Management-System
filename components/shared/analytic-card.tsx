@@ -1,6 +1,8 @@
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { StatusDot } from './status-dot';
 
 interface AnalyticCardProps {
   title: string;
@@ -9,7 +11,7 @@ interface AnalyticCardProps {
   icon?: LucideIcon;
   breakdown?: { label: string; tone: 'success' | 'error' }[];
   tone?: 'emerald' | 'red';
-  helperText?: string;
+  helperText?: ReactNode;
   className?: string;
 }
 
@@ -61,17 +63,7 @@ export function AnalyticCard({
         {breakdown && breakdown.length > 0 && (
           <div className="flex gap-3">
             {breakdown.map((item) => (
-              <div key={item.label} className="flex items-center gap-1.5">
-                <span
-                  className={cn(
-                    'size-2 rounded-sm',
-                    item.tone === 'success'
-                      ? 'bg-green-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]'
-                      : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
-                  )}
-                />
-                <span className="text-xs text-[#444651]">{item.label}</span>
-              </div>
+              <StatusDot key={item.label} label={item.label} tone={item.tone} />
             ))}
           </div>
         )}
