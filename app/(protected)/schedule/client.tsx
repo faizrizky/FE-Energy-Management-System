@@ -82,7 +82,8 @@ export function ScheduleClient({
   const loadSchedules = async (
     nextPage = page,
     nextRowsPerPage = rowsPerPage,
-    nextSearch = search
+    nextSearch = search,
+    nextTab = tab
   ) => {
     try {
       const res = await api.get<ScheduleListResponseDTO>('/schedules', {
@@ -90,6 +91,7 @@ export function ScheduleClient({
           page: nextPage,
           rowsPerPage: nextRowsPerPage,
           search: nextSearch || undefined,
+          tab: nextTab,
         },
       });
 
@@ -107,23 +109,23 @@ export function ScheduleClient({
 
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      loadSchedules(1, rowsPerPage, value);
+      loadSchedules(1, rowsPerPage, value, tab);
     }, SEARCH_DEBOUNCE_MS);
   };
 
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
-    loadSchedules(nextPage, rowsPerPage, search);
+    loadSchedules(nextPage, rowsPerPage, search, tab);
   };
 
   const handleRowsPerPageChange = (nextRowsPerPage: number) => {
     setRowsPerPage(nextRowsPerPage);
     setPage(1);
-    loadSchedules(1, nextRowsPerPage, search);
+    loadSchedules(1, nextRowsPerPage, search, tab);
   };
 
   const activeSchedules = data.data.filter(isCurrentlyActive);
-  const upcomingWithin24Hours = data.data.filter(isUpcomingWithin24Hours);
+  const upcomingWithin24Hours = data.data.filter(isUpcoming);
   // const activeSchedules = useMemo(
   //   () => schedules.filter(isCurrentlyActive),
   //   [schedules]
@@ -201,14 +203,17 @@ export function ScheduleClient({
     onDelete: (schedule) => setDeleteTarget(schedule),
   });
 
-  const { sorted, sortKey, direction, toggleSort } = useTableSort(data.data, {
-    room: (s) => s.room?.name ?? '',
-    component: (s) => s.device?.deviceType ?? '',
-    deviceEui: (s) => s.device?.eui ?? '',
-    date: (s) => new Date(s.scheduledDate).getTime(),
-    time: (s) => s.startTime,
-    repeat: (s) => s.repeatType,
-  });
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(
+    tabSchedules,
+    {
+      room: (s) => s.room?.name ?? '',
+      component: (s) => s.device?.deviceType ?? '',
+      deviceEui: (s) => s.device?.eui ?? '',
+      date: (s) => new Date(s.scheduledDate).getTime(),
+      time: (s) => s.startTime,
+      repeat: (s) => s.repeatType,
+    }
+  );
 
   const allSelected =
     sorted.length > 0 && sorted.every((schedule) => selected.has(schedule.id));
@@ -233,6 +238,7 @@ export function ScheduleClient({
     setTab(nextTab);
     setPage(1);
     setSelected(new Set());
+    loadSchedules(1, rowsPerPage, search, nextTab);
   };
 
   const handleSave = async (saved: ScheduleDTO) => {
@@ -387,7 +393,7 @@ export function ScheduleClient({
           </div>
         )}
 
-        {data.data.length === 0 ? (
+        {tabSchedules.length === 0 ? (
           <EmptyState
             icon={CalendarDays}
             title={search ? 'No matching schedule' : 'No schedule'}
@@ -481,7 +487,7 @@ export function ScheduleClient({
               </TableHeader>
 
               <TableBody>
-                {data.data.map((schedule) => (
+                {tabSchedules.map((schedule) => (
                   <TableRow key={schedule.id}>
                     <TableCell>{columns.checkbox(schedule)}</TableCell>
                     <TableCell>{columns.room(schedule)}</TableCell>

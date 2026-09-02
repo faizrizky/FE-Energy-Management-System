@@ -10,7 +10,11 @@ import { ScheduleClient } from './client';
 export default async function SchedulePage() {
   const [session, schedules, rooms, devices] = await Promise.all([
     getSession(),
-    scheduleApi.list(),
+    scheduleApi.list({
+      page: 1,
+      rowsPerPage: 10,
+      tab: 'active',
+    }),
     roomsApi.list({ page: 1, rowsPerPage: 10 }),
     devicesApi.list(),
   ]);
