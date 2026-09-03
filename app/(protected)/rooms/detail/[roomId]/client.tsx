@@ -2,13 +2,10 @@
 
 import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Smartphone } from 'lucide-react';
-import { PageHeader } from '@/components/shared/page-header';
+import { ArrowLeft, CalendarDays, DoorOpen, Plus } from 'lucide-react';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
-import { EmptyState } from '@/components/shared/empty-state';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
-import { TableToolbar } from '@/components/shared/table-toolbar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -28,8 +25,11 @@ import type {
   RoomDetailDTO,
   RoomDeviceDTO,
   RoomDeviceLogEntryDTO,
+  RoomDTO,
 } from '@/feat/rooms/dto';
 import { DeviceLogModal } from './_partials/device-log-modal';
+import { TableToolbar } from '@/components/shared/table-toolbar';
+import { EmptyState } from '@/components/shared/empty-state';
 
 interface RoomDetailClientProps {
   room: RoomDetailDTO;
@@ -45,24 +45,26 @@ interface LogModalState {
 const SEARCH_DEBOUNCE_MS = 250;
 
 export function RoomDetailClient({ room }: RoomDetailClientProps) {
-  const [roomInfo] = useState(room);
+  const [roomInfo] = useState(room); // usage/name gak butuh refetch tiap ganti page device
   const [devicesData, setDevicesData] = useState(room.devices);
   const [page, setPage] = useState(room.devices.page);
   const [rowsPerPage, setRowsPerPage] = useState(room.devices.rowsPerPage);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-
   const [logModal, setLogModal] = useState<LogModalState>({
     open: false,
     device: null,
     logs: null,
     loading: false,
   });
-
+  const [modalState, setModalState] = useState<{
+    open: boolean;
+    room?: RoomDTO;
+  }>({
+    open: false,
+  });
   const [deleteTarget, setDeleteTarget] = useState<RoomDeviceDTO | null>(null);
-
   const [deleting, setDeleting] = useState(false);
-
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadDevices = async (
@@ -76,9 +78,7 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
         rowsPerPage: nextRowsPerPage,
         search: nextSearch || undefined,
       });
-
       setDevicesData(result.devices);
-      setSelected(new Set());
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Failed to load devices'
@@ -89,11 +89,7 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPage(1);
-
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
       loadDevices(1, rowsPerPage, value);
     }, SEARCH_DEBOUNCE_MS);
@@ -107,114 +103,65 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
   const handleRowsPerPageChange = (nextRowsPerPage: number) => {
     setRowsPerPage(nextRowsPerPage);
     setPage(1);
-
     loadDevices(1, nextRowsPerPage, search);
   };
 
   const devices = devicesData.data;
-
-  const online = devices.filter((device) => device.isPowerOn).length;
+  const online = devices.filter((d) => d.isPowerOn).length;
 
   const handleConfirmDelete = () => {
     if (!deleteTarget) return;
-
     setDeleting(true);
-
     setDevicesData((prev) => ({
       ...prev,
-      data: prev.data.filter((device) => device.id !== deleteTarget.id),
-      totalRows: Math.max(0, prev.totalRows - 1),
+      data: prev.data.filter((d) => d.id !== deleteTarget.id),
     }));
-
     toast.success('Device has been removed from this room');
-
     setDeleteTarget(null);
     setDeleting(false);
   };
 
   const openDeviceLog = async (device: RoomDeviceDTO) => {
-    setLogModal({
-      open: true,
-      device,
-      logs: null,
-      loading: true,
-    });
-
+    setLogModal({ open: true, device, logs: null, loading: true });
     try {
       const logs = await roomsClientApi.getDeviceLog(roomInfo.id, device.id);
-
-      setLogModal({
-        open: true,
-        device,
-        logs,
-        loading: false,
-      });
+      setLogModal({ open: true, device, logs, loading: false });
     } catch (err) {
-      setLogModal({
-        open: true,
-        device,
-        logs: [],
-        loading: false,
-      });
-
+      setLogModal({ open: true, device, logs: [], loading: false });
       toast.error(
         err instanceof Error ? err.message : 'Failed to load device log'
       );
     }
   };
 
-  const closeDeviceLog = () => {
-    setLogModal({
-      open: false,
-      device: null,
-      logs: null,
-      loading: false,
-    });
-  };
+  const closeDeviceLog = () =>
+    setLogModal({ open: false, device: null, logs: null, loading: false });
 
   const columns = useMemo(
     () =>
       getRoomDevicesColumns({
         isSelected: (id) => selected.has(id),
-
         onToggleSelect: (id) =>
           setSelected((prev) => {
             const next = new Set(prev);
-
             next.has(id) ? next.delete(id) : next.add(id);
-
             return next;
           }),
-
         onTogglePower: (device) =>
           setDevicesData((prev) => ({
             ...prev,
-            data: prev.data.map((item) =>
-              item.id === device.id
-                ? {
-                    ...item,
-                    isPowerOn: !item.isPowerOn,
-                  }
-                : item
+            data: prev.data.map((d) =>
+              d.id === device.id ? { ...d, isPowerOn: !d.isPowerOn } : d
             ),
           })),
-
         onViewLog: openDeviceLog,
-
         onDelete: (device) => setDeleteTarget(device),
-
         onIntervalChange: (device, minutes) => {
           if (minutes < 15) return;
-
           setDevicesData((prev) => ({
             ...prev,
-            data: prev.data.map((item) =>
-              item.id === device.id
-                ? {
-                    ...item,
-                    intervalMinutes: minutes,
-                  }
-                : item
+            data: prev.data.map((d) =>
+              d.id === device.id ? { ...d, intervalMinutes: minutes } : d
             ),
           }));
         },
@@ -223,45 +170,34 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
   );
 
   const allSelected =
-    devices.length > 0 && devices.every((device) => selected.has(device.id));
-
-  const hasNoResults = devices.length === 0;
+    devices.length > 0 && devices.every((r) => selected.has(r.id));
 
   return (
     <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-y-auto bg-slate-50 p-8">
-      <PageHeader
-        title={roomInfo.name}
-        // description={roomInfo.description}
-        actions={
-          <Link
-            href="/rooms"
-            aria-label="Back to rooms"
-            className="mt-1 flex size-8 items-center justify-center rounded-md border border-slate-400 bg-white"
-          >
-            <ArrowLeft className="size-4 text-slate-950" />
-          </Link>
-        }
-      />
-
       <div className="flex w-full items-start gap-1">
+        <Link
+          href="/rooms"
+          aria-label="Back to rooms"
+          className="mt-1 flex size-8 items-center justify-center rounded-md border border-slate-400 bg-white"
+        >
+          <ArrowLeft className="size-4 text-slate-950" />
+        </Link>
+
         <div className="flex flex-1 flex-col gap-1">
           <h1 className="font-display text-[36px] font-bold leading-[44px] tracking-[-0.72px] text-emerald-500">
             {roomInfo.name}
           </h1>
-
           <div className="flex flex-col gap-1 text-xs text-slate-600 md:flex-row md:items-center md:gap-4">
             <span>
-              Location:{' '}
+              Created at:{' '}
               <span className="text-slate-950">{roomInfo.location}</span>
             </span>
-
             <span>
               Created at:{' '}
               <span className="text-slate-950">
                 {formatDate(roomInfo.createdAt)}
               </span>
             </span>
-
             <span>
               Last updated:{' '}
               <span className="text-slate-950">
@@ -271,7 +207,6 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
               </span>
             </span>
           </div>
-
           <p className="text-xs text-slate-600">{roomInfo.description}</p>
         </div>
       </div>
@@ -285,7 +220,6 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
           )}
           unit="kWh"
         />
-
         <AnalyticCard
           title="Avg usage(24H)"
           value={formatKwh(roomInfo.usage.avg24hKwh ?? 0, 0).replace(
@@ -294,14 +228,12 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
           )}
           unit="kWh"
         />
-
         <AnalyticCard
           title="Peak usage"
           value={formatKwh(roomInfo.usage.peakKwh ?? 0, 0).replace(' kWh', '')}
           unit="kWh"
           tone="red"
         />
-
         <AnalyticCard
           title="Highest component"
           value={formatKwh(roomInfo.usage.highestComponent.kwh, 0).replace(
@@ -368,14 +300,24 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
           </div>
         )}
 
-        {hasNoResults ? (
+        {devices.length === 0 ? (
           <EmptyState
-            icon={Smartphone}
-            title={search ? 'No matching devices' : 'No devices yet'}
+            icon={DoorOpen}
+            title={search ? 'No matching rooms' : 'No rooms yet'}
             description={
               search
-                ? `No devices match "${search}". Try a different search term.`
-                : 'This room does not have any devices yet.'
+                ? `No rooms match "${search}". Try a different search term.`
+                : 'Create your first room to connect your gateway and device.'
+            }
+            action={
+              !search && (
+                <Button
+                  onClick={() => setModalState({ open: true })}
+                  className="w-[200px]"
+                >
+                  <Plus className="size-4" /> Add room
+                </Button>
+              )
             }
           />
         ) : (
@@ -457,9 +399,7 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
           <>
             Are you sure you want to remove{' '}
             <span className="font-bold">
-              &quot;
-              {deleteTarget?.tbDeviceId}
-              &quot;
+              &quot;{deleteTarget?.tbDeviceId}&quot;
             </span>{' '}
             from this room? This action cannot be undone.
           </>
