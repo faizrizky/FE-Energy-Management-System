@@ -1,5 +1,10 @@
 import { api } from '@/lib/axios';
-import type { RoomDTO, RoomDetailDTO, RoomDeviceLogEntryDTO } from './dto';
+import type {
+  RoomDTO,
+  RoomDetailDTO,
+  RoomDeviceLogEntryDTO,
+  RoomDeviceListResponseDTO,
+} from './dto';
 import type { RoomFormValues } from './schema';
 
 /**
@@ -12,8 +17,27 @@ import type { RoomFormValues } from './schema';
  * kehilangan manfaat SSR/cache lib/http.ts).
  */
 export const roomsClientApi = {
-  getById: (roomId: string) =>
-    api.get<RoomDetailDTO>(`/rooms/${roomId}`).then((res) => res.data),
+  listDevices: (
+    roomId: string,
+    {
+      page = 1,
+      rowsPerPage = 10,
+      search,
+    }: { page?: number; rowsPerPage?: number; search?: string } = {}
+  ) =>
+    api
+      .get<RoomDeviceListResponseDTO>(`/rooms/${roomId}/devices`, {
+        params: { page, rowsPerPage, search: search || undefined },
+      })
+      .then((res) => res.data),
+
+  getById: (
+    roomId: string,
+    params?: { page?: number; rowsPerPage?: number; search?: string }
+  ) =>
+    api
+      .get<RoomDetailDTO>(`/rooms/${roomId}`, { params })
+      .then((res) => res.data),
 
   create: (payload: RoomFormValues) =>
     api.post<RoomDTO>('/rooms', payload).then((res) => res.data),

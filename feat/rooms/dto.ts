@@ -18,13 +18,20 @@ export interface RoomListResponseDTO {
   totalPages: number;
 }
 
+export interface RoomDeviceListResponseDTO {
+  data: RoomDeviceDTO[];
+  page: number;
+  rowsPerPage: number;
+  totalRows: number;
+  totalPages: number;
+}
+
 export interface RoomSummaryDTO {
   totalRooms: number;
   totalGateways: { total: number; online: number; offline: number };
   totalDevices: { total: number; online: number; offline: number };
 }
 
-/** Shape returned by create/update — matches prisma.room row, no usage stats. */
 export interface RoomDTO {
   id: string;
   name: string;
@@ -46,13 +53,20 @@ export interface RoomDetailDTO extends RoomDTO {
     peakKwh: number;
     highestComponent: { name: string; kwh: number };
   };
+  devices: {
+    data: RoomDeviceDTO[];
+    page: number;
+    rowsPerPage: number;
+    totalRows: number;
+    totalPages: number;
+  };
 }
 
 export interface RoomDeviceDTO {
   id: string;
   tbDeviceId: string;
   deviceEui: string;
-  component: string;
+  deviceType: string;
   totalUsage24hKwh: number;
   intervalMinutes: number;
   isPowerOn: boolean;
