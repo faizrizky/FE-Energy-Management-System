@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,15 +9,23 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast-store';
 import { loginFormSchema, type LoginFormValues } from '@/feat/auth/schema';
 import { loginAction } from '@/feat/auth/actions';
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from '@/components/shared/turnstile-widget';
 
 interface LoginClientProps {
   redirectTo: string;
 }
 
+const CAPTCHA_ENABLED = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+
 export function LoginClient({ redirectTo }: LoginClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
 
   const {
     register,
@@ -30,9 +38,11 @@ export function LoginClient({ redirectTo }: LoginClientProps) {
 
   const onSubmit = (values: LoginFormValues) => {
     startTransition(async () => {
-      const result = await loginAction(values);
+      const result = await loginAction(values, captchaToken ?? undefined);
       if (!result.success) {
         toast.error(result.message ?? 'Login failed');
+        turnstileRef.current?.reset();
+        setCaptchaToken(null);
         return;
       }
       router.replace(redirectTo);
@@ -40,9 +50,10 @@ export function LoginClient({ redirectTo }: LoginClientProps) {
     });
   };
 
+  const submitDisabled = isPending || (CAPTCHA_ENABLED && !captchaToken);
+
   return (
     <div className="flex min-h-screen w-full items-stretch bg-[#f8faf4]">
-      {/* Hero_Section — foto asli belum dipasang, lihat catatan di atas */}
       <div className="relative hidden w-[720px] shrink-0 flex-col justify-between overflow-hidden bg-gradient-to-br from-emerald-950 via-[#042f2c] to-emerald-900 p-16 lg:flex">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.25),transparent_45%),radial-gradient(circle_at_80%_70%,rgba(16,185,129,0.15),transparent_50%)]" />
 
@@ -73,7 +84,6 @@ export function LoginClient({ redirectTo }: LoginClientProps) {
         </p>
       </div>
 
-      {/* Form_Section */}
       <div className="flex min-h-screen w-full flex-1 items-center justify-center border-l border-slate-200 bg-white p-8 lg:w-[560px] lg:flex-none lg:p-20">
         <form
           onSubmit={handleSubmit(onSubmit)}
@@ -128,9 +138,17 @@ export function LoginClient({ redirectTo }: LoginClientProps) {
                 </button>
               </div>
             </Field>
+
+            {CAPTCHA_ENABLED && (
+              <TurnstileWidget
+                ref={turnstileRef}
+                onVerify={setCaptchaToken}
+                onExpire={() => setCaptchaToken(null)}
+              />
+            )}
           </div>
 
-          <Button type="submit" disabled={isPending} className="w-full">
+          <Button type="submit" disabled={submitDisabled} className="w-full">
             {isPending ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>

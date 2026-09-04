@@ -14,6 +14,7 @@ const BASE_URL =
 export interface LoginActionResult {
   success: boolean;
   message?: string;
+  lockedOut?: boolean;
 }
 
 export async function logoutAction(): Promise<void> {
@@ -35,7 +36,8 @@ export async function logoutAction(): Promise<void> {
 }
 
 export async function loginAction(
-  values: LoginFormValues
+  values: LoginFormValues,
+  captchaToken?: string
 ): Promise<LoginActionResult> {
   const parsed = loginFormSchema.safeParse(values);
   if (!parsed.success) {
@@ -53,6 +55,7 @@ export async function loginAction(
       body: JSON.stringify({
         username: parsed.data.email,
         password: parsed.data.password,
+        captchaToken,
       }),
       cache: 'no-store',
     });
@@ -66,7 +69,11 @@ export async function loginAction(
   const body = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    return { success: false, message: body?.message ?? 'Login failed' };
+    return {
+      success: false,
+      message: body?.message ?? 'Login failed',
+      lockedOut: res.status === 423,
+    };
   }
 
   const accessToken: string | undefined = body?.data?.accessToken;
