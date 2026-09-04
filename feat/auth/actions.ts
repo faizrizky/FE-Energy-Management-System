@@ -1,8 +1,12 @@
 'use server';
 
-import { cookies } from 'next/headers';
-import { loginFormSchema, type LoginFormValues } from './schema';
 import { redirect } from 'next/navigation';
+import { loginFormSchema, type LoginFormValues } from './schema';
+import {
+  setAuthCookies,
+  clearAuthCookies,
+  getRefreshTokenValue,
+} from '@/lib/auth';
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/api';
@@ -13,7 +17,20 @@ export interface LoginActionResult {
 }
 
 export async function logoutAction(): Promise<void> {
-  (await cookies()).delete('ems_token');
+  const refreshToken = await getRefreshTokenValue();
+
+  if (refreshToken) {
+    try {
+      await fetch(`${BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+        cache: 'no-store',
+      });
+    } catch {}
+  }
+
+  await clearAuthCookies();
   redirect('/login');
 }
 
@@ -52,18 +69,14 @@ export async function loginAction(
     return { success: false, message: body?.message ?? 'Login failed' };
   }
 
-  const token: string | undefined = body?.data?.token;
-  if (!token) {
+  const accessToken: string | undefined = body?.data?.accessToken;
+  const refreshToken: string | undefined = body?.data?.refreshToken;
+
+  if (!accessToken || !refreshToken) {
     return { success: false, message: 'Unexpected response from server' };
   }
 
-  (await cookies()).set('ems_token', token, {
-    httpOnly: false,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: 60 * 60 * 24,
-  });
+  await setAuthCookies({ accessToken, refreshToken });
 
   return { success: true };
 }

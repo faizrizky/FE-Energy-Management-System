@@ -1,6 +1,6 @@
 'use client';
 
-import axios from 'axios';
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 export class ApiError extends Error {
   status?: number;
@@ -22,22 +22,39 @@ export const api = axios.create({
   },
 });
 
-api.interceptors.request.use((config) => {
-  if (typeof document === 'undefined') {
-    return config;
-  }
-
+function readCookieToken() {
+  if (typeof document === 'undefined') return undefined;
   const token = document.cookie
     .split('; ')
     .find((row) => row.startsWith('ems_token='))
     ?.split('=')[1];
+  return token ? decodeURIComponent(token) : undefined;
+}
 
+api.interceptors.request.use((config) => {
+  const token = readCookieToken();
   if (token) {
-    config.headers.Authorization = `Bearer ${decodeURIComponent(token)}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
-
   return config;
 });
+
+let isRefreshing = false;
+let pendingQueue: Array<() => void> = [];
+
+function resolveQueue() {
+  pendingQueue.forEach((resolve) => resolve());
+  pendingQueue = [];
+}
+
+async function refreshSession(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/auth/refresh', { method: 'POST' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 api.interceptors.response.use(
   (response) => {
@@ -48,19 +65,54 @@ api.interceptors.response.use(
     ) {
       response.data = response.data.data;
     }
-
     return response;
   },
-  (error) => {
+  async (error: AxiosError) => {
     const status = error?.response?.status;
+    const originalRequest = error.config as
+      | (InternalAxiosRequestConfig & { _retried?: boolean })
+      | undefined;
+
+    const isAuthEndpoint = originalRequest?.url?.includes('/auth/login');
+
+    if (
+      status === 401 &&
+      originalRequest &&
+      !originalRequest._retried &&
+      !isAuthEndpoint
+    ) {
+      originalRequest._retried = true;
+
+      if (isRefreshing) {
+        await new Promise<void>((resolve) => pendingQueue.push(resolve));
+        return api(originalRequest);
+      }
+
+      isRefreshing = true;
+      const refreshed = await refreshSession();
+      isRefreshing = false;
+      resolveQueue();
+
+      if (refreshed) {
+        return api(originalRequest);
+      }
+
+      if (typeof window !== 'undefined') {
+        window.location.href = `/login?redirectTo=${encodeURIComponent(window.location.pathname)}`;
+      }
+    }
 
     const message =
-      error?.response?.data?.message ??
+      (error?.response?.data as { message?: string } | undefined)?.message ??
       error?.message ??
       'Something went wrong';
 
     return Promise.reject(
-      new ApiError(message, status, error?.response?.data?.code)
+      new ApiError(
+        message,
+        status,
+        (error?.response?.data as { code?: string } | undefined)?.code
+      )
     );
   }
 );
