@@ -80,3 +80,10 @@ export interface RoomDeviceLogEntryDTO {
   picName: string;
   picRole: string;
 }
+
+export interface RoomUsageSummaryDTO {
+  total24hKwh: number;
+  avg24hKwh: number;
+  peakKwh: number;
+  highestComponent: { name: string; kwh: number };
+}

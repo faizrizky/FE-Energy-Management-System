@@ -4,6 +4,7 @@ import type {
   RoomDetailDTO,
   RoomDeviceLogEntryDTO,
   RoomDeviceListResponseDTO,
+  RoomUsageSummaryDTO,
 } from './dto';
 import type { RoomFormValues } from './schema';
 
@@ -64,5 +65,10 @@ export const roomsClientApi = {
   getDeviceLog: (roomId: string, deviceId: string) =>
     api
       .get<RoomDeviceLogEntryDTO[]>(`/rooms/${roomId}/devices/${deviceId}/logs`)
+      .then((res) => res.data),
+
+  getUsageSummary: (roomId: string) =>
+    api
+      .get<RoomUsageSummaryDTO>(`/rooms/${roomId}/usage-summary`)
       .then((res) => res.data),
 };

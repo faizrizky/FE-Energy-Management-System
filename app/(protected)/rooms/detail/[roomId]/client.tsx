@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CalendarDays, DoorOpen, Plus } from 'lucide-react';
 import { AnalyticCard } from '@/components/shared/analytic-card';
@@ -30,6 +30,8 @@ import type {
 import { DeviceLogModal } from './_partials/device-log-modal';
 import { TableToolbar } from '@/components/shared/table-toolbar';
 import { EmptyState } from '@/components/shared/empty-state';
+import { connectSocket } from '@/lib/socket';
+import type { RoomUsageSummaryDTO } from '@/feat/rooms/dto';
 
 interface RoomDetailClientProps {
   room: RoomDetailDTO;
@@ -45,7 +47,8 @@ interface LogModalState {
 const SEARCH_DEBOUNCE_MS = 250;
 
 export function RoomDetailClient({ room }: RoomDetailClientProps) {
-  const [roomInfo] = useState(room); // usage/name gak butuh refetch tiap ganti page device
+  const [roomInfo] = useState(room);
+  const [usage, setUsage] = useState<RoomUsageSummaryDTO>(room.usage);
   const [devicesData, setDevicesData] = useState(room.devices);
   const [page, setPage] = useState(room.devices.page);
   const [rowsPerPage, setRowsPerPage] = useState(room.devices.rowsPerPage);
@@ -85,6 +88,31 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
       );
     }
   };
+
+  useEffect(() => {
+    const socket = connectSocket();
+    let timeout: ReturnType<typeof setTimeout>;
+
+    const refreshUsage = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(async () => {
+        try {
+          const result = await roomsClientApi.getUsageSummary(roomInfo.id);
+          setUsage(result);
+        } catch {}
+      }, 3000);
+    };
+
+    const onDeviceStatus = (payload: { roomId: string }) => {
+      if (payload.roomId === roomInfo.id) refreshUsage();
+    };
+
+    socket.on('device:status', onDeviceStatus);
+    return () => {
+      socket.off('device:status', onDeviceStatus);
+      clearTimeout(timeout);
+    };
+  }, [roomInfo.id]);
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -214,33 +242,24 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
       <div className="grid w-full grid-cols-1 gap-2.5 md:grid-cols-3">
         <AnalyticCard
           title="Total usage(24H)"
-          value={formatKwh(roomInfo.usage.total24hKwh ?? 0, 0).replace(
-            ' kWh',
-            ''
-          )}
+          value={formatKwh(usage.total24hKwh ?? 0, 0).replace(' kWh', '')}
           unit="kWh"
         />
         <AnalyticCard
           title="Avg usage(24H)"
-          value={formatKwh(roomInfo.usage.avg24hKwh ?? 0, 0).replace(
-            ' kWh',
-            ''
-          )}
+          value={formatKwh(usage.avg24hKwh ?? 0, 0).replace(' kWh', '')}
           unit="kWh"
         />
         <AnalyticCard
           title="Peak usage"
-          value={formatKwh(roomInfo.usage.peakKwh ?? 0, 0).replace(' kWh', '')}
+          value={formatKwh(usage.peakKwh ?? 0, 0).replace(' kWh', '')}
           unit="kWh"
           tone="red"
         />
         <AnalyticCard
           title="Highest component"
-          value={formatKwh(roomInfo.usage.highestComponent.kwh, 0).replace(
-            ' kWh',
-            ''
-          )}
-          unit={roomInfo.usage.highestComponent.name}
+          value={formatKwh(usage.highestComponent.kwh, 0).replace(' kWh', '')}
+          unit={usage.highestComponent.name}
           tone="red"
         />
       </div>
