@@ -39,6 +39,16 @@ interface DeviceClientProps {
 }
 const SEARCH_DEBOUNCE_MS = 250;
 
+const DEVICE_SORT_ACCESSORS = {
+  name: (d: DeviceDTO) => d.name,
+  component: (d: DeviceDTO) => d.deviceType,
+  room: (d: DeviceDTO) => d.room?.name ?? '',
+  gateway: (d: DeviceDTO) => d.gateway?.name ?? '',
+  tbDeviceId: (d: DeviceDTO) => d.tbDeviceId,
+  inverval: (d: DeviceDTO) => d.intervalMinutes,
+  status: (d: DeviceDTO) => d.status,
+};
+
 export function DeviceClient({
   initialData,
   rooms,
@@ -221,15 +231,10 @@ export function DeviceClient({
     onDelete: (device) => setDeleteTarget(device),
   });
 
-  const { sorted, sortKey, direction, toggleSort } = useTableSort(data.data, {
-    name: (d) => d.name,
-    component: (d) => d.deviceType,
-    room: (d) => d.room?.name ?? '',
-    gateway: (d) => d.gateway?.name ?? '',
-    tbDeviceId: (d) => d.tbDeviceId,
-    inverval: (d) => d.intervalMinutes,
-    status: (d) => d.status,
-  });
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(
+    data.data,
+    DEVICE_SORT_ACCESSORS
+  );
 
   const allSelected =
     sorted.length > 0 && sorted.every((d) => selected.has(d.id));

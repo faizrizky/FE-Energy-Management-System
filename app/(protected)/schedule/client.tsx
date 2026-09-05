@@ -41,6 +41,15 @@ interface ScheduleClientProps {
 
 const SEARCH_DEBOUNCE_MS = 250;
 
+const SCHEDULE_SORT_ACCESSORS = {
+  room: (s: ScheduleDTO) => s.room?.name ?? '',
+  component: (s: ScheduleDTO) => s.device?.deviceType ?? '',
+  deviceEui: (s: ScheduleDTO) => s.device?.eui ?? '',
+  date: (s: ScheduleDTO) => new Date(s.scheduledDate).getTime(),
+  time: (s: ScheduleDTO) => s.startTime,
+  repeat: (s: ScheduleDTO) => s.repeatType,
+};
+
 type ScheduleTab = 'active' | 'upcoming';
 
 export function ScheduleClient({
@@ -207,14 +216,7 @@ export function ScheduleClient({
 
   const { sorted, sortKey, direction, toggleSort } = useTableSort(
     tabSchedules,
-    {
-      room: (s) => s.room?.name ?? '',
-      component: (s) => s.device?.deviceType ?? '',
-      deviceEui: (s) => s.device?.eui ?? '',
-      date: (s) => new Date(s.scheduledDate).getTime(),
-      time: (s) => s.startTime,
-      repeat: (s) => s.repeatType,
-    }
+    SCHEDULE_SORT_ACCESSORS
   );
 
   const allSelected =

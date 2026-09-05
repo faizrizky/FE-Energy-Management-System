@@ -37,6 +37,8 @@ import type { UserSummaryDTO } from '@/feat/user/dto';
 import { GatewayFormModal } from './_partials/modal';
 import { GatewayDetailModal } from './_partials/detail-modal';
 import { StatusDot } from '@/components/shared/status-dot';
+import { useEffect } from 'react';
+import { connectSocket } from '@/lib/socket';
 
 interface GatewayClientProps {
   initialData: GatewayListResponseDTO;
@@ -44,6 +46,11 @@ interface GatewayClientProps {
 }
 
 const SEARCH_DEBOUNCE_MS = 250;
+
+const GATEWAY_SORT_ACCESSORS = {
+  name: (g: GatewayDTO) => g.name,
+  status: (g: GatewayDTO) => g.status,
+};
 
 export function GatewayClient({ initialData, users }: GatewayClientProps) {
   const [data, setData] = useState(initialData);
@@ -88,6 +95,22 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
     },
     []
   );
+
+  useEffect(() => {
+    const socket = connectSocket();
+    let timeout: ReturnType<typeof setTimeout>;
+
+    const scheduleRefresh = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => loadGateways(page, rowsPerPage, search), 3000);
+    };
+
+    socket.on('device:status', scheduleRefresh);
+    return () => {
+      socket.off('device:status', scheduleRefresh);
+      clearTimeout(timeout);
+    };
+  }, [page, rowsPerPage, search]);
 
   useRealtimeEvent<{ gateway: GatewayDTO }>(
     'gateway:created',
@@ -190,10 +213,10 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
     }
   };
 
-  const { sorted, sortKey, direction, toggleSort } = useTableSort(data.data, {
-    name: (g) => g.name,
-    status: (g) => g.status,
-  });
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(
+    data.data,
+    GATEWAY_SORT_ACCESSORS
+  );
 
   const allSelected =
     data.data.length > 0 &&

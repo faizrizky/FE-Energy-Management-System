@@ -50,6 +50,12 @@ interface ReportClientProps {
   range: ReportExportParams;
 }
 
+const REPORT_SORT_ACCESSORS = {
+  deviceEui: (r: ReportDeviceRowDTO) => r.deviceEui,
+  room: (r: ReportDeviceRowDTO) => r.roomName,
+  usage: (r: ReportDeviceRowDTO) => r.usageKwh,
+};
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -94,11 +100,10 @@ export function ReportClient({
     );
   });
 
-  const { sorted, sortKey, direction, toggleSort } = useTableSort(filtered, {
-    deviceEui: (r) => r.deviceEui,
-    room: (r) => r.roomName,
-    usage: (r) => r.usageKwh,
-  });
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(
+    filtered,
+    REPORT_SORT_ACCESSORS
+  );
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / rowsPerPage));
   const safePage = Math.min(page, totalPages);

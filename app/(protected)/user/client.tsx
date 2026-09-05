@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import { Plus, Users, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
-import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
@@ -33,6 +32,14 @@ interface UserClientProps {
   initialData: UserDTO[];
   roles: RoleDTO[];
 }
+
+const USER_SORT_ACCESSORS = {
+  fullName: (u: UserDTO) => u.fullName,
+  address: (u: UserDTO) => u.address ?? '',
+  role: (u: UserDTO) => u.role?.name ?? '',
+  lastActiveAt: (u: UserDTO) =>
+    u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : null,
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -69,13 +76,10 @@ export function UserClient({ initialData, roles }: UserClientProps) {
     );
   }, [users, search]);
 
-  const { sorted, sortKey, direction, toggleSort } = useTableSort(filtered, {
-    fullName: (u) => u.fullName,
-    address: (u) => u.address ?? '',
-    role: (u) => u.role?.name ?? '',
-    lastActiveAt: (u) =>
-      u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : null,
-  });
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(
+    filtered,
+    USER_SORT_ACCESSORS
+  );
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / rowsPerPage));
   const safePage = Math.min(page, totalPages);

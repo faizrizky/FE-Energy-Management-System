@@ -46,6 +46,11 @@ interface RoomsClientProps {
 
 const SEARCH_DEBOUNCE_MS = 250;
 
+const ROOMS_SORT_ACCESSORS = {
+  name: (r: RoomListItemDTO) => r.name,
+  usage: (r: RoomListItemDTO) => r.totalUsage24hKwh,
+};
+
 export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const [data, setData] = useState<RoomListResponseDTO>(
     initialData ?? {
@@ -246,10 +251,10 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
     onDelete: (room) => setDeleteTarget(room),
   });
 
-  const { sorted, sortKey, direction, toggleSort } = useTableSort(data.data, {
-    name: (r) => r.name,
-    usage: (r) => r.totalUsage24hKwh,
-  });
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(
+    data.data,
+    ROOMS_SORT_ACCESSORS
+  );
 
   const allSelected =
     data.data.length > 0 && data.data.every((r) => selected.has(r.id));
