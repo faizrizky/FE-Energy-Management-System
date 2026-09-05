@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { useMemo, useState } from 'react';
 import {
   Download,
@@ -40,6 +41,7 @@ import type {
   DashboardSummaryDTO,
   EnergyUsageTimelineDTO,
 } from '@/feat/dashboard/dto';
+import { useRealtimeEvent } from '@/hooks/use-realtime-event';
 
 interface ReportClientProps {
   summary: DashboardSummaryDTO;
@@ -79,6 +81,18 @@ export function ReportClient({
       )
     );
   }, [rows, search]);
+
+  const notifiedRef = useRef(false);
+  useRealtimeEvent('device:status', () => {
+    if (notifiedRef.current) return;
+    notifiedRef.current = true;
+    toast.message(
+      'Ada data energi terbaru masuk. Muat ulang halaman untuk melihat laporan terkini.',
+      {
+        duration: 8000,
+      }
+    );
+  });
 
   const { sorted, sortKey, direction, toggleSort } = useTableSort(filtered, {
     deviceEui: (r) => r.deviceEui,

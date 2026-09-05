@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
-import { Plus, ListFilter, DoorOpen, CalendarDays } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Plus, DoorOpen, CalendarDays } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
@@ -35,6 +35,8 @@ import type { UserSummaryDTO } from '@/feat/user/dto';
 import { RoomFormModal } from './_partials/modal';
 import { Trash2 } from 'lucide-react';
 import { TableToolbar } from '@/components/shared/table-toolbar';
+import { useRealtimeEvent } from '@/hooks/use-realtime-event';
+import { useRealtimeRefresh } from '@/hooks/use-realtime-refresh';
 
 interface RoomsClientProps {
   summary: RoomSummaryDTO;
@@ -104,6 +106,33 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
       toast.error(err instanceof Error ? err.message : 'Failed to load rooms');
     }
   };
+
+  useRealtimeEvent<{ room: RoomDTO }>('room:created', () => {
+    loadRooms(1, rowsPerPage, search);
+    setPage(1);
+  });
+  useRealtimeEvent<{ room: RoomDTO }>('room:updated', ({ room }) => {
+    setData((prev) => ({
+      ...prev,
+      data: prev.data.map((r) =>
+        r.id === room.id
+          ? {
+              ...r,
+              name: room.name,
+              location: room.location,
+              isCritical: room.isCritical,
+            }
+          : r
+      ),
+    }));
+  });
+  useRealtimeEvent<{ roomId: string }>('room:deleted', ({ roomId }) => {
+    setData((prev) => ({
+      ...prev,
+      data: prev.data.filter((r) => r.id !== roomId),
+    }));
+  });
+  useRealtimeRefresh(['device:status', 'room:power']);
 
   const openEdit = async (room: RoomListItemDTO) => {
     try {

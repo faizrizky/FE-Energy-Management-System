@@ -48,3 +48,13 @@ export interface DeviceDeviceSummaryDTO {
 export interface DeviceDetailDTO extends DeviceDTO {
   devices: DeviceDeviceSummaryDTO[];
 }
+
+export interface DeviceStatusEventDTO {
+  deviceId: string;
+  eui: string;
+  roomId: string;
+  status: string;
+  powerWatt?: number | null;
+  usageKwh?: number | null;
+  timestamp: string;
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Plus, ListFilter, Router, CalendarDays } from 'lucide-react';
+import { Plus, Router, CalendarDays } from 'lucide-react';
 
 import { PageHeader } from '@/components/shared/page-header';
 import { SearchInput } from '@/components/shared/search-input';
@@ -25,6 +25,7 @@ import { formatNumber } from '@/lib/utils';
 import { useTableSort } from '@/lib/use-table-sort';
 import { getGatewayColumns } from '@/column/gateway';
 import { gatewaysClientApi } from '@/feat/gateway/api.client';
+import { useRealtimeEvent } from '@/hooks/use-realtime-event';
 
 import type {
   GatewayDTO,
@@ -86,6 +87,36 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
       }
     },
     []
+  );
+
+  useRealtimeEvent<{ gateway: GatewayDTO }>(
+    'gateway:created',
+    ({ gateway }) => {
+      setData((prev) => ({
+        ...prev,
+        data: [gateway, ...prev.data],
+        totalRows: prev.totalRows + 1,
+      }));
+    }
+  );
+  useRealtimeEvent<{ gateway: GatewayDTO }>(
+    'gateway:updated',
+    ({ gateway }) => {
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.map((g) => (g.id === gateway.id ? gateway : g)),
+      }));
+    }
+  );
+  useRealtimeEvent<{ gatewayId: string }>(
+    'gateway:deleted',
+    ({ gatewayId }) => {
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.filter((g) => g.id !== gatewayId),
+        totalRows: Math.max(0, prev.totalRows - 1),
+      }));
+    }
   );
 
   const handleSearchChange = (value: string) => {

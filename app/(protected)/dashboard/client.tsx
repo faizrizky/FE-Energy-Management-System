@@ -12,6 +12,7 @@ import type {
   RiskyRoomDTO,
 } from '@/feat/dashboard/dto';
 import type { ScheduleDTO } from '@/feat/schedule/dto';
+import { useRealtimeRefresh } from '@/hooks/use-realtime-refresh';
 
 const TABS = [
   { value: 'energy-usage-timeline', label: 'Energy Usage Timeline' },
@@ -60,6 +61,17 @@ export function DashboardTabs({
   const [tab, setTab] = useState<(typeof TABS)[number]['value']>(
     'energy-usage-timeline'
   );
+
+  useRealtimeRefresh([
+    'device:status',
+    'device:created',
+    'device:deleted',
+    'room:power',
+    'room:updated',
+    'schedule:created',
+    'schedule:updated',
+    'schedule:deleted',
+  ]);
 
   return (
     <div className="flex w-full flex-col gap-4">

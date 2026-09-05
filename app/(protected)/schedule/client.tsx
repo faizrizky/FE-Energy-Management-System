@@ -31,6 +31,7 @@ import type { DeviceDTO } from '@/feat/device/dto';
 import { ScheduleFormModal } from './_partials/modal';
 import { ScheduleDetailModal } from './_partials/detail-modal';
 import { TableToolbar } from '@/components/shared/table-toolbar';
+import { useRealtimeEvent } from '@/hooks/use-realtime-event';
 
 interface ScheduleClientProps {
   initialData: ScheduleListResponseDTO;
@@ -93,6 +94,16 @@ export function ScheduleClient({
       );
     }
   };
+
+  useRealtimeEvent('schedule:created', () =>
+    loadSchedules(1, rowsPerPage, search)
+  );
+  useRealtimeEvent('schedule:updated', () =>
+    loadSchedules(page, rowsPerPage, search)
+  );
+  useRealtimeEvent('schedule:deleted', () =>
+    loadSchedules(page, rowsPerPage, search)
+  );
 
   const handleSearchChange = (value: string) => {
     setSearch(value);

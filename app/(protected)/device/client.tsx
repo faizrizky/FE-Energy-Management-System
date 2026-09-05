@@ -29,6 +29,8 @@ import type { RoomListItemDTO } from '@/feat/rooms/dto';
 import type { GatewayDTO } from '@/feat/gateway/dto';
 import { DeviceFormModal } from './_partials/modal';
 import { TableToolbar } from '@/components/shared/table-toolbar';
+import { useRealtimeEvent } from '@/hooks/use-realtime-event';
+import type { DeviceStatusEventDTO } from '@/feat/device/dto';
 
 interface DeviceClientProps {
   initialData: DeviceListResponseDTO;
@@ -77,6 +79,46 @@ export function DeviceClient({
     },
     []
   );
+
+  useRealtimeEvent<{ device: DeviceDTO }>('device:created', ({ device }) => {
+    setData((prev) =>
+      prev.data.some((d) => d.id === device.id)
+        ? prev
+        : {
+            ...prev,
+            data: [device, ...prev.data],
+            totalRows: prev.totalRows + 1,
+          }
+    );
+  });
+
+  useRealtimeEvent<{ device: DeviceDTO }>('device:updated', ({ device }) => {
+    setData((prev) => ({
+      ...prev,
+      data: prev.data.map((d) =>
+        d.id === device.id ? { ...d, ...device } : d
+      ),
+    }));
+  });
+
+  useRealtimeEvent<{ deviceId: string }>('device:deleted', ({ deviceId }) => {
+    setData((prev) => ({
+      ...prev,
+      data: prev.data.filter((d) => d.id !== deviceId),
+      totalRows: Math.max(0, prev.totalRows - 1),
+    }));
+  });
+
+  useRealtimeEvent<DeviceStatusEventDTO>('device:status', (payload) => {
+    setData((prev) => ({
+      ...prev,
+      data: prev.data.map((d) =>
+        d.id === payload.deviceId
+          ? { ...d, status: payload.status, lastSeenAt: payload.timestamp }
+          : d
+      ),
+    }));
+  });
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
