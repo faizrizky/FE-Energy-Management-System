@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Plus, UserCog, Trash2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Plus, UserCog, Trash2, CalendarDays } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
@@ -18,22 +18,46 @@ import {
   TableCell,
   SortableTableHead,
 } from '@/components/ui/table';
+import { Pagination } from '@/components/ui/pagination';
 import { toast } from '@/lib/toast-store';
 import { formatNumber } from '@/lib/utils';
 import { useTableSort } from '@/lib/use-table-sort';
 import { getRoleColumns } from '@/column/role';
 import { rolesClientApi } from '@/feat/role/api.client';
-import type { RoleDTO, PermissionDTO } from '@/feat/role/dto';
+import type {
+  RoleDTO,
+  PermissionDTO,
+  RoleListResponseDTO,
+} from '@/feat/role/dto';
 import { RoleFormModal } from './_partials/modal';
 import { RoleDetailDrawer } from './_partials/detail-drawer';
+import { TableToolbar } from '@/components/shared/table-toolbar';
 
 interface RoleClientProps {
-  initialData: RoleDTO[];
+  initialData: RoleListResponseDTO;
   permissions: PermissionDTO[];
 }
 
+const SEARCH_DEBOUNCE_MS = 250;
+
+const ROLE_SORT_ACCESSORS = {
+  name: (r: RoleDTO) => r.name,
+  users: (r: RoleDTO) => r._count?.users ?? 0,
+  permissions: (r: RoleDTO) => r.permissions?.length ?? 0,
+};
+
 export function RoleClient({ initialData, permissions }: RoleClientProps) {
-  const [roles, setRoles] = useState<RoleDTO[]>(initialData ?? []);
+  const [data, setData] = useState<RoleListResponseDTO>(
+    initialData ?? {
+      data: [],
+      page: 1,
+      rowsPerPage: 10,
+      totalRows: 0,
+      totalPages: 1,
+    }
+  );
+  const [page, setPage] = useState(initialData.page);
+  const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{
@@ -46,22 +70,48 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
-  const systemCount = roles.filter((r) => r.isSystem).length;
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filtered = useMemo(() => {
-    const normalized = search.trim().toLowerCase();
-    if (!normalized) return roles;
-    return roles.filter((r) => r.name.toLowerCase().includes(normalized));
-  }, [roles, search]);
+  const loadRoles = async (
+    nextPage: number,
+    nextRowsPerPage: number,
+    nextSearch: string
+  ) => {
+    try {
+      const result = await rolesClientApi.list({
+        page: nextPage,
+        rowsPerPage: nextRowsPerPage,
+        search: nextSearch,
+      });
+      setData(result);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load roles');
+    }
+  };
 
-  const { sorted, sortKey, direction, toggleSort } = useTableSort(filtered, {
-    name: (r) => r.name,
-    users: (r) => r._count?.users ?? 0,
-    permissions: (r) => r.permissions?.length ?? 0,
-  });
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      loadRoles(1, rowsPerPage, value);
+    }, SEARCH_DEBOUNCE_MS);
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+    loadRoles(nextPage, rowsPerPage, search);
+  };
+
+  const handleRowsPerPageChange = (nextRowsPerPage: number) => {
+    setRowsPerPage(nextRowsPerPage);
+    setPage(1);
+    loadRoles(1, nextRowsPerPage, search);
+  };
 
   const deletableSelected = Array.from(selected).filter(
-    (id) => !roles.find((r) => r.id === id)?.isSystem
+    (id) => !data.data.find((r) => r.id === id)?.isSystem
   );
 
   const handleConfirmDelete = async () => {
@@ -72,7 +122,11 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
         loading: `Deleting ${deleteTarget.name}...`,
         success: 'Role has been deleted',
       });
-      setRoles((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.filter((r) => r.id !== deleteTarget.id),
+        totalRows: Math.max(0, prev.totalRows - 1),
+      }));
       setDeleteTarget(null);
     } catch {
     } finally {
@@ -92,7 +146,11 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
       );
       const failedCount = results.length - successfulIds.length;
 
-      setRoles((prev) => prev.filter((r) => !successfulIds.includes(r.id)));
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.filter((r) => !successfulIds.includes(r.id)),
+        totalRows: Math.max(0, prev.totalRows - successfulIds.length),
+      }));
       setSelected(new Set());
       setBulkDeleteOpen(false);
 
@@ -106,25 +164,28 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
     }
   };
 
-  const columns = useMemo(
-    () =>
-      getRoleColumns({
-        isSelected: (id) => selected.has(id),
-        onToggleSelect: (id) =>
-          setSelected((prev) => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-          }),
-        onView: (role) => setDetailRole(role),
-        onEdit: (role) => setModalState({ open: true, role }),
-        onDelete: (role) => setDeleteTarget(role),
+  const columns = getRoleColumns({
+    isSelected: (id) => selected.has(id),
+    onToggleSelect: (id) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
       }),
-    [selected]
+    onView: (role) => setDetailRole(role),
+    onEdit: (role) => setModalState({ open: true, role }),
+    onDelete: (role) => setDeleteTarget(role),
+  });
+
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(
+    data.data,
+    ROLE_SORT_ACCESSORS
   );
 
   const allSelected =
-    filtered.length > 0 && filtered.every((r) => selected.has(r.id));
+    sorted.length > 0 && sorted.every((r) => selected.has(r.id));
+
+  const systemCount = data.data.filter((r) => r.isSystem).length;
 
   return (
     <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-y-auto bg-slate-50 p-8">
@@ -144,7 +205,7 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
       <div className="grid w-full grid-cols-1 gap-2.5 md:grid-cols-3">
         <AnalyticCard
           title="Total role(s)"
-          value={formatNumber(roles.length)}
+          value={formatNumber(data.totalRows)}
           unit="configured"
         />
         <AnalyticCard
@@ -158,37 +219,35 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
           unit="available"
         />
       </div>
-
-      <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
-        <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <p className="text-lg font-semibold text-emerald-500">
-            {formatNumber(filtered.length)} role(s)
-          </p>
-          <div className="flex w-full items-center gap-2 md:w-auto">
+      <TableToolbar
+        summary={
+          <div className="flex flex-col gap-1">
+            <p className="text-lg font-semibold text-emerald-500">
+              {formatNumber(data.totalRows)} role(s)
+            </p>
+          </div>
+        }
+        actions={
+          <>
             <div className="min-w-0 flex-1 md:flex-none">
               <SearchInput
                 value={search}
-                onChange={setSearch}
-                placeholder="Search role..."
+                onChange={handleSearchChange}
+                placeholder="Search gateway..."
               />
             </div>
-          </div>
-        </div>
 
-        {deletableSelected.length > 0 && (
-          <div className="flex w-full items-center">
             <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setBulkDeleteOpen(true)}
+              variant="outline"
+              size="icon"
+              className="size-11 shrink-0 rounded-md md:size-8"
             >
-              <Trash2 className="size-4" />
-              Delete ({deletableSelected.length})
+              <CalendarDays className="size-4" />
             </Button>
-          </div>
-        )}
-
-        {filtered.length === 0 ? (
+          </>
+        }
+      >
+        {data.data.length === 0 ? (
           <EmptyState
             icon={UserCog}
             title={search ? 'No matching roles' : 'No roles yet'}
@@ -209,62 +268,71 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
             }
           />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={() =>
-                      setSelected(
-                        allSelected
-                          ? new Set()
-                          : new Set(sorted.map((r) => r.id))
-                      )
-                    }
-                  />
-                </TableHead>
-                <SortableTableHead
-                  sortKey="name"
-                  activeKey={sortKey}
-                  direction={direction}
-                  onSort={toggleSort}
-                >
-                  Role
-                </SortableTableHead>
-                <SortableTableHead
-                  sortKey="users"
-                  activeKey={sortKey}
-                  direction={direction}
-                  onSort={toggleSort}
-                >
-                  Users
-                </SortableTableHead>
-                <SortableTableHead
-                  sortKey="permissions"
-                  activeKey={sortKey}
-                  direction={direction}
-                  onSort={toggleSort}
-                >
-                  Permission
-                </SortableTableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sorted.map((role) => (
-                <TableRow key={role.id}>
-                  <TableCell>{columns.checkbox(role)}</TableCell>
-                  <TableCell>{columns.role(role)}</TableCell>
-                  <TableCell>{columns.users(role)}</TableCell>
-                  <TableCell>{columns.permissionCount(role)}</TableCell>
-                  <TableCell>{columns.action(role)}</TableCell>
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={() =>
+                        setSelected(
+                          allSelected
+                            ? new Set()
+                            : new Set(sorted.map((r) => r.id))
+                        )
+                      }
+                    />
+                  </TableHead>
+                  <SortableTableHead
+                    sortKey="name"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Role
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="users"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Users
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="permissions"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Permission
+                  </SortableTableHead>
+                  <TableHead>Action</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {sorted.map((role) => (
+                  <TableRow key={role.id}>
+                    <TableCell>{columns.checkbox(role)}</TableCell>
+                    <TableCell>{columns.role(role)}</TableCell>
+                    <TableCell>{columns.users(role)}</TableCell>
+                    <TableCell>{columns.permissionCount(role)}</TableCell>
+                    <TableCell>{columns.action(role)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Pagination
+              page={page}
+              totalPages={data.totalPages}
+              onPageChange={handlePageChange}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={handleRowsPerPageChange}
+            />
+          </>
         )}
-      </div>
+      </TableToolbar>
 
       <RoleFormModal
         open={modalState.open}
@@ -272,10 +340,15 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
         permissions={permissions}
         onOpenChange={(open) => setModalState({ open })}
         onSuccess={(saved) => {
-          setRoles((prev) => {
-            const exists = prev.some((r) => r.id === saved.id);
-            if (exists) return prev.map((r) => (r.id === saved.id ? saved : r));
-            return [saved, ...prev];
+          setData((prev) => {
+            const exists = prev.data.some((r) => r.id === saved.id);
+            return {
+              ...prev,
+              data: exists
+                ? prev.data.map((r) => (r.id === saved.id ? saved : r))
+                : [saved, ...prev.data],
+              totalRows: exists ? prev.totalRows : prev.totalRows + 1,
+            };
           });
           const wasEditing = !!modalState.role;
           setModalState({ open: false });

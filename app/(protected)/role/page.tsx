@@ -6,7 +6,7 @@ import { RoleClient } from './client';
 export default async function RolePage() {
   const [session, roles, permissions] = await Promise.all([
     getSession(),
-    rolesApi.list(),
+    rolesApi.list({ page: 1, rowsPerPage: 10 }),
     rolesApi.listPermissions(),
   ]);
 
