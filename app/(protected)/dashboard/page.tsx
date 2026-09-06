@@ -1,10 +1,8 @@
-// app/(protected)/dashboard/page.tsx
 import { Zap, Router, Smartphone } from 'lucide-react';
 import { Header } from '@/components/shared/header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { getSession } from '@/lib/auth';
 import { dashboardApi } from '@/feat/dashboard/api';
-import { scheduleApi } from '@/feat/schedule/api';
 import { formatKwh, formatNumber } from '@/lib/utils';
 import { DashboardSearch, DashboardTabs } from './client';
 
@@ -20,7 +18,8 @@ export default async function DashboardPage() {
     riskyWeek,
     riskyMonth,
     riskyYear,
-    schedules,
+    activeSchedules,
+    upcomingSchedules,
   ] = await Promise.all([
     getSession(),
     dashboardApi.getSummary(),
@@ -32,7 +31,11 @@ export default async function DashboardPage() {
     dashboardApi.getTopRiskyRooms('last_week'),
     dashboardApi.getTopRiskyRooms('last_month'),
     dashboardApi.getTopRiskyRooms('last_year'),
-    scheduleApi.list(),
+    // Fix: dulu pakai scheduleApi.list() (generic, cuma 10 row terbaru,
+    // filter di client) - sekarang pakai endpoint yang emang udah dibikin
+    // buat ini, filter server-side, gak kepotong 10 item.
+    dashboardApi.getActiveSchedules('active'),
+    dashboardApi.getActiveSchedules('upcoming'),
   ]);
 
   const timelineByRange = {
@@ -90,7 +93,8 @@ export default async function DashboardPage() {
         <DashboardTabs
           timelineByRange={timelineByRange}
           riskyByRange={riskyByRange}
-          schedules={schedules.data}
+          activeSchedules={activeSchedules}
+          upcomingSchedules={upcomingSchedules}
         />
       </div>
     </>

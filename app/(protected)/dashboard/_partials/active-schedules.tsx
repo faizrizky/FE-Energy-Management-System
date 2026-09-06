@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { CalendarSearch } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import {
@@ -13,13 +13,8 @@ import {
   SortableTableHead,
 } from '@/components/ui/table';
 import { useTableSort } from '@/lib/use-table-sort';
-import {
-  formatScheduleDate,
-  formatTimeRange,
-  isCurrentlyActive,
-  isUpcoming,
-} from '@/feat/schedule/time';
-import type { ScheduleDTO } from '@/feat/schedule/dto';
+import { formatScheduleDate } from '@/feat/schedule/time';
+import type { ActiveScheduleDTO } from '@/feat/dashboard/dto';
 
 const STATUS_TABS = [
   { value: 'active', label: 'Active schedule' },
@@ -27,32 +22,35 @@ const STATUS_TABS = [
 ] as const;
 
 interface ActiveSchedulesTabProps {
-  schedules: ScheduleDTO[];
+  activeSchedules: ActiveScheduleDTO[];
+  upcomingSchedules: ActiveScheduleDTO[];
 }
 
-export function ActiveSchedulesTab({ schedules }: ActiveSchedulesTabProps) {
+// Module-level, bukan inline di dalam komponen - biar identity-nya stabil
+// dan useTableSort beneran bisa nge-cache (lihat catatan performa di audit).
+const SCHEDULE_SORT_ACCESSORS = {
+  room: (s: ActiveScheduleDTO) => s.roomName,
+  date: (s: ActiveScheduleDTO) => new Date(s.startDate).getTime(),
+};
+
+export function ActiveSchedulesTab({
+  activeSchedules,
+  upcomingSchedules,
+}: ActiveSchedulesTabProps) {
   const [status, setStatus] =
     useState<(typeof STATUS_TABS)[number]['value']>('active');
 
-  // sama biji sama kayak Schedule page (feat/schedule/time.ts) - gak bikin logic baru.
-  const activeSchedules = useMemo(
-    () => schedules.filter(isCurrentlyActive),
-    [schedules]
-  );
-  const upcomingSchedules = useMemo(
-    () => schedules.filter(isUpcoming),
-    [schedules]
-  );
+  // Data sudah difilter server-side (reportUseCase.getActiveSchedules), jadi
+  // di sini tinggal pilih array-nya, gak perlu filter ulang di client.
   const rows = status === 'active' ? activeSchedules : upcomingSchedules;
 
-  const { sorted, sortKey, direction, toggleSort } = useTableSort(rows, {
-    room: (s) => s.room?.name ?? '',
-    date: (s) => new Date(s.scheduledDate).getTime(),
-  });
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(
+    rows,
+    SCHEDULE_SORT_ACCESSORS
+  );
 
   return (
     <Card className="flex w-full flex-col items-end gap-4 p-2 md:p-6">
-      {/* mobile */}
       <div className="flex w-full flex-col gap-3 md:hidden">
         <div className="flex w-full items-center justify-between">
           <p className="text-lg font-semibold text-emerald-500">
@@ -81,7 +79,6 @@ export function ActiveSchedulesTab({ schedules }: ActiveSchedulesTabProps) {
         </div>
       </div>
 
-      {/* tablet/desktop */}
       <div className="hidden w-full items-center justify-between md:flex">
         <p className="text-lg font-semibold text-emerald-500">
           Active schedule
@@ -145,24 +142,22 @@ export function ActiveSchedulesTab({ schedules }: ActiveSchedulesTabProps) {
               <TableRow key={s.id}>
                 <TableCell>
                   <div className="flex flex-col gap-0.5 py-1">
-                    <span>{s.room?.name ?? s.roomId}</span>
+                    <span>{s.roomName}</span>
                     <span className="text-[10px] text-slate-500">
-                      {s.room?.location}
+                      {s.roomLocation}
                     </span>
                   </div>
                 </TableCell>
-                <TableCell>{s.device?.deviceType ?? 'Room'}</TableCell>
-                <TableCell>{s.device?.eui ?? 'Room level'}</TableCell>
-                <TableCell>{formatScheduleDate(s.scheduledDate)}</TableCell>
-                <TableCell>{formatTimeRange(s.startTime, s.endTime)}</TableCell>
+                <TableCell>{s.component}</TableCell>
+                <TableCell>{s.deviceEui}</TableCell>
+                <TableCell>{formatScheduleDate(s.startDate)}</TableCell>
+                <TableCell>{s.time}</TableCell>
                 <TableCell
                   className={
-                    s.repeatType !== 'none'
-                      ? 'text-emerald-500'
-                      : 'text-status-error'
+                    s.repeat ? 'text-emerald-500' : 'text-status-error'
                   }
                 >
-                  {s.repeatType !== 'none' ? 'Yes' : 'No'}
+                  {s.repeat ? 'Yes' : 'No'}
                 </TableCell>
               </TableRow>
             ))}

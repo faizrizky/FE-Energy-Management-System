@@ -8,10 +8,10 @@ import { EnergyUsageTimelineTab } from './_partials/energy-usage-timeline';
 import { TopRiskyRoomsTab } from './_partials/top-risky-rooms';
 import { ActiveSchedulesTab } from './_partials/active-schedules';
 import type {
+  ActiveScheduleDTO,
   EnergyUsageTimelineDTO,
   RiskyRoomDTO,
 } from '@/feat/dashboard/dto';
-import type { ScheduleDTO } from '@/feat/schedule/dto';
 import { useRealtimeRefresh } from '@/hooks/use-realtime-refresh';
 
 const TABS = [
@@ -50,18 +50,22 @@ export function DashboardSearch() {
 interface DashboardTabsProps {
   timelineByRange: Record<string, EnergyUsageTimelineDTO>;
   riskyByRange: Record<string, RiskyRoomDTO[]>;
-  schedules: ScheduleDTO[];
+  activeSchedules: ActiveScheduleDTO[];
+  upcomingSchedules: ActiveScheduleDTO[];
 }
 
 export function DashboardTabs({
   timelineByRange,
   riskyByRange,
-  schedules,
+  activeSchedules,
+  upcomingSchedules,
 }: DashboardTabsProps) {
   const [tab, setTab] = useState<(typeof TABS)[number]['value']>(
     'energy-usage-timeline'
   );
 
+  // schedule:created/updated/deleted -> router.refresh() -> Server Component
+  // ke-render ulang -> dashboardApi.getActiveSchedules ke-fetch ulang juga.
   useRealtimeRefresh([
     'device:status',
     'device:created',
@@ -87,7 +91,10 @@ export function DashboardTabs({
         <TopRiskyRoomsTab dataByRange={riskyByRange} />
       )}
       {tab === 'active-schedules' && (
-        <ActiveSchedulesTab schedules={schedules} />
+        <ActiveSchedulesTab
+          activeSchedules={activeSchedules}
+          upcomingSchedules={upcomingSchedules}
+        />
       )}
     </div>
   );
