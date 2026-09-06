@@ -16,3 +16,11 @@ export interface RoleDTO {
   permissions?: RolePermissionDTO[];
   _count?: { users: number };
 }
+
+export interface RoleListResponseDTO {
+  data: RoleDTO[];
+  page: number;
+  rowsPerPage: number;
+  totalRows: number;
+  totalPages: number;
+}

@@ -1,8 +1,19 @@
 import { http } from '@/lib/http';
-import type { RoleDTO, PermissionDTO } from './dto';
+import type {
+  RoleDTO,
+  PermissionDTO,
+  RoleListResponseDTO,
+  RolePermissionDTO,
+} from './dto';
 
 export const rolesApi = {
-  list: () => http<RoleDTO[]>('/roles', { next: { revalidate: 30 } }),
+  list: async (): Promise<RoleDTO[]> => {
+    const result = await http<RoleListResponseDTO>(
+      '/roles?page=1&rowsPerPage=1000',
+      { next: { revalidate: 30 } }
+    );
+    return result.data;
+  },
   getById: (id: string) =>
     http<RoleDTO>(`/roles/${id}`, { next: { revalidate: 15 } }),
   listPermissions: () =>

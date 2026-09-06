@@ -20,3 +20,11 @@ export interface UserDTO extends UserSummaryDTO {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface UserListResponseDTO {
+  data: UserDTO[];
+  page: number;
+  rowsPerPage: number;
+  totalRows: number;
+  totalPages: number;
+}
