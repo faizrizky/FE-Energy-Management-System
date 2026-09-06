@@ -3,6 +3,7 @@ import type { ScheduleDTO, ScheduleListResponseDTO } from './dto';
 
 export interface ScheduleListParams {
   roomId?: string;
+  status?: 'active' | 'upcoming';
   page?: number;
   rowsPerPage?: number;
   search?: string;
@@ -11,6 +12,7 @@ export interface ScheduleListParams {
 export const scheduleApi = {
   list: ({
     roomId,
+    status,
     page = 1,
     rowsPerPage = 10,
     search,
@@ -20,6 +22,7 @@ export const scheduleApi = {
       rowsPerPage: String(rowsPerPage),
     });
     if (roomId) query.set('roomId', roomId);
+    if (status) query.set('status', status);
     if (search) query.set('search', search);
     return http<ScheduleListResponseDTO>(`/schedules?${query.toString()}`, {
       next: { revalidate: 10 },
@@ -28,8 +31,6 @@ export const scheduleApi = {
 
   getById: (scheduleId: string) =>
     http<ScheduleDTO>(`/schedules/${scheduleId}`, {
-      next: {
-        revalidate: 10,
-      },
+      next: { revalidate: 10 },
     }),
 };

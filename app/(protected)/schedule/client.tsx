@@ -24,7 +24,6 @@ import { formatNumber } from '@/lib/utils';
 import { useTableSort } from '@/lib/use-table-sort';
 import { getScheduleColumns } from '@/column/schedule';
 import { scheduleClientApi } from '@/feat/schedule/api.client';
-import { isCurrentlyActive, isUpcoming } from '@/feat/schedule/time';
 import type { ScheduleDTO, ScheduleListResponseDTO } from '@/feat/schedule/dto';
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
 import type { DeviceDTO } from '@/feat/device/dto';
@@ -35,6 +34,8 @@ import { useRealtimeEvent } from '@/hooks/use-realtime-event';
 
 interface ScheduleClientProps {
   initialData: ScheduleListResponseDTO;
+  initialOverallTotal: number;
+  initialUpcomingTotal: number;
   rooms: RoomListItemDTO[];
   devices: DeviceDTO[];
 }
@@ -54,6 +55,8 @@ type ScheduleTab = 'active' | 'upcoming';
 
 export function ScheduleClient({
   initialData,
+  initialOverallTotal,
+  initialUpcomingTotal,
   rooms,
   devices,
 }: ScheduleClientProps) {
@@ -71,6 +74,15 @@ export function ScheduleClient({
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<ScheduleTab>('active');
+
+  // Total per status di-track terpisah dari `data` (yang cuma nyimpen page
+  // yang lagi ditampilkan). Fix dari bug lama: dulu kartu statistik dihitung
+  // dari `.filter()` atas 10 row pertama tanpa filter status, jadi sering
+  // salah kalau ada lebih dari 10 schedule di sistem.
+  const [overallTotal, setOverallTotal] = useState(initialOverallTotal);
+  const [activeTotal, setActiveTotal] = useState(initialData.totalRows);
+  const [upcomingTotal, setUpcomingTotal] = useState(initialUpcomingTotal);
+
   const [modalState, setModalState] = useState<{
     open: boolean;
     schedule?: ScheduleDTO;
@@ -87,16 +99,20 @@ export function ScheduleClient({
   const loadSchedules = async (
     nextPage = page,
     nextRowsPerPage = rowsPerPage,
-    nextSearch = search
+    nextSearch = search,
+    nextTab = tab
   ) => {
     try {
       const result = await scheduleClientApi.list({
+        status: nextTab,
         page: nextPage,
         rowsPerPage: nextRowsPerPage,
         search: nextSearch,
       });
 
       setData(result);
+      if (nextTab === 'active') setActiveTotal(result.totalRows);
+      else setUpcomingTotal(result.totalRows);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Failed to load schedules'
@@ -104,15 +120,41 @@ export function ScheduleClient({
     }
   };
 
-  useRealtimeEvent('schedule:created', () =>
-    loadSchedules(1, rowsPerPage, search)
-  );
-  useRealtimeEvent('schedule:updated', () =>
-    loadSchedules(page, rowsPerPage, search)
-  );
-  useRealtimeEvent('schedule:deleted', () =>
-    loadSchedules(page, rowsPerPage, search)
-  );
+  // Refresh angka di kartu statistik tanpa nyentuh tabel yang lagi
+  // ditampilkan - dipanggil abis create/update/delete atau event socket.
+  const refreshCounts = async () => {
+    try {
+      const [overall, upcoming] = await Promise.all([
+        scheduleClientApi.list({ page: 1, rowsPerPage: 1 }),
+        scheduleClientApi.list({ page: 1, rowsPerPage: 1, status: 'upcoming' }),
+      ]);
+      setOverallTotal(overall.totalRows);
+      setUpcomingTotal(upcoming.totalRows);
+      if (tab === 'upcoming') {
+        const active = await scheduleClientApi.list({
+          page: 1,
+          rowsPerPage: 1,
+          status: 'active',
+        });
+        setActiveTotal(active.totalRows);
+      }
+    } catch {
+      // statistik doang, gak usah ganggu user kalau gagal refresh
+    }
+  };
+
+  useRealtimeEvent('schedule:created', () => {
+    loadSchedules(1, rowsPerPage, search);
+    refreshCounts();
+  });
+  useRealtimeEvent('schedule:updated', () => {
+    loadSchedules(page, rowsPerPage, search);
+    refreshCounts();
+  });
+  useRealtimeEvent('schedule:deleted', () => {
+    loadSchedules(page, rowsPerPage, search);
+    refreshCounts();
+  });
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -135,87 +177,21 @@ export function ScheduleClient({
     loadSchedules(1, nextRowsPerPage, search);
   };
 
-  const activeSchedules = data.data.filter(isCurrentlyActive);
-  const upcomingWithin24Hours = data.data.filter(isUpcoming);
-  // const activeSchedules = useMemo(
-  //   () => schedules.filter(isCurrentlyActive),
-  //   [schedules]
-  // );
-  // const upcomingSchedules = useMemo(
-  //   () => schedules.filter(isUpcoming),
-  //   [schedules]
-  // );
-  // const upcomingWithin24Hours = useMemo(
-  //   () => schedules.filter(isUpcomingWithin24Hours),
-  //   [schedules]
-  // );
-
-  const tabSchedules =
-    tab === 'active' ? activeSchedules : upcomingWithin24Hours;
-
-  // const filteredSchedules = useMemo(() => {
-  //   const normalized = search.trim().toLowerCase();
-  //   return tabSchedules.filter((schedule) => {
-  //     const matchesSearch =
-  //       !normalized ||
-  //       [
-  //         schedule.room?.name,
-  //         schedule.room?.location,
-  //         schedule.device?.name,
-  //         schedule.device?.eui,
-  //         schedule.device?.deviceType,
-  //         schedule.action,
-  //       ]
-  //         .filter(Boolean)
-  //         .some((value) => value!.toLowerCase().includes(normalized));
-
-  //     const matchesComponent =
-  //       !filterComponent || schedule.device?.deviceType === filterComponent;
-  //     return matchesSearch && matchesComponent;
-  //   });
-  // }, [search, tabSchedules, filterComponent]);
-
-  // const totalPages = Math.max(
-  //   1,
-  //   Math.ceil(filteredSchedules.length / rowsPerPage)
-  // );
-  // const safePage = Math.min(page, totalPages);
-  // const paginatedSchedules = filteredSchedules.slice(
-  //   (safePage - 1) * rowsPerPage,
-  //   safePage * rowsPerPage
-  // );
-
-  const toggleSelected = (id: string) => {
-    setSelected((previous) => {
-      const next = new Set(previous);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
   const columns = getScheduleColumns({
     isSelected: (id) => selected.has(id),
-
     onToggleSelect: (id) =>
       setSelected((prev) => {
         const next = new Set(prev);
         next.has(id) ? next.delete(id) : next.add(id);
         return next;
       }),
-
     onView: (schedule) => setDetailSchedule(schedule),
-
-    onEdit: (schedule) =>
-      setModalState({
-        open: true,
-        schedule,
-      }),
-
+    onEdit: (schedule) => setModalState({ open: true, schedule }),
     onDelete: (schedule) => setDeleteTarget(schedule),
   });
 
   const { sorted, sortKey, direction, toggleSort } = useTableSort(
-    tabSchedules,
+    data.data,
     SCHEDULE_SORT_ACCESSORS
   );
 
@@ -242,11 +218,12 @@ export function ScheduleClient({
     setTab(nextTab);
     setPage(1);
     setSelected(new Set());
-    loadSchedules(1, rowsPerPage, search);
+    loadSchedules(1, rowsPerPage, search, nextTab);
   };
 
-  const handleSave = async (saved: ScheduleDTO) => {
+  const handleSave = async () => {
     await loadSchedules(page, rowsPerPage, search);
+    await refreshCounts();
     setModalState({ open: false });
     toast.success('Schedule saved successfully');
   };
@@ -260,6 +237,7 @@ export function ScheduleClient({
         success: 'Schedule deleted',
       });
       await loadSchedules(page, rowsPerPage, search);
+      await refreshCounts();
       setSelected((previous) => {
         const next = new Set(previous);
         next.delete(deleteTarget.id);
@@ -285,6 +263,7 @@ export function ScheduleClient({
       const failedCount = results.length - successfulIds.length;
 
       await loadSchedules(page, rowsPerPage, search);
+      await refreshCounts();
 
       setSelected(new Set());
       setBulkDeleteOpen(false);
@@ -318,18 +297,18 @@ export function ScheduleClient({
       <div className="grid w-full grid-cols-1 gap-2.5 md:grid-cols-3">
         <AnalyticCard
           title="Total schedule(s)"
-          value={formatNumber(data.totalRows)}
+          value={formatNumber(overallTotal)}
           unit="all times"
         />
         <AnalyticCard
           title="Active schedule(s)"
-          value={formatNumber(activeSchedules.length)}
+          value={formatNumber(activeTotal)}
           unit="Running now"
         />
         <AnalyticCard
           title="Upcoming schedule(s)"
-          value={formatNumber(upcomingWithin24Hours.length)}
-          unit="Next 24h"
+          value={formatNumber(upcomingTotal)}
+          unit="All upcoming"
         />
       </div>
 
@@ -397,7 +376,7 @@ export function ScheduleClient({
           </div>
         )}
 
-        {tabSchedules.length === 0 ? (
+        {data.data.length === 0 ? (
           <EmptyState
             icon={CalendarDays}
             title={search ? 'No matching schedule' : 'No schedule'}
@@ -406,7 +385,7 @@ export function ScheduleClient({
                 ? `No schedules match "${search}". Try a different search term.`
                 : tab === 'active'
                   ? 'There are no schedules running right now.'
-                  : 'There are no upcoming schedules within the next 24 hours.'
+                  : 'There are no upcoming schedules.'
             }
             action={
               !search && (
@@ -431,7 +410,6 @@ export function ScheduleClient({
                       onCheckedChange={togglePageSelection}
                     />
                   </TableHead>
-
                   <SortableTableHead
                     sortKey="room"
                     activeKey={sortKey}
@@ -440,7 +418,6 @@ export function ScheduleClient({
                   >
                     Room
                   </SortableTableHead>
-
                   <SortableTableHead
                     sortKey="component"
                     activeKey={sortKey}
@@ -449,7 +426,6 @@ export function ScheduleClient({
                   >
                     Component
                   </SortableTableHead>
-
                   <SortableTableHead
                     sortKey="deviceEui"
                     activeKey={sortKey}
@@ -458,7 +434,6 @@ export function ScheduleClient({
                   >
                     Device EUI
                   </SortableTableHead>
-
                   <SortableTableHead
                     sortKey="date"
                     activeKey={sortKey}
@@ -467,7 +442,6 @@ export function ScheduleClient({
                   >
                     Start Date
                   </SortableTableHead>
-
                   <SortableTableHead
                     sortKey="time"
                     activeKey={sortKey}
@@ -476,7 +450,6 @@ export function ScheduleClient({
                   >
                     Time
                   </SortableTableHead>
-
                   <SortableTableHead
                     sortKey="repeat"
                     activeKey={sortKey}
@@ -485,13 +458,11 @@ export function ScheduleClient({
                   >
                     Repeat
                   </SortableTableHead>
-
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
-
               <TableBody>
-                {tabSchedules.map((schedule) => (
+                {sorted.map((schedule) => (
                   <TableRow key={schedule.id}>
                     <TableCell>{columns.checkbox(schedule)}</TableCell>
                     <TableCell>{columns.room(schedule)}</TableCell>
