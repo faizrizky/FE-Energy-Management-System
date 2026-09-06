@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Plus, Users, Trash2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Plus, Users, Trash2, CalendarDays } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { SearchInput } from '@/components/shared/search-input';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -23,15 +23,18 @@ import { formatNumber } from '@/lib/utils';
 import { useTableSort } from '@/lib/use-table-sort';
 import { getUserColumns } from '@/column/user';
 import { usersClientApi } from '@/feat/user/api.client';
-import type { UserDTO } from '@/feat/user/dto';
+import type { UserDTO, UserListResponseDTO } from '@/feat/user/dto';
 import type { RoleDTO } from '@/feat/role/dto';
 import { UserFormModal } from './_partials/modal';
 import { UserDetailModal } from './_partials/detail-modal';
+import { TableToolbar } from '@/components/shared/table-toolbar';
 
 interface UserClientProps {
-  initialData: UserDTO[];
+  initialData: UserListResponseDTO;
   roles: RoleDTO[];
 }
+
+const SEARCH_DEBOUNCE_MS = 250;
 
 const USER_SORT_ACCESSORS = {
   fullName: (u: UserDTO) => u.fullName,
@@ -41,13 +44,19 @@ const USER_SORT_ACCESSORS = {
     u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : null,
 };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 export function UserClient({ initialData, roles }: UserClientProps) {
-  const [users, setUsers] = useState<UserDTO[]>(initialData ?? []);
+  const [data, setData] = useState<UserListResponseDTO>(
+    initialData ?? {
+      data: [],
+      page: 1,
+      rowsPerPage: 10,
+      totalRows: 0,
+      totalPages: 1,
+    }
+  );
+  const [page, setPage] = useState(initialData.page);
+  const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{
     open: boolean;
@@ -59,34 +68,45 @@ export function UserClient({ initialData, roles }: UserClientProps) {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
-  const activeRecently = users.filter(
-    (u) =>
-      u.lastActiveAt &&
-      Date.now() - new Date(u.lastActiveAt).getTime() <= DAY_MS
-  ).length;
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filtered = useMemo(() => {
-    const normalized = search.trim().toLowerCase();
-    if (!normalized) return users;
-    return users.filter(
-      (u) =>
-        u.fullName.toLowerCase().includes(normalized) ||
-        u.username.toLowerCase().includes(normalized) ||
-        u.email.toLowerCase().includes(normalized)
-    );
-  }, [users, search]);
+  const loadUsers = async (
+    nextPage: number,
+    nextRowsPerPage: number,
+    nextSearch: string
+  ) => {
+    try {
+      const result = await usersClientApi.list({
+        page: nextPage,
+        rowsPerPage: nextRowsPerPage,
+        search: nextSearch,
+      });
+      setData(result);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load users');
+    }
+  };
 
-  const { sorted, sortKey, direction, toggleSort } = useTableSort(
-    filtered,
-    USER_SORT_ACCESSORS
-  );
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / rowsPerPage));
-  const safePage = Math.min(page, totalPages);
-  const paginated = sorted.slice(
-    (safePage - 1) * rowsPerPage,
-    safePage * rowsPerPage
-  );
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      loadUsers(1, rowsPerPage, value);
+    }, SEARCH_DEBOUNCE_MS);
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+    loadUsers(nextPage, rowsPerPage, search);
+  };
+
+  const handleRowsPerPageChange = (nextRowsPerPage: number) => {
+    setRowsPerPage(nextRowsPerPage);
+    setPage(1);
+    loadUsers(1, nextRowsPerPage, search);
+  };
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -96,7 +116,11 @@ export function UserClient({ initialData, roles }: UserClientProps) {
         loading: `Deleting ${deleteTarget.fullName}...`,
         success: 'User has been deleted',
       });
-      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.filter((u) => u.id !== deleteTarget.id),
+        totalRows: Math.max(0, prev.totalRows - 1),
+      }));
       setDeleteTarget(null);
     } catch {
     } finally {
@@ -116,7 +140,11 @@ export function UserClient({ initialData, roles }: UserClientProps) {
       );
       const failedCount = results.length - successfulIds.length;
 
-      setUsers((prev) => prev.filter((u) => !successfulIds.includes(u.id)));
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.filter((u) => !successfulIds.includes(u.id)),
+        totalRows: Math.max(0, prev.totalRows - successfulIds.length),
+      }));
       setSelected(new Set());
       setBulkDeleteOpen(false);
 
@@ -130,25 +158,26 @@ export function UserClient({ initialData, roles }: UserClientProps) {
     }
   };
 
-  const columns = useMemo(
-    () =>
-      getUserColumns({
-        isSelected: (id) => selected.has(id),
-        onToggleSelect: (id) =>
-          setSelected((prev) => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-          }),
-        onView: (user) => setDetailUser(user),
-        onEdit: (user) => setModalState({ open: true, user }),
-        onDelete: (user) => setDeleteTarget(user),
+  const columns = getUserColumns({
+    isSelected: (id) => selected.has(id),
+    onToggleSelect: (id) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
       }),
-    [selected]
+    onView: (user) => setDetailUser(user),
+    onEdit: (user) => setModalState({ open: true, user }),
+    onDelete: (user) => setDeleteTarget(user),
+  });
+
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(
+    data.data,
+    USER_SORT_ACCESSORS
   );
 
   const allSelected =
-    paginated.length > 0 && paginated.every((u) => selected.has(u.id));
+    sorted.length > 0 && sorted.every((u) => selected.has(u.id));
 
   return (
     <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-y-auto bg-slate-50 p-8">
@@ -165,24 +194,34 @@ export function UserClient({ initialData, roles }: UserClientProps) {
         }
       />
 
-      <div className="flex w-full flex-col items-end gap-4 rounded-xl border border-slate-400 bg-white p-6 shadow-[0px_1px_1px_rgba(0,0,0,0.04)]">
-        <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <p className="text-lg font-semibold text-emerald-500">
-            {formatNumber(filtered.length)} user(s)
-          </p>
-
-          <div className="min-w-0 flex-1 md:flex-none">
-            <SearchInput
-              value={search}
-              onChange={(value) => {
-                setSearch(value);
-                setPage(1);
-              }}
-              placeholder="Search by name, username, or email..."
-            />
+      <TableToolbar
+        summary={
+          <div className="flex flex-col gap-1">
+            <p className="text-lg font-semibold text-emerald-500">
+              {formatNumber(data.totalRows)} role(s)
+            </p>
           </div>
-        </div>
+        }
+        actions={
+          <>
+            <div className="min-w-0 flex-1 md:flex-none">
+              <SearchInput
+                value={search}
+                onChange={handleSearchChange}
+                placeholder="Search gateway..."
+              />
+            </div>
 
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-11 shrink-0 rounded-md md:size-8"
+            >
+              <CalendarDays className="size-4" />
+            </Button>
+          </>
+        }
+      >
         {selected.size > 0 && (
           <div className="flex w-full items-center">
             <Button
@@ -195,8 +234,7 @@ export function UserClient({ initialData, roles }: UserClientProps) {
             </Button>
           </div>
         )}
-
-        {filtered.length === 0 ? (
+        {data.data.length === 0 ? (
           <EmptyState
             icon={Users}
             title={search ? 'No matching users' : 'No users yet'}
@@ -228,7 +266,7 @@ export function UserClient({ initialData, roles }: UserClientProps) {
                         setSelected(
                           allSelected
                             ? new Set()
-                            : new Set(paginated.map((u) => u.id))
+                            : new Set(sorted.map((u) => u.id))
                         )
                       }
                     />
@@ -269,7 +307,7 @@ export function UserClient({ initialData, roles }: UserClientProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.map((user) => (
+                {sorted.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>{columns.checkbox(user)}</TableCell>
                     <TableCell>{columns.user(user)}</TableCell>
@@ -283,29 +321,30 @@ export function UserClient({ initialData, roles }: UserClientProps) {
             </Table>
 
             <Pagination
-              page={safePage}
-              totalPages={totalPages}
-              onPageChange={setPage}
+              page={page}
+              totalPages={data.totalPages}
+              onPageChange={handlePageChange}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(next) => {
-                setRowsPerPage(next);
-                setPage(1);
-              }}
+              onRowsPerPageChange={handleRowsPerPageChange}
             />
           </>
         )}
-      </div>
-
+      </TableToolbar>
       <UserFormModal
         open={modalState.open}
         user={modalState.user}
         roles={roles}
         onOpenChange={(open) => setModalState({ open })}
         onSuccess={(saved) => {
-          setUsers((prev) => {
-            const exists = prev.some((u) => u.id === saved.id);
-            if (exists) return prev.map((u) => (u.id === saved.id ? saved : u));
-            return [saved, ...prev];
+          setData((prev) => {
+            const exists = prev.data.some((u) => u.id === saved.id);
+            return {
+              ...prev,
+              data: exists
+                ? prev.data.map((u) => (u.id === saved.id ? saved : u))
+                : [saved, ...prev.data],
+              totalRows: exists ? prev.totalRows : prev.totalRows + 1,
+            };
           });
           const wasEditing = !!modalState.user;
           setModalState({ open: false });

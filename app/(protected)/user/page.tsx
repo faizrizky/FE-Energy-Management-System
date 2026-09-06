@@ -7,8 +7,8 @@ import { UserClient } from './client';
 export default async function UserPage() {
   const [session, users, roles] = await Promise.all([
     getSession(),
-    usersApi.list(),
-    rolesApi.list(),
+    usersApi.list({ page: 1, rowsPerPage: 10 }),
+    rolesApi.listSummary(),
   ]);
 
   return (
