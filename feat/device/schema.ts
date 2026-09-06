@@ -1,10 +1,5 @@
 import { z } from 'zod';
 
-/**
- * Interval minimum 15 menit — mengikuti constraint yang sudah dipakai di
- * Rooms - device list (column/room-devices.tsx), meskipun backend sendiri
- * defaultnya 5 kalau intervalMinutes tidak diisi.
- */
 export const deviceFormSchema = z.object({
   name: z.string().min(1, 'Device name is required').max(120),
   eui: z.string().min(1, 'Device EUI is required'),

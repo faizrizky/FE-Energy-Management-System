@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { ArrowDownUp, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
@@ -95,11 +95,13 @@ export function SortableTableHead({
         className="flex items-center gap-1 hover:text-emerald-600"
       >
         {children}
-        {isActive && direction === 'asc' && <ChevronUp className="size-3.5" />}
-        {isActive && direction === 'desc' && (
-          <ChevronDown className="size-3.5" />
+        {isActive && direction === 'asc' && (
+          <ArrowUpDown className="size-3.5" />
         )}
-        {!isActive && <ChevronsUpDown className="size-3.5 opacity-40" />}
+        {isActive && direction === 'desc' && (
+          <ArrowDownUp className="size-3.5" />
+        )}
+        {!isActive && <ArrowDownUp className="size-3.5 opacity-40" />}
       </button>
     </TableHead>
   );

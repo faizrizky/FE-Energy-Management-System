@@ -15,6 +15,7 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  SortableTableHead,
 } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { formatDate, formatKwh } from '@/lib/utils';
@@ -34,6 +35,7 @@ import { DeviceLogModal } from './_partials/device-log-modal';
 import { TableToolbar } from '@/components/shared/table-toolbar';
 import { EmptyState } from '@/components/shared/empty-state';
 import { useRealtimeEvent } from '@/hooks/use-realtime-event';
+import { useTableSort } from '@/lib/use-table-sort';
 
 interface RoomDetailClientProps {
   room: RoomDetailDTO;
@@ -78,6 +80,14 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
     null
   );
 
+  const ROOM_DETAIL_SORT_ACCESSORS = {
+    deviceEui: (d: RoomDeviceDTO) => d.deviceEui,
+    deviceType: (d: RoomDeviceDTO) => d.deviceType,
+    totalUsage24hKwh: (d: RoomDeviceDTO) => d.totalUsage24hKwh,
+    intervalMinutes: (d: RoomDeviceDTO) => d.intervalMinutes,
+    isPowerOn: (d: RoomDeviceDTO) => (d.isPowerOn ? 1 : 0),
+  };
+
   const loadDevices = async (
     nextPage = page,
     nextRowsPerPage = rowsPerPage,
@@ -101,14 +111,9 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
     try {
       const result = await roomsClientApi.getUsageSummary(roomInfo.id);
       setUsage(result);
-    } catch {
-      // biarin diam - usage cuma nampilan pendukung, gak perlu ganggu user kalau gagal refresh
-    }
+    } catch {}
   };
 
-  // Ganti raw useEffect+socket dengan hook useRealtimeEvent (efeknya sudah
-  // dienkapsulasi di dalam hook itu sendiri). Debounce tetap manual pakai ref
-  // biar gak nge-refresh usage tiap kali reading masuk (bisa tiap beberapa detik).
   useRealtimeEvent<DeviceStatusEventDTO>('device:status', (payload) => {
     if (payload.roomId !== roomInfo.id) return;
     if (usageRefreshTimeoutRef.current) {
@@ -146,7 +151,6 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
   const handleTogglePower = async (device: RoomDeviceDTO) => {
     const nextState = !device.isPowerOn;
 
-    // Optimistic update dulu, di-rollback kalau request ke backend gagal.
     setDevicesData((prev) => ({
       ...prev,
       data: prev.data.map((d) =>
@@ -191,7 +195,6 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
       });
       setDeleteTarget(null);
     } catch {
-      // toast.promise sudah nampilin toast.error-nya
     } finally {
       setDeleting(false);
     }
@@ -243,7 +246,6 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
   const closeDeviceLog = () =>
     setLogModal({ open: false, device: null, logs: null, loading: false });
 
-  // Dipanggil langsung, gak dibungkus useMemo - sama kayak pola di device/client.tsx.
   const columns = getRoomDevicesColumns({
     isSelected: (id) => selected.has(id),
     onToggleSelect: (id) =>
@@ -266,8 +268,13 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
     },
   });
 
+  const { sorted, sortKey, direction, toggleSort } = useTableSort(
+    devices,
+    ROOM_DETAIL_SORT_ACCESSORS
+  );
+
   const allSelected =
-    devices.length > 0 && devices.every((r) => selected.has(r.id));
+    sorted.length > 0 && sorted.every((r) => selected.has(r.id));
 
   return (
     <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-y-auto bg-slate-50 p-8">
@@ -394,7 +401,7 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
           </div>
         )}
 
-        {devices.length === 0 ? (
+        {sorted.length === 0 ? (
           <EmptyState
             icon={DoorOpen}
             title={search ? 'No matching rooms' : 'No rooms yet'}
@@ -426,28 +433,63 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
                         setSelected(
                           allSelected
                             ? new Set()
-                            : new Set(devices.map((device) => device.id))
+                            : new Set(sorted.map((device) => device.id))
                         )
                       }
                     />
                   </TableHead>
 
-                  <TableHead>Device(s)</TableHead>
+                  <SortableTableHead
+                    sortKey="deviceEui"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Device
+                  </SortableTableHead>
 
-                  <TableHead>Component</TableHead>
+                  <SortableTableHead
+                    sortKey="deviceType"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Component
+                  </SortableTableHead>
 
-                  <TableHead>Total usage(24H)</TableHead>
+                  <SortableTableHead
+                    sortKey="usage"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Total usage(24H)
+                  </SortableTableHead>
 
-                  <TableHead>Interval</TableHead>
+                  <SortableTableHead
+                    sortKey="intervalMinutes"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Interval
+                  </SortableTableHead>
 
-                  <TableHead>Status</TableHead>
+                  <SortableTableHead
+                    sortKey="isPowerOn"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  >
+                    Status
+                  </SortableTableHead>
 
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
-                {devices.map((device) => (
+                {sorted.map((device) => (
                   <TableRow key={device.id}>
                     <TableCell>{columns.checkbox(device)}</TableCell>
 
