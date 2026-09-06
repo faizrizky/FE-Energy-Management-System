@@ -1,5 +1,4 @@
 import { Eye, Pencil, Trash2 } from 'lucide-react';
-import { StatusDot } from '@/components/shared/status-dot';
 import { TableActionButton } from '@/components/shared/table-action-button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatScheduleDate, formatTimeRange } from '@/feat/schedule/time';

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, DoorOpen, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, DoorOpen, Plus, Trash2 } from 'lucide-react';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
@@ -21,17 +21,19 @@ import { formatDate, formatKwh } from '@/lib/utils';
 import { toast } from '@/lib/toast-store';
 import { getRoomDevicesColumns } from '@/column/room-devices';
 import { roomsClientApi } from '@/feat/rooms/api.client';
+import { devicesClientApi } from '@/feat/device/api.client';
 import type {
   RoomDetailDTO,
   RoomDeviceDTO,
   RoomDeviceLogEntryDTO,
   RoomDTO,
+  RoomUsageSummaryDTO,
 } from '@/feat/rooms/dto';
+import type { DeviceStatusEventDTO } from '@/feat/device/dto';
 import { DeviceLogModal } from './_partials/device-log-modal';
 import { TableToolbar } from '@/components/shared/table-toolbar';
 import { EmptyState } from '@/components/shared/empty-state';
-import { connectSocket } from '@/lib/socket';
-import type { RoomUsageSummaryDTO } from '@/feat/rooms/dto';
+import { useRealtimeEvent } from '@/hooks/use-realtime-event';
 
 interface RoomDetailClientProps {
   room: RoomDetailDTO;
@@ -45,6 +47,7 @@ interface LogModalState {
 }
 
 const SEARCH_DEBOUNCE_MS = 250;
+const USAGE_REFRESH_DEBOUNCE_MS = 3000;
 
 export function RoomDetailClient({ room }: RoomDetailClientProps) {
   const [roomInfo] = useState(room);
@@ -68,7 +71,12 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
   });
   const [deleteTarget, setDeleteTarget] = useState<RoomDeviceDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const usageRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   const loadDevices = async (
     nextPage = page,
@@ -89,30 +97,28 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
     }
   };
 
-  useEffect(() => {
-    const socket = connectSocket();
-    let timeout: ReturnType<typeof setTimeout>;
+  const refreshUsage = async () => {
+    try {
+      const result = await roomsClientApi.getUsageSummary(roomInfo.id);
+      setUsage(result);
+    } catch {
+      // biarin diam - usage cuma nampilan pendukung, gak perlu ganggu user kalau gagal refresh
+    }
+  };
 
-    const refreshUsage = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(async () => {
-        try {
-          const result = await roomsClientApi.getUsageSummary(roomInfo.id);
-          setUsage(result);
-        } catch {}
-      }, 3000);
-    };
-
-    const onDeviceStatus = (payload: { roomId: string }) => {
-      if (payload.roomId === roomInfo.id) refreshUsage();
-    };
-
-    socket.on('device:status', onDeviceStatus);
-    return () => {
-      socket.off('device:status', onDeviceStatus);
-      clearTimeout(timeout);
-    };
-  }, [roomInfo.id]);
+  // Ganti raw useEffect+socket dengan hook useRealtimeEvent (efeknya sudah
+  // dienkapsulasi di dalam hook itu sendiri). Debounce tetap manual pakai ref
+  // biar gak nge-refresh usage tiap kali reading masuk (bisa tiap beberapa detik).
+  useRealtimeEvent<DeviceStatusEventDTO>('device:status', (payload) => {
+    if (payload.roomId !== roomInfo.id) return;
+    if (usageRefreshTimeoutRef.current) {
+      clearTimeout(usageRefreshTimeoutRef.current);
+    }
+    usageRefreshTimeoutRef.current = setTimeout(
+      refreshUsage,
+      USAGE_REFRESH_DEBOUNCE_MS
+    );
+  });
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -137,16 +143,88 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
   const devices = devicesData.data;
   const online = devices.filter((d) => d.isPowerOn).length;
 
-  const handleConfirmDelete = () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
+  const handleTogglePower = async (device: RoomDeviceDTO) => {
+    const nextState = !device.isPowerOn;
+
+    // Optimistic update dulu, di-rollback kalau request ke backend gagal.
     setDevicesData((prev) => ({
       ...prev,
-      data: prev.data.filter((d) => d.id !== deleteTarget.id),
+      data: prev.data.map((d) =>
+        d.id === device.id ? { ...d, isPowerOn: nextState } : d
+      ),
     }));
-    toast.success('Device has been removed from this room');
-    setDeleteTarget(null);
-    setDeleting(false);
+
+    try {
+      await devicesClientApi.setPower(device.id, nextState);
+    } catch (err) {
+      setDevicesData((prev) => ({
+        ...prev,
+        data: prev.data.map((d) =>
+          d.id === device.id ? { ...d, isPowerOn: device.isPowerOn } : d
+        ),
+      }));
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : 'Could not change device power state'
+      );
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await toast.promise(devicesClientApi.remove(deleteTarget.id), {
+        loading: `Removing ${deleteTarget.tbDeviceId}...`,
+        success: 'Device has been removed from this room',
+      });
+      setDevicesData((prev) => ({
+        ...prev,
+        data: prev.data.filter((d) => d.id !== deleteTarget.id),
+        totalRows: Math.max(0, prev.totalRows - 1),
+      }));
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(deleteTarget.id);
+        return next;
+      });
+      setDeleteTarget(null);
+    } catch {
+      // toast.promise sudah nampilin toast.error-nya
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    const ids = Array.from(selected);
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => devicesClientApi.remove(id))
+      );
+      const successfulIds = ids.filter(
+        (_, index) => results[index].status === 'fulfilled'
+      );
+      const failedCount = results.length - successfulIds.length;
+
+      setDevicesData((prev) => ({
+        ...prev,
+        data: prev.data.filter((d) => !successfulIds.includes(d.id)),
+        totalRows: Math.max(0, prev.totalRows - successfulIds.length),
+      }));
+      setSelected(new Set());
+      setBulkDeleteOpen(false);
+
+      if (failedCount === 0) {
+        toast.success(`${successfulIds.length} device(s) removed`);
+      } else {
+        toast.error(`${successfulIds.length} removed, ${failedCount} failed`);
+      }
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   const openDeviceLog = async (device: RoomDeviceDTO) => {
@@ -165,37 +243,28 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
   const closeDeviceLog = () =>
     setLogModal({ open: false, device: null, logs: null, loading: false });
 
-  const columns = useMemo(
-    () =>
-      getRoomDevicesColumns({
-        isSelected: (id) => selected.has(id),
-        onToggleSelect: (id) =>
-          setSelected((prev) => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-          }),
-        onTogglePower: (device) =>
-          setDevicesData((prev) => ({
-            ...prev,
-            data: prev.data.map((d) =>
-              d.id === device.id ? { ...d, isPowerOn: !d.isPowerOn } : d
-            ),
-          })),
-        onViewLog: openDeviceLog,
-        onDelete: (device) => setDeleteTarget(device),
-        onIntervalChange: (device, minutes) => {
-          if (minutes < 15) return;
-          setDevicesData((prev) => ({
-            ...prev,
-            data: prev.data.map((d) =>
-              d.id === device.id ? { ...d, intervalMinutes: minutes } : d
-            ),
-          }));
-        },
+  // Dipanggil langsung, gak dibungkus useMemo - sama kayak pola di device/client.tsx.
+  const columns = getRoomDevicesColumns({
+    isSelected: (id) => selected.has(id),
+    onToggleSelect: (id) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
       }),
-    [selected]
-  );
+    onTogglePower: handleTogglePower,
+    onViewLog: openDeviceLog,
+    onDelete: (device) => setDeleteTarget(device),
+    onIntervalChange: (device, minutes) => {
+      if (minutes < 15) return;
+      setDevicesData((prev) => ({
+        ...prev,
+        data: prev.data.map((d) =>
+          d.id === device.id ? { ...d, intervalMinutes: minutes } : d
+        ),
+      }));
+    },
+  });
 
   const allSelected =
     devices.length > 0 && devices.every((r) => selected.has(r.id));
@@ -306,15 +375,21 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
         }
       >
         {selected.size > 0 && (
-          <div className="flex w-full items-center">
+          <div className="flex w-full items-center gap-2">
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => {
-                setSelected(new Set());
-              }}
+              onClick={() => setBulkDeleteOpen(true)}
             >
-              Clear selection ({selected.size})
+              <Trash2 className="size-4" />
+              Remove ({selected.size})
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelected(new Set())}
+            >
+              Clear selection
             </Button>
           </div>
         )}
@@ -426,6 +501,16 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
         confirming={deleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title="Remove Devices"
+        count={selected.size}
+        itemLabel="device"
+        confirming={bulkDeleting}
+        onConfirm={handleConfirmBulkDelete}
+        onCancel={() => setBulkDeleteOpen(false)}
       />
     </div>
   );
