@@ -33,13 +33,28 @@ interface TurnstileWidgetProps {
   onExpire?: () => void;
 }
 
-export const TurnstileWidget = forwardRef<
-  TurnstileWidgetHandle,
-  TurnstileWidgetProps
->(function TurnstileWidget({ onVerify, onExpire }, ref) {
+function TurnstileWidgetInner(
+  { onVerify, onExpire }: TurnstileWidgetProps,
+  ref: React.ForwardedRef<TurnstileWidgetHandle>
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
+
+  const [scriptLoaded, setScriptLoaded] = useState(
+    () => typeof window !== 'undefined' && !!window.turnstile
+  );
+
+  useEffect(() => {
+    if (scriptLoaded) return;
+    const interval = setInterval(() => {
+      if (window.turnstile) {
+        setScriptLoaded(true);
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [scriptLoaded]);
 
   useImperativeHandle(ref, () => ({
     reset: () => {
@@ -79,4 +94,7 @@ export const TurnstileWidget = forwardRef<
       <div ref={containerRef} />
     </>
   );
-});
+}
+
+export const TurnstileWidget = forwardRef(TurnstileWidgetInner);
+TurnstileWidget.displayName = 'TurnstileWidget';
