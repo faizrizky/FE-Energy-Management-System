@@ -1,3 +1,5 @@
+export type GatewayStatus = 'online' | 'offline';
+
 export interface GatewayInstallerDTO {
   id: string;
   fullName: string;
@@ -11,8 +13,8 @@ export interface GatewayDTO {
   simcard: string | null;
   powerSource: string | null;
   modelUnit: string | null;
-  installationDate: string | null; // ISO date string
-  status: string; // "online" | "offline" — raw backend field
+  installationDate: string | null;
+  status: GatewayStatus;
   lastSeenAt: string | null;
   installedById: string | null;
   installedBy: GatewayInstallerDTO | null;

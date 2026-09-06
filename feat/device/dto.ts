@@ -1,3 +1,5 @@
+export type DevicePowerStatus = 'on' | 'off';
+
 export interface DeviceRoomDTO {
   id: string;
   name: string;
@@ -17,7 +19,7 @@ export interface DeviceDTO {
   name: string;
   deviceType: string | null;
   intervalMinutes: number;
-  status: string;
+  status: DevicePowerStatus;
   lastSeenAt: string | null;
   roomId: string;
   gatewayId: string;
@@ -53,7 +55,7 @@ export interface DeviceStatusEventDTO {
   deviceId: string;
   eui: string;
   roomId: string;
-  status: string;
+  status: DevicePowerStatus;
   powerWatt?: number | null;
   usageKwh?: number | null;
   timestamp: string;
