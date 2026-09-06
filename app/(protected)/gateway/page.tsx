@@ -4,11 +4,11 @@ import { gatewaysApi } from '@/feat/gateway/api';
 import { usersApi } from '@/feat/user/api';
 import { GatewayClient } from './client';
 
-export default async function () {
+export default async function GatewayPage() {
   const [session, gateways, users] = await Promise.all([
     getSession(),
     gatewaysApi.list(),
-    usersApi.list(),
+    usersApi.listSummary(),
   ]);
 
   return (

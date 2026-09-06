@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Plus, Router, CalendarDays } from 'lucide-react';
+import { Plus, Router, CalendarDays, Trash2 } from 'lucide-react';
 
 import { PageHeader } from '@/components/shared/page-header';
 import { SearchInput } from '@/components/shared/search-input';
@@ -66,6 +66,8 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
   });
   const [deleteTarget, setDeleteTarget] = useState<GatewayDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [detailState, setDetailState] = useState<{
     open: boolean;
     gateway: GatewayDetailDTO | null;
@@ -180,6 +182,35 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
     setDetailState({ open: false, gateway: null, loading: false });
   };
 
+  const handleConfirmBulkDelete = async () => {
+    const ids = Array.from(selected);
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => gatewaysClientApi.remove(id))
+      );
+      const successfulIds = ids.filter(
+        (_, index) => results[index].status === 'fulfilled'
+      );
+      const failedCount = results.length - successfulIds.length;
+
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.filter((d) => !successfulIds.includes(d.id)),
+      }));
+      setSelected(new Set());
+      setBulkDeleteOpen(false);
+
+      if (failedCount === 0) {
+        toast.success(`${successfulIds.length} device(s) deleted`);
+      } else {
+        toast.error(`${successfulIds.length} deleted, ${failedCount} failed`);
+      }
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const columns = getGatewayColumns({
     isSelected: (id) => selected.has(id),
     onToggleSelect: (id) =>
@@ -207,7 +238,6 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
       }));
       setDeleteTarget(null);
     } catch {
-      // toast.promise sudah nampilin error-nya
     } finally {
       setDeleting(false);
     }
@@ -276,6 +306,18 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
             </>
           }
         >
+          {selected.size > 0 && (
+            <div className="flex w-full items-center">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                <Trash2 className="size-4" />
+                Delete ({selected.size})
+              </Button>
+            </div>
+          )}
           {data.data.length === 0 ? (
             <EmptyState
               icon={Router}
@@ -434,6 +476,15 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
           confirming={deleting}
           onConfirm={handleConfirmDelete}
           onCancel={() => setDeleteTarget(null)}
+        />
+        <ConfirmDialog
+          open={bulkDeleteOpen}
+          title="Delete Devices"
+          count={selected.size}
+          itemLabel="device"
+          confirming={bulkDeleting}
+          onConfirm={handleConfirmBulkDelete}
+          onCancel={() => setBulkDeleteOpen(false)}
         />
       </div>
 
