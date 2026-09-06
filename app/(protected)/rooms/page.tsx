@@ -9,7 +9,7 @@ export default async function RoomsPage() {
     getSession(),
     roomsApi.getSummary(),
     roomsApi.list({ page: 1, rowsPerPage: 10 }),
-    usersApi.list(),
+    usersApi.listSummary(),
   ]);
 
   return (
