@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
 import { ScheduleForm } from './form';
 import { scheduleClientApi } from '@/feat/schedule/api.client';
 import { toDateInputValue } from '@/feat/schedule/time';
@@ -28,8 +29,6 @@ export function ScheduleFormModal({
   onSuccess,
 }: ScheduleFormModalProps) {
   const [submitting, setSubmitting] = useState(false);
-
-  if (!open) return null;
 
   const defaultValues: Partial<ScheduleFormValues> = schedule
     ? {
@@ -66,34 +65,38 @@ export function ScheduleFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4 backdrop-blur-[5px]">
-      <div className="flex max-h-[90vh] w-full max-w-[700px] flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0px_8px_12px_rgba(0,0,0,0.15)]">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-          <h2 className="text-lg font-semibold text-emerald-500">
-            {schedule ? 'Edit schedule' : 'Add schedule'}
-          </h2>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={() => onOpenChange(false)}
-            disabled={submitting}
-            className="rounded-md p-1 hover:bg-slate-100"
-          >
-            <X className="size-5 text-slate-500" />
-          </button>
-        </div>
-        <div className="overflow-y-auto px-6 py-5">
-          <ScheduleForm
-            rooms={rooms}
-            devices={devices}
-            defaultValues={defaultValues}
-            schedule={schedule}
-            onSubmit={handleSubmit}
-            onCancel={() => onOpenChange(false)}
-            submitting={submitting}
-          />
-        </div>
+    <Modal
+      open={open}
+      onClose={() => onOpenChange(false)}
+      panelClassName="flex max-h-[auto] w-full max-w-[700px] flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0px_8px_12px_rgba(0,0,0,0.15)] gap-2"
+    >
+      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+        <h2 className="text-lg font-semibold text-emerald-500">
+          {schedule ? 'Edit schedule' : 'Add schedule'}
+        </h2>
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={() => onOpenChange(false)}
+          disabled={submitting}
+          className="rounded-md p-1 hover:bg-slate-100"
+        >
+          <X className="size-5 text-slate-500" />
+        </button>
       </div>
-    </div>
+      <div className="overflow-y-auto px-6 py-5">
+        <ScheduleForm
+          rooms={rooms}
+          devices={devices}
+          defaultValues={defaultValues}
+          schedule={schedule}
+          onSubmit={handleSubmit}
+          onCancel={() => onOpenChange(false)}
+          submitting={submitting}
+        />
+      </div>
+      {/* </div>
+    </div> */}
+    </Modal>
   );
 }

@@ -74,11 +74,6 @@ export function ScheduleClient({
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<ScheduleTab>('active');
-
-  // Total per status di-track terpisah dari `data` (yang cuma nyimpen page
-  // yang lagi ditampilkan). Fix dari bug lama: dulu kartu statistik dihitung
-  // dari `.filter()` atas 10 row pertama tanpa filter status, jadi sering
-  // salah kalau ada lebih dari 10 schedule di sistem.
   const [overallTotal, setOverallTotal] = useState(initialOverallTotal);
   const [activeTotal, setActiveTotal] = useState(initialData.totalRows);
   const [upcomingTotal, setUpcomingTotal] = useState(initialUpcomingTotal);
@@ -87,6 +82,7 @@ export function ScheduleClient({
     open: boolean;
     schedule?: ScheduleDTO;
   }>({ open: false });
+  const [detailOpen, setDetailOpen] = useState(false);
   const [detailSchedule, setDetailSchedule] = useState<ScheduleDTO | null>(
     null
   );
@@ -120,8 +116,6 @@ export function ScheduleClient({
     }
   };
 
-  // Refresh angka di kartu statistik tanpa nyentuh tabel yang lagi
-  // ditampilkan - dipanggil abis create/update/delete atau event socket.
   const refreshCounts = async () => {
     try {
       const [overall, upcoming] = await Promise.all([
@@ -138,9 +132,7 @@ export function ScheduleClient({
         });
         setActiveTotal(active.totalRows);
       }
-    } catch {
-      // statistik doang, gak usah ganggu user kalau gagal refresh
-    }
+    } catch {}
   };
 
   useRealtimeEvent('schedule:created', () => {
@@ -185,7 +177,10 @@ export function ScheduleClient({
         next.has(id) ? next.delete(id) : next.add(id);
         return next;
       }),
-    onView: (schedule) => setDetailSchedule(schedule),
+    onView: (schedule) => {
+      setDetailSchedule(schedule);
+      setDetailOpen(true);
+    },
     onEdit: (schedule) => setModalState({ open: true, schedule }),
     onDelete: (schedule) => setDeleteTarget(schedule),
   });
@@ -498,7 +493,9 @@ export function ScheduleClient({
       />
 
       <ScheduleDetailModal
+        open={detailOpen}
         schedule={detailSchedule}
+        onOpenChange={setDetailOpen}
         onClose={() => setDetailSchedule(null)}
       />
 
