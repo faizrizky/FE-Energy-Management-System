@@ -1,8 +1,16 @@
+// app/(protected)/rooms/detail/[roomId]/client.tsx
 'use client';
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, DoorOpen, Plus, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  CalendarDays,
+  DoorOpen,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
@@ -31,7 +39,9 @@ import type {
   RoomUsageSummaryDTO,
 } from '@/feat/rooms/dto';
 import type { DeviceStatusEventDTO } from '@/feat/device/dto';
+import type { UserSummaryDTO } from '@/feat/user/dto';
 import { DeviceLogModal } from './_partials/device-log-modal';
+import { RoomFormModal } from '../../_partials/modal';
 import { TableToolbar } from '@/components/shared/table-toolbar';
 import { EmptyState } from '@/components/shared/empty-state';
 import { useRealtimeEvent } from '@/hooks/use-realtime-event';
@@ -39,6 +49,7 @@ import { useTableSort } from '@/lib/use-table-sort';
 
 interface RoomDetailClientProps {
   room: RoomDetailDTO;
+  users: UserSummaryDTO[];
 }
 
 interface LogModalState {
@@ -51,8 +62,8 @@ interface LogModalState {
 const SEARCH_DEBOUNCE_MS = 250;
 const USAGE_REFRESH_DEBOUNCE_MS = 3000;
 
-export function RoomDetailClient({ room }: RoomDetailClientProps) {
-  const [roomInfo] = useState(room);
+export function RoomDetailClient({ room, users }: RoomDetailClientProps) {
+  const [roomInfo, setRoomInfo] = useState(room);
   const [usage, setUsage] = useState<RoomUsageSummaryDTO>(room.usage);
   const [devicesData, setDevicesData] = useState(room.devices);
   const [page, setPage] = useState(room.devices.page);
@@ -243,8 +254,12 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
     }
   };
 
-  const closeDeviceLog = () =>
-    setLogModal({ open: false, device: null, logs: null, loading: false });
+  const closeDeviceLog = () => {
+    setLogModal((prev) => ({
+      ...prev,
+      open: false,
+    }));
+  };
 
   const columns = getRoomDevicesColumns({
     isSelected: (id) => selected.has(id),
@@ -288,9 +303,19 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
         </Link>
 
         <div className="flex flex-1 flex-col gap-1">
-          <h1 className="font-display text-[36px] font-bold leading-[44px] tracking-[-0.72px] text-emerald-500">
-            {roomInfo.name}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-[36px] font-bold leading-[44px] tracking-[-0.72px] text-emerald-500">
+              {roomInfo.name}
+            </h1>
+            {/* <button
+              type="button"
+              aria-label="Edit room"
+              onClick={() => setModalState({ open: true, room: roomInfo })}
+              className="flex size-8 shrink-0 items-center justify-center rounded-md border border-slate-400 bg-white hover:bg-slate-50"
+            >
+              <Pencil className="size-4 text-slate-600" />
+            </button> */}
+          </div>
           <div className="flex flex-col gap-1 text-xs text-slate-600 md:flex-row md:items-center md:gap-4">
             <span>
               Created at:{' '}
@@ -526,6 +551,26 @@ export function RoomDetailClient({ room }: RoomDetailClientProps) {
         loading={logModal.loading}
         open={logModal.open}
         onClose={closeDeviceLog}
+      />
+
+      <RoomFormModal
+        open={modalState.open}
+        room={modalState.room}
+        users={users}
+        onOpenChange={(open) => setModalState({ open })}
+        onSuccess={(saved) => {
+          setRoomInfo((prev) => ({
+            ...prev,
+            name: saved.name,
+            location: saved.location,
+            picName: saved.picName,
+            picPhone: saved.picPhone,
+            description: saved.description,
+            isCritical: saved.isCritical,
+          }));
+          setModalState({ open: false });
+          toast.success(modalState.room ? 'Room updated' : 'Room created');
+        }}
       />
 
       <ConfirmDialog

@@ -18,7 +18,6 @@ interface RoomFormProps {
   submitting?: boolean;
 }
 
-/** Add / Edit room form — validated with the shared `roomFormSchema`. */
 export function RoomForm({
   users,
   isEdit,
@@ -46,15 +45,14 @@ export function RoomForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <Field label="Room name" required error={errors.name?.message}>
+        <Input
+          placeholder="Type room name here ..."
+          {...register('name')}
+          aria-invalid={!!errors.name}
+        />
+      </Field>
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Room name" required error={errors.name?.message}>
-          <Input
-            placeholder="Type room name here ..."
-            {...register('name')}
-            aria-invalid={!!errors.name}
-          />
-        </Field>
-
         <Field label="PIC contact" required error={errors.picPhone?.message}>
           <Input
             placeholder="Type building pic contact here ..."
@@ -62,34 +60,34 @@ export function RoomForm({
             aria-invalid={!!errors.picPhone}
           />
         </Field>
-      </div>
 
-      <Field
-        label="Choose building PIC"
-        required
-        error={errors.picName?.message}
-      >
-        <SelectField>
-          <select
-            {...register('picName')}
-            className="h-8 w-full appearance-none rounded-md border border-slate-400 bg-white px-3 pr-8 text-sm text-slate-950 outline-none"
-          >
-            <option value="">Choose building PIC ...</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.fullName}>
-                {user.fullName}
-              </option>
-            ))}
-          </select>
-        </SelectField>
-      </Field>
+        <Field
+          label="Choose building PIC"
+          required
+          error={errors.picName?.message}
+        >
+          <SelectField>
+            <select
+              {...register('picName')}
+              className="h-8 w-full appearance-none rounded-md border border-slate-400 bg-white px-3 pr-8 text-sm text-slate-950 outline-none"
+            >
+              <option value="">Choose building PIC ...</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.fullName}>
+                  {user.fullName}
+                </option>
+              ))}
+            </select>
+          </SelectField>
+        </Field>
+      </div>
 
       <Field label="Room location" required error={errors.location?.message}>
         <textarea
           {...register('location')}
-          rows={3}
+          rows={5}
           placeholder="Type your room location here ..."
-          className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="w-full rounded-md border border-slate-400 px-3 py-3 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
         />
       </Field>
 
@@ -100,8 +98,8 @@ export function RoomForm({
       >
         <textarea
           {...register('description')}
-          rows={3}
-          className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          rows={5}
+          className="w-full rounded-md border border-slate-400 px-3 py-3 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           placeholder="Type your room description here ..."
         />
       </Field>
