@@ -45,7 +45,6 @@ function applySessionCookies(
   tokens: { accessToken: string; refreshToken: string }
 ) {
   const isProd = process.env.NODE_ENV === 'production';
-
   response.cookies.set(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
     httpOnly: false,
     sameSite: 'lax',
@@ -83,18 +82,29 @@ export async function middleware(request: NextRequest) {
 
   if (!refreshToken) return redirectToLogin(request);
 
-  const tokens = await requestTokenRefresh(refreshToken);
-  if (!tokens) {
+  const result = await requestTokenRefresh(refreshToken);
+
+  if (result.status === 'rate_limited') {
+    const res = NextResponse.next();
+    if (result.retryAfterSeconds != null) {
+      res.headers.set(
+        'x-rate-limited-retry-after',
+        String(result.retryAfterSeconds)
+      );
+    }
+    return res;
+  }
+
+  if (result.status === 'invalid') {
     const response = redirectToLogin(request);
     response.cookies.delete(ACCESS_TOKEN_COOKIE);
     response.cookies.delete(REFRESH_TOKEN_COOKIE);
     return response;
   }
 
-  request.cookies.set(ACCESS_TOKEN_COOKIE, tokens.accessToken);
-
+  request.cookies.set(ACCESS_TOKEN_COOKIE, result.tokens.accessToken);
   const response = NextResponse.next({ request });
-  applySessionCookies(response, tokens);
+  applySessionCookies(response, result.tokens);
   return response;
 }
 

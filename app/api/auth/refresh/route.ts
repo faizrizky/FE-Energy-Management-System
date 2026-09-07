@@ -15,12 +15,22 @@ export async function POST() {
     );
   }
 
-  const tokens = await requestTokenRefresh(refreshToken);
-  if (!tokens) {
+  const result = await requestTokenRefresh(refreshToken);
+
+  if (result.status === 'rate_limited') {
+    return NextResponse.json(
+      {
+        message: 'Terlalu banyak percobaan, coba lagi sebentar lagi',
+        retryAfterSeconds: result.retryAfterSeconds,
+      },
+      { status: 429 }
+    );
+  }
+  if (result.status === 'invalid') {
     await clearAuthCookies();
     return NextResponse.json({ message: 'Sesi kedaluwarsa' }, { status: 401 });
   }
 
-  await setAuthCookies(tokens);
+  await setAuthCookies(result.tokens);
   return NextResponse.json({ ok: true });
 }

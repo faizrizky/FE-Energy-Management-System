@@ -1,6 +1,7 @@
 'use client';
 
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { toast } from './toast-store';
 
 export class ApiError extends Error {
   status?: number;
@@ -16,10 +17,7 @@ export class ApiError extends Error {
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/api',
-
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
 function readCookieToken() {
@@ -33,9 +31,7 @@ function readCookieToken() {
 
 api.interceptors.request.use((config) => {
   const token = readCookieToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
@@ -47,12 +43,41 @@ function resolveQueue() {
   pendingQueue = [];
 }
 
-async function refreshSession(): Promise<boolean> {
+function getRetryAfterSeconds(err: AxiosError): number | null {
+  const headers = err.response?.headers;
+  const retryAfter = headers?.['retry-after'];
+  if (retryAfter) return Number(retryAfter) || null;
+  const reset = headers?.['ratelimit-reset'];
+  return reset ? Number(reset) || null : null;
+}
+
+let lastRateLimitToastAt = 0;
+
+function showRateLimitToast(err: AxiosError) {
+  const now = Date.now();
+  if (now - lastRateLimitToastAt < 3000) return;
+  lastRateLimitToastAt = now;
+
+  const seconds = getRetryAfterSeconds(err);
+  const message =
+    (err.response?.data as { message?: string } | undefined)?.message ??
+    'Terlalu banyak request';
+
+  toast.warning(message, {
+    description: seconds
+      ? `Coba lagi dalam ${seconds} detik. Kamu tetap login.`
+      : 'Coba lagi sebentar lagi. Kamu tetap login.',
+    duration: seconds ? Math.min(seconds * 1000, 15000) : 6000,
+  });
+}
+
+async function refreshSession(): Promise<'ok' | 'rate_limited' | 'invalid'> {
   try {
     const res = await fetch('/api/auth/refresh', { method: 'POST' });
-    return res.ok;
+    if (res.status === 429) return 'rate_limited';
+    return res.ok ? 'ok' : 'invalid';
   } catch {
-    return false;
+    return 'rate_limited';
   }
 }
 
@@ -73,6 +98,14 @@ api.interceptors.response.use(
       | (InternalAxiosRequestConfig & { _retried?: boolean })
       | undefined;
 
+    if (status === 429) {
+      showRateLimitToast(error);
+      const message =
+        (error?.response?.data as { message?: string } | undefined)?.message ??
+        'Terlalu banyak request, coba lagi nanti';
+      return Promise.reject(new ApiError(message, status, 'RATE_LIMITED'));
+    }
+
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/login');
 
     if (
@@ -89,12 +122,27 @@ api.interceptors.response.use(
       }
 
       isRefreshing = true;
-      const refreshed = await refreshSession();
+      const result = await refreshSession();
       isRefreshing = false;
       resolveQueue();
 
-      if (refreshed) {
+      if (result === 'ok') {
         return api(originalRequest);
+      }
+
+      if (result === 'rate_limited') {
+        toast.warning('Sesi belum bisa diperbarui', {
+          description:
+            'Server sedang membatasi request. Kamu tetap login, coba lagi sebentar.',
+          duration: 6000,
+        });
+        return Promise.reject(
+          new ApiError(
+            'Terlalu banyak request saat refresh sesi',
+            429,
+            'RATE_LIMITED'
+          )
+        );
       }
 
       if (typeof window !== 'undefined') {

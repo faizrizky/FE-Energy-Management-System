@@ -12,9 +12,21 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
+export type RefreshResult =
+  | { status: 'ok'; tokens: AuthTokens }
+  | { status: 'rate_limited'; retryAfterSeconds: number | null }
+  | { status: 'invalid' };
+
+function getRetryAfterSeconds(res: Response): number | null {
+  const retryAfter = res.headers.get('retry-after');
+  if (retryAfter) return Number(retryAfter) || null;
+  const reset = res.headers.get('ratelimit-reset');
+  return reset ? Number(reset) || null : null;
+}
+
 export async function requestTokenRefresh(
   refreshToken: string
-): Promise<AuthTokens | null> {
+): Promise<RefreshResult> {
   try {
     const res = await fetch(`${BASE_URL}/auth/refresh`, {
       method: 'POST',
@@ -22,12 +34,25 @@ export async function requestTokenRefresh(
       body: JSON.stringify({ refreshToken }),
       cache: 'no-store',
     });
-    if (!res.ok) return null;
+
+    if (res.status === 429) {
+      return {
+        status: 'rate_limited',
+        retryAfterSeconds: getRetryAfterSeconds(res),
+      };
+    }
+    if (!res.ok) return { status: 'invalid' };
 
     const { data } = await res.json();
-    if (!data?.accessToken || !data?.refreshToken) return null;
-    return { accessToken: data.accessToken, refreshToken: data.refreshToken };
+    if (!data?.accessToken || !data?.refreshToken) return { status: 'invalid' };
+    return {
+      status: 'ok',
+      tokens: {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+      },
+    };
   } catch {
-    return null;
+    return { status: 'rate_limited', retryAfterSeconds: null };
   }
 }
