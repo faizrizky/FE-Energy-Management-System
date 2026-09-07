@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
 import { GatewayForm } from './form';
 import { gatewaysClientApi } from '@/feat/gateway/api.client';
 import { toast } from '@/lib/toast-store';
@@ -26,8 +27,6 @@ export function GatewayFormModal({
 }: GatewayFormModalProps) {
   const [submitting, setSubmitting] = useState(false);
 
-  if (!open) return null;
-
   const handleSubmit = async (values: GatewayFormValues) => {
     setSubmitting(true);
     try {
@@ -45,40 +44,42 @@ export function GatewayFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[5px]">
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto gap-4 rounded-xl bg-white p-6 shadow-lg">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-emerald-500">
-            {gateway ? 'Edit gateway' : 'Add gateway'}
-          </h2>
-          <button aria-label="Close" onClick={() => onOpenChange(false)}>
-            <X className="size-5 text-slate-500" />
-          </button>
-        </div>
-
-        <GatewayForm
-          users={users}
-          defaultValues={
-            gateway
-              ? {
-                  name: gateway.name,
-                  eui: gateway.eui,
-                  simcard: gateway.simcard ?? '',
-                  installationDate: gateway.installationDate
-                    ? gateway.installationDate.slice(0, 10)
-                    : '',
-                  powerSource: gateway.powerSource ?? '',
-                  modelUnit: gateway.modelUnit ?? '',
-                  installedById: gateway.installedById ?? '',
-                  description: gateway.description ?? '',
-                }
-              : undefined
-          }
-          onSubmit={handleSubmit}
-          onCancel={() => onOpenChange(false)}
-          submitting={submitting}
-        />
+    <Modal
+      open={open}
+      onClose={() => onOpenChange(false)}
+      panelClassName="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto gap-4 rounded-xl bg-white p-6 shadow-lg"
+    >
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-emerald-500">
+          {gateway ? 'Edit gateway' : 'Add gateway'}
+        </h2>
+        <button aria-label="Close" onClick={() => onOpenChange(false)}>
+          <X className="size-5 text-slate-500" />
+        </button>
       </div>
-    </div>
+
+      <GatewayForm
+        users={users}
+        defaultValues={
+          gateway
+            ? {
+                name: gateway.name,
+                eui: gateway.eui,
+                simcard: gateway.simcard ?? '',
+                installationDate: gateway.installationDate
+                  ? gateway.installationDate.slice(0, 10)
+                  : '',
+                powerSource: gateway.powerSource ?? '',
+                modelUnit: gateway.modelUnit ?? '',
+                installedById: gateway.installedById ?? '',
+                description: gateway.description ?? '',
+              }
+            : undefined
+        }
+        onSubmit={handleSubmit}
+        onCancel={() => onOpenChange(false)}
+        submitting={submitting}
+      />
+    </Modal>
   );
 }
