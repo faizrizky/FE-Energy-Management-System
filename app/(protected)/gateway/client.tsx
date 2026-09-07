@@ -68,12 +68,11 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
   const [deleting, setDeleting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [detailState, setDetailState] = useState<{
-    open: boolean;
-    gateway: GatewayDetailDTO | null;
-    loading: boolean;
-  }>({ open: false, gateway: null, loading: false });
-
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailGateway, setDetailGateway] = useState<GatewayDetailDTO | null>(
+    null
+  );
+  const [detailLoading, setDetailLoading] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const online = data.data.filter(
@@ -166,20 +165,24 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
   };
 
   const openGatewayDetail = async (gateway: GatewayDTO) => {
-    setDetailState({ open: true, gateway: null, loading: true });
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailGateway(null);
+
     try {
       const result = await gatewaysClientApi.getById(gateway.id);
-      setDetailState({ open: true, gateway: result, loading: false });
+      setDetailGateway(result);
     } catch (err) {
-      setDetailState({ open: true, gateway: null, loading: false });
       toast.error(
         err instanceof Error ? err.message : 'Failed to load gateway detail'
       );
+    } finally {
+      setDetailLoading(false);
     }
   };
 
   const closeGatewayDetail = () => {
-    setDetailState({ open: false, gateway: null, loading: false });
+    setDetailOpen(false);
   };
 
   const handleConfirmBulkDelete = async () => {
@@ -488,13 +491,13 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
         />
       </div>
 
-      {detailState.open && (
-        <GatewayDetailModal
-          gateway={detailState.gateway}
-          loading={detailState.loading}
-          onClose={closeGatewayDetail}
-        />
-      )}
+      <GatewayDetailModal
+        open={detailOpen}
+        gateway={detailGateway}
+        loading={detailLoading}
+        onOpenChange={setDetailOpen}
+        onClose={closeGatewayDetail}
+      />
     </>
   );
 }
