@@ -8,6 +8,7 @@ interface DrawerProps {
   onClose: () => void;
   children: React.ReactNode;
   panelClassName?: string;
+  side?: 'left' | 'right';
 }
 
 export function Drawer({
@@ -15,6 +16,7 @@ export function Drawer({
   onClose,
   children,
   panelClassName,
+  side = 'right',
 }: DrawerProps) {
   return (
     <DialogPrimitive.Root
@@ -27,7 +29,10 @@ export function Drawer({
         <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[5px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           className={cn(
-            'fixed right-0 top-0 z-40 flex h-full w-full flex-col overflow-hidden border-l border-slate-300 bg-white p-6 shadow-[0px_8px_12px_rgba(0,0,0,0.05)] outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
+            'fixed top-0 z-40 flex h-full w-full flex-col overflow-hidden bg-white p-6 shadow-[0px_8px_12px_rgba(0,0,0,0.05)] outline-none data-[state=open]:animate-in data-[state=closed]:animate-out',
+            side === 'right'
+              ? 'right-0 border-l border-slate-300 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right'
+              : 'left-0 border-r border-slate-300 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left',
             panelClassName
           )}
         >

@@ -1,21 +1,20 @@
 'use client';
 
 import { Sidebar } from './sidebar';
+import { Drawer } from '@/components/ui/drawer';
 import { SidebarProvider, useSidebar } from './sidebar-context';
 
 function MobileDrawer() {
   const { open, setOpen } = useSidebar();
-  if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex lg:hidden">
-      <div
-        className="absolute inset-0 backdrop-blur-[5px]"
-        onClick={() => setOpen(false)}
-      />
-      <div className="relative">
-        <Sidebar onNavigate={() => setOpen(false)} />
-      </div>
-    </div>
+    <Drawer
+      open={open}
+      onClose={() => setOpen(false)}
+      side="left"
+      panelClassName="w-[250px] p-0"
+    >
+      <Sidebar onNavigate={() => setOpen(false)} />
+    </Drawer>
   );
 }
 
@@ -26,7 +25,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="hidden lg:block">
           <Sidebar />
         </div>
-        <MobileDrawer />
+        <div className="lg:hidden">
+          <MobileDrawer />
+        </div>
         <div className="flex h-full min-w-0 flex-1 flex-col items-start overflow-hidden">
           {children}
         </div>

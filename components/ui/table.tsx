@@ -1,4 +1,7 @@
+'use client';
+
 import * as React from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { ArrowDownUp, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,18 +31,62 @@ export function TableHeader(
   return <thead className="bg-slate-50" {...props} />;
 }
 
-export function TableBody(
-  props: React.HTMLAttributes<HTMLTableSectionElement>
-) {
-  return <tbody className="bg-white" {...props} />;
+/**
+ * Wraps children in AnimatePresence so individual <TableRow> mount/unmount
+ * (add, remove, filter, delete) animate. AnimatePresence itself renders no
+ * DOM node - only its children (the actual <tr>s) end up under <tbody>, so
+ * this stays valid table markup.
+ */
+export function TableBody({
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLTableSectionElement>) {
+  return (
+    <tbody className={cn('bg-white', className)} {...props}>
+      <AnimatePresence initial mode="sync">
+        {children}
+      </AnimatePresence>
+    </tbody>
+  );
 }
 
-export function TableRow({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLTableRowElement>) {
+/**
+ * Fade-only row animation. Deliberately NOT using `layout`/transform here -
+ * CSS transforms on <tr> are unreliable across browsers (table layout
+ * engine handles them differently than block/flex elements). Opacity is
+ * safe everywhere.
+ *
+ * Row identity is tracked via the `key` you already pass in `.map()` -
+ * rows with the same key across re-renders (e.g. toggling a switch) will
+ * NOT re-play the entrance animation, only genuinely new/removed rows do.
+ *
+ * Optional: pass `custom={index}` from your `.map()` for a staggered
+ * cascade on first load (see rowVariants below).
+ */
+const rowVariants = {
+  hidden: { opacity: 0 },
+  visible: (index: number = 0) => ({
+    opacity: 1,
+    transition: { delay: Math.min(index, 20) * 0.03, duration: 0.18 },
+  }),
+};
+
+export interface TableRowProps extends Omit<
+  React.ComponentProps<typeof motion.tr>,
+  'ref'
+> {
+  custom?: number;
+}
+
+export function TableRow({ className, custom, ...props }: TableRowProps) {
   return (
-    <tr
+    <motion.tr
+      variants={rowVariants}
+      initial="hidden"
+      animate="visible"
+      exit={{ opacity: 0, transition: { duration: 0.15 } }}
+      custom={custom}
       className={cn('h-12 border-b border-slate-200', className)}
       {...props}
     />
