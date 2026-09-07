@@ -86,6 +86,7 @@ export function ScheduleClient({
   const [detailSchedule, setDetailSchedule] = useState<ScheduleDTO | null>(
     null
   );
+  const [detailLoading, setDetailLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ScheduleDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -169,6 +170,27 @@ export function ScheduleClient({
     loadSchedules(1, nextRowsPerPage, search);
   };
 
+  const openScheduleDetail = async (schedule: ScheduleDTO) => {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailSchedule(null);
+
+    try {
+      const result = await scheduleClientApi.getById(schedule.id);
+      setDetailSchedule(result);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to load gateway detail'
+      );
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeScheduleDetail = () => {
+    setDetailOpen(false);
+  };
+
   const columns = getScheduleColumns({
     isSelected: (id) => selected.has(id),
     onToggleSelect: (id) =>
@@ -177,10 +199,7 @@ export function ScheduleClient({
         next.has(id) ? next.delete(id) : next.add(id);
         return next;
       }),
-    onView: (schedule) => {
-      setDetailSchedule(schedule);
-      setDetailOpen(true);
-    },
+    onView: openScheduleDetail,
     onEdit: (schedule) => setModalState({ open: true, schedule }),
     onDelete: (schedule) => setDeleteTarget(schedule),
   });
@@ -496,7 +515,7 @@ export function ScheduleClient({
         open={detailOpen}
         schedule={detailSchedule}
         onOpenChange={setDetailOpen}
-        onClose={() => setDetailSchedule(null)}
+        onClose={closeScheduleDetail}
       />
 
       <ConfirmDialog
