@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { TableActionButton } from '@/components/shared/table-action-button';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -8,6 +8,7 @@ export interface DeviceColumnHandlers {
   onToggleSelect: (id: string) => void;
   isSelected: (id: string) => boolean;
   onTogglePower: (device: DeviceDTO) => void;
+  onView: (device: DeviceDTO) => void;
   onEdit: (device: DeviceDTO) => void;
   onDelete: (device: DeviceDTO) => void;
 }
@@ -16,6 +17,7 @@ export function getDeviceColumns({
   onToggleSelect,
   isSelected,
   onTogglePower,
+  onView,
   onEdit,
   onDelete,
 }: DeviceColumnHandlers) {
@@ -59,6 +61,11 @@ export function getDeviceColumns({
     ),
     action: (device: DeviceDTO) => (
       <div className="flex items-center gap-2">
+        <TableActionButton
+          icon={Eye}
+          aria-label={`View ${device.name}`}
+          onClick={() => onView(device)}
+        />
         <TableActionButton
           icon={Pencil}
           aria-label={`Edit ${device.name}`}
