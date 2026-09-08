@@ -15,6 +15,7 @@ export interface AuthTokens {
 export type RefreshResult =
   | { status: 'ok'; tokens: AuthTokens }
   | { status: 'rate_limited'; retryAfterSeconds: number | null }
+  | { status: 'server_error' }
   | { status: 'invalid' };
 
 function getRetryAfterSeconds(res: Response): number | null {
@@ -27,24 +28,41 @@ function getRetryAfterSeconds(res: Response): number | null {
 export async function requestTokenRefresh(
   refreshToken: string
 ): Promise<RefreshResult> {
+  let res: Response;
   try {
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+    res = await fetch(`${BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
       cache: 'no-store',
     });
+  } catch {
+    return { status: 'server_error' };
+  }
 
-    if (res.status === 429) {
-      return {
-        status: 'rate_limited',
-        retryAfterSeconds: getRetryAfterSeconds(res),
-      };
-    }
-    if (!res.ok) return { status: 'invalid' };
+  // (409)
+  if (res.status === 429) {
+    return {
+      status: 'rate_limited',
+      retryAfterSeconds: getRetryAfterSeconds(res),
+    };
+  }
 
+  // (401, 403)
+  if (res.status === 401 || res.status === 403) {
+    return { status: 'invalid' };
+  }
+
+  // (500/502/503/504
+  if (!res.ok) {
+    return { status: 'server_error' };
+  }
+
+  try {
     const { data } = await res.json();
-    if (!data?.accessToken || !data?.refreshToken) return { status: 'invalid' };
+    if (!data?.accessToken || !data?.refreshToken) {
+      return { status: 'server_error' };
+    }
     return {
       status: 'ok',
       tokens: {
@@ -53,6 +71,6 @@ export async function requestTokenRefresh(
       },
     };
   } catch {
-    return { status: 'rate_limited', retryAfterSeconds: null };
+    return { status: 'server_error' };
   }
 }

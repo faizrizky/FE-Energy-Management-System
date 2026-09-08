@@ -26,6 +26,14 @@ export async function POST() {
       { status: 429 }
     );
   }
+
+  if (result.status === 'server_error') {
+    return NextResponse.json(
+      { message: 'Server sedang bermasalah, coba lagi sebentar' },
+      { status: 503 }
+    );
+  }
+
   if (result.status === 'invalid') {
     await clearAuthCookies();
     return NextResponse.json({ message: 'Sesi kedaluwarsa' }, { status: 401 });

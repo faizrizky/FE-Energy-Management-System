@@ -95,6 +95,12 @@ export async function middleware(request: NextRequest) {
     return res;
   }
 
+  if (result.status === 'server_error') {
+    const res = NextResponse.next();
+    res.headers.set('x-session-refresh-degraded', '1');
+    return res;
+  }
+
   if (result.status === 'invalid') {
     const response = redirectToLogin(request);
     response.cookies.delete(ACCESS_TOKEN_COOKIE);

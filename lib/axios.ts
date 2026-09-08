@@ -71,10 +71,13 @@ function showRateLimitToast(err: AxiosError) {
   });
 }
 
-async function refreshSession(): Promise<'ok' | 'rate_limited' | 'invalid'> {
+async function refreshSession(): Promise<
+  'ok' | 'rate_limited' | 'server_error' | 'invalid'
+> {
   try {
     const res = await fetch('/api/auth/refresh', { method: 'POST' });
     if (res.status === 429) return 'rate_limited';
+    if (res.status === 503) return 'server_error';
     return res.ok ? 'ok' : 'invalid';
   } catch {
     return 'rate_limited';
@@ -102,7 +105,7 @@ api.interceptors.response.use(
       showRateLimitToast(error);
       const message =
         (error?.response?.data as { message?: string } | undefined)?.message ??
-        'Terlalu banyak request, coba lagi nanti';
+        'Terlalu banyak request, coba lagi sebentar';
       return Promise.reject(new ApiError(message, status, 'RATE_LIMITED'));
     }
 
@@ -141,6 +144,19 @@ api.interceptors.response.use(
             'Terlalu banyak request saat refresh sesi',
             429,
             'RATE_LIMITED'
+          )
+        );
+      }
+
+      if (result === 'server_error') {
+        toast.error('Server sedang bermasalah, coba lagi sebentar', {
+          duration: 6000,
+        });
+        return Promise.reject(
+          new ApiError(
+            'Server sedang bermasalah saat memperbarui sesi',
+            503,
+            'SERVER_ERROR'
           )
         );
       }
