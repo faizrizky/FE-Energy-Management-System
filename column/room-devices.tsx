@@ -45,12 +45,12 @@ export function getRoomDevicesColumns({
       </span>
     ),
     interval: (device: RoomDeviceDTO) => {
-      const isBelowMinimum = device.intervalMinutes < 15;
+      const isBelowMinimum = device.intervalMinutes < 60;
       return (
         <div className="flex flex-col gap-0.5">
           <input
             type="number"
-            min={15}
+            min={60}
             defaultValue={device.intervalMinutes}
             onBlur={(e) => onIntervalChange(device, Number(e.target.value))}
             aria-invalid={isBelowMinimum}

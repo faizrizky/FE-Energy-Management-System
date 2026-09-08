@@ -10,7 +10,7 @@ export const deviceFormSchema = z.object({
   intervalMinutes: z.coerce
     .number()
     .int()
-    .min(15, 'Minimum interval is 15 minutes'),
+    .min(60, 'Minimum interval is 60 minutes'),
 });
 
 export type DeviceFormValues = z.infer<typeof deviceFormSchema>;

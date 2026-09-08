@@ -38,36 +38,54 @@ export function DeviceForm({
       roomId: '',
       gatewayId: '',
       tbDeviceId: '',
-      intervalMinutes: 15,
+      intervalMinutes: 60,
       ...defaultValues,
     },
   });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-      <Field label="Device name" error={errors.name?.message}>
-        <Input
-          placeholder="e.g. AC Command Center"
-          {...register('name')}
-          aria-invalid={!!errors.name}
-        />
-      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Device name" error={errors.name?.message}>
+          <Input
+            placeholder="e.g. AC Command Center"
+            {...register('name')}
+            aria-invalid={!!errors.name}
+          />
+        </Field>
 
-      <Field label="Device EUI" error={errors.eui?.message}>
-        <Input
-          placeholder="e.g. DEV-0001"
-          {...register('eui')}
-          aria-invalid={!!errors.eui}
-        />
-      </Field>
+        <Field label="Device EUI" error={errors.eui?.message}>
+          <Input
+            placeholder="e.g. DEV-0001"
+            {...register('eui')}
+            aria-invalid={!!errors.eui}
+          />
+        </Field>
+      </div>
 
-      <Field label="Component type" error={errors.deviceType?.message}>
-        <Input
-          placeholder="e.g. AC, Lampu, Stopkontak"
-          {...register('deviceType')}
-          aria-invalid={!!errors.deviceType}
-        />
-      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Component type" error={errors.deviceType?.message}>
+          <Input
+            placeholder="e.g. AC, Lampu, Stopkontak"
+            {...register('deviceType')}
+            aria-invalid={!!errors.deviceType}
+          />
+        </Field>
+
+        <Field
+          label="Reporting interval (minutes)"
+          error={errors.intervalMinutes?.message}
+        >
+          <Input
+            type="number"
+            min={60}
+            {...register('intervalMinutes')}
+            aria-invalid={!!errors.intervalMinutes}
+            readOnly={true}
+            className="bg-slate-100 text-slate-400 cursor-not-allowed select-none"
+          />
+        </Field>
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="Room" error={errors.roomId?.message}>
@@ -108,18 +126,6 @@ export function DeviceForm({
           <Input
             placeholder="e.g. 11111111-1111-4111-8111-111111111111"
             {...register('tbDeviceId')}
-          />
-        </Field>
-
-        <Field
-          label="Reporting interval (minutes)"
-          error={errors.intervalMinutes?.message}
-        >
-          <Input
-            type="number"
-            min={15}
-            {...register('intervalMinutes')}
-            aria-invalid={!!errors.intervalMinutes}
           />
         </Field>
       </div>
