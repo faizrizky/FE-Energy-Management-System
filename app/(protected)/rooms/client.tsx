@@ -1,10 +1,12 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Plus, DoorOpen, CalendarDays } from 'lucide-react';
+import { Plus, DoorOpen } from 'lucide-react';
+import type { DateRange } from 'react-day-picker';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
+import { DateRangeFilter } from '@/components/shared/date-range-filter';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Button } from '@/components/ui/button';
@@ -52,6 +54,10 @@ const ROOMS_SORT_ACCESSORS = {
   usage: (r: RoomListItemDTO) => r.totalUsage24hKwh,
 };
 
+function toApiDate(date: Date | undefined) {
+  return date ? date.toISOString().slice(0, 10) : undefined;
+}
+
 export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const [data, setData] = useState<RoomListResponseDTO>(
     initialData ?? {
@@ -65,6 +71,7 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const [page, setPage] = useState(initialData.page);
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{
     open: boolean;
@@ -79,6 +86,7 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadRoomsRequestRef = useRef(0);
 
   const safeSummary: RoomSummaryDTO = {
     totalRooms: summary?.totalRooms ?? 0,
@@ -97,18 +105,27 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const loadRooms = async (
     nextPage = page,
     nextRowsPerPage = rowsPerPage,
-    nextSearch = search
+    nextSearch = search,
+    nextRange = dateRange
   ) => {
+    const requestId = ++loadRoomsRequestRef.current;
     try {
       const res = await api.get<RoomListResponseDTO>('/rooms', {
         params: {
           page: nextPage,
           rowsPerPage: nextRowsPerPage,
           search: nextSearch || undefined,
+          createdFrom: toApiDate(nextRange?.from),
+          createdTo: toApiDate(nextRange?.to),
         },
       });
+      // Ignore this response if a newer loadRooms call has since fired —
+      // otherwise a slow, now-stale request (e.g. an old filter) can
+      // resolve after a newer one and clobber the table with old data.
+      if (requestId !== loadRoomsRequestRef.current) return;
       setData(res.data);
     } catch (err) {
+      if (requestId !== loadRoomsRequestRef.current) return;
       toast.error(err instanceof Error ? err.message : 'Failed to load rooms');
     }
   };
@@ -161,6 +178,12 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
     }, SEARCH_DEBOUNCE_MS);
   };
 
+  const handleDateRangeApply = (range: DateRange | undefined) => {
+    setDateRange(range);
+    setPage(1);
+    loadRooms(1, rowsPerPage, search, range);
+  };
+
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
     loadRooms(nextPage, rowsPerPage, search);
@@ -205,7 +228,6 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
       }));
       setDeleteTarget(null);
     } catch {
-      // toast.promise sudah menampilkan toast.error; biarkan modal tetap terbuka
     } finally {
       setDeleting(false);
     }
@@ -329,13 +351,7 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
               />
             </div>
 
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 shrink-0 rounded-md md:size-8"
-            >
-              <CalendarDays className="size-4" />
-            </Button>
+            <DateRangeFilter value={dateRange} onApply={handleDateRangeApply} />
           </>
         }
       >
@@ -355,14 +371,19 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
         {data.data.length === 0 ? (
           <EmptyState
             icon={DoorOpen}
-            title={search ? 'No matching rooms' : 'No rooms yet'}
+            title={
+              search || dateRange?.from ? 'No matching rooms' : 'No rooms yet'
+            }
             description={
               search
                 ? `No rooms match "${search}". Try a different search term.`
-                : 'Create your first room to connect your gateway and device.'
+                : dateRange?.from
+                  ? 'No rooms were created in this date range.'
+                  : 'Create your first room to connect your gateway and device.'
             }
             action={
-              !search && (
+              !search &&
+              !dateRange?.from && (
                 <Button
                   onClick={() => setModalState({ open: true })}
                   className="w-[200px]"

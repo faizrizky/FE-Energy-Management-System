@@ -7,24 +7,6 @@ import { cn } from '@/lib/utils';
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
-/**
- * Tipis banget di atas react-day-picker v9. Dua catatan soal nav
- * (Prev/Next) yang sengaja dibedain dari kalender biasa, ngikutin desain:
- *
- * - Prev: outline putih/slate, konsisten - hover cuma bg-slate-50.
- * - Next: default pale emerald (bg-emerald-100), begitu di-hover/focus
- *   baru solid emerald-500.
- *
- * navLayout="around" + grid per bulan (bukan Nav tunggal + absolute):
- * dengan numberOfMonths=2, satu Nav gabungan bakal render SEKALI sebelum
- * semua bulan, jadi tombol absolute-nya nggak punya "month" sebagai acuan
- * posisi - dia lari ke ancestor positioned TERDEKAT (bisa jadi popover-nya
- * sendiri), dan ujungnya nangkring di tengah vertikal alih-alih sejajar
- * caption. "around" bikin react-day-picker nempelin persis satu tombol
- * Previous ke bulan pertama & satu Next ke bulan terakhir, lalu grid
- * kolom [prev|caption|next] di tiap `.month` yang jamin dua-duanya selalu
- * segaris biarpun cuma salah satu yang ada di bulan itu.
- */
 export function Calendar({
   className,
   classNames,
@@ -39,17 +21,10 @@ export function Calendar({
       animate={animate}
       className={cn('p-3', className)}
       classNames={{
-        // items-start: dua bulan itu flex siblings - default align-items
-        // itu "stretch", jadi bulan yang butuh 5 baris dipaksa setinggi
-        // bulan sebelahnya yang 6 baris, terus grid-nya (lihat `month`
-        // di bawah) nyebar sisa tinggi itu ke row caption juga, bikin
-        // caption+header bulan yang lebih pendek ikut turun. items-start
-        // matiin stretch itu - tiap bulan tingginya ngikutin konten
-        // sendiri, sejajar di atas, dan yang barisnya lebih banyak
-        // tinggal manjang ke bawah.
         months: 'flex flex-col gap-5 items-start sm:flex-row',
         month: 'grid w-full grid-cols-[2rem_1fr_2rem] items-center gap-y-2',
-        month_caption: 'col-start-2 row-start-1 flex items-center justify-center pt-1',
+        month_caption:
+          'col-start-2 row-start-1 flex items-center justify-center pt-1',
         caption_label: 'text-sm font-bold text-slate-950',
         button_previous: cn(
           'col-start-1 row-start-1 flex size-8 items-center justify-center rounded-lg',
@@ -66,12 +41,6 @@ export function Calendar({
         ),
         month_grid: 'col-span-3 row-start-2 w-full border-collapse',
 
-        // Animasi ganti bulan (prop `animate` di atas) - react-day-picker
-        // sendiri yang pasang/lepas class ini lewat `classList.add/remove`
-        // LANGSUNG ke DOM (bukan lewat React), dan classList API nolak
-        // string yang ada spasinya - jadi tiap key di bawah ini WAJIB satu
-        // class tunggal. Definisinya (gabungan animate-in/out dari
-        // tailwindcss-animate) ada di app/globals.css lewat @apply.
         weeks_after_enter: 'rdp-weeks-after-enter',
         weeks_after_exit: 'rdp-weeks-after-exit',
         weeks_before_enter: 'rdp-weeks-before-enter',

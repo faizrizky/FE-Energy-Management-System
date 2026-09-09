@@ -11,6 +11,8 @@ export interface RoomListParams {
   rowsPerPage?: number;
   search?: string;
   roleFilter?: string;
+  createdFrom?: string;
+  createdTo?: string;
 }
 
 export interface RoomDetailParams {
@@ -27,12 +29,16 @@ export const roomsApi = {
     page = 1,
     rowsPerPage = 10,
     search,
+    createdFrom,
+    createdTo,
     roleFilter,
   }: RoomListParams = {}) => {
     const query = new URLSearchParams({
       page: String(page),
       rowsPerPage: String(rowsPerPage),
       ...(search ? { search } : {}),
+      ...(createdFrom ? { createdFrom } : {}),
+      ...(createdTo ? { createdTo } : {}),
       ...(roleFilter ? { roleFilter } : {}),
     });
     return http<RoomListResponseDTO>(`/rooms?${query.toString()}`, {

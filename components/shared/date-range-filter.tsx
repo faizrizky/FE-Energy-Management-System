@@ -17,17 +17,11 @@ interface DateRangeFilterProps {
   onApply: (range: DateRange | undefined) => void;
 }
 
-/**
- * Draft/commit pattern: pilih tanggal cuma nge-update state lokal (draft).
- * API baru ke-hit sekali pas tombol "Apply" - kalau langsung onSelect ->
- * onApply, tiap klik tanggal awal di range bakal nembak fetch parsial
- * (from doang, to masih kosong) yang sia-sia.
- */
 export function DateRangeFilter({ value, onApply }: DateRangeFilterProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRange | undefined>(value);
-  // Desktop: 2 bulan berdampingan. Mobile: 1 bulan, biar muat di layar
-  // sempit dan sama kayak mockup mobile.
+  const [month, setMonth] = useState<Date>(value?.from ?? new Date());
+
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
   return (
@@ -35,7 +29,10 @@ export function DateRangeFilter({ value, onApply }: DateRangeFilterProps) {
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (next) setDraft(value);
+        if (next) {
+          setDraft(value);
+          setMonth(value?.from ?? new Date());
+        }
       }}
     >
       <PopoverTrigger asChild>
@@ -55,7 +52,8 @@ export function DateRangeFilter({ value, onApply }: DateRangeFilterProps) {
           <Calendar
             mode="range"
             numberOfMonths={isDesktop ? 2 : 1}
-            defaultMonth={draft?.from}
+            month={month}
+            onMonthChange={setMonth}
             selected={draft}
             onSelect={(range) => setDraft(range)}
           />
@@ -67,6 +65,7 @@ export function DateRangeFilter({ value, onApply }: DateRangeFilterProps) {
               size="sm"
               onClick={() => {
                 setDraft(undefined);
+                setMonth(new Date());
                 onApply(undefined);
                 setOpen(false);
               }}
