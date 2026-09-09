@@ -68,7 +68,7 @@ export function ScheduleFormModal({
     <Modal
       open={open}
       onClose={() => onOpenChange(false)}
-      panelClassName="flex max-h-[auto] w-full max-w-[700px] flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0px_8px_12px_rgba(0,0,0,0.15)] gap-2"
+      panelClassName="flex max-h-[90vh] w-full max-w-[90vh] flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0px_8px_12px_rgba(0,0,0,0.15)] gap-2"
     >
       <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
         <h2 className="text-lg font-semibold text-emerald-500">

@@ -57,31 +57,8 @@ export function DeviceFormModal({
     <Modal
       open={open}
       onClose={() => onOpenChange(false)}
-      panelClassName="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto gap-4 rounded-xl bg-white p-1 shadow-lg"
+      panelClassName="flex max-h-[90vh] w-full max-w-[90vh] flex-col overflow-y-auto gap-4 rounded-xl bg-white p-1 shadow-lg"
     >
-      {/* <div
-        className="fixed inset-0 z-50
-        flex items-center justify-center
-        bg-[rgba(10,10,10,0.5)]
-        p-4
-        backdrop-blur-[5px]
-      "
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget && !submitting) {
-            onOpenChange(false);
-          }
-        }}
-      >
-        <div
-          className="
-          flex max-h-[90vh] w-full max-w-[550px]
-          flex-col overflow-hidden
-          rounded-xl
-          border border-slate-300
-          bg-white
-          shadow-[0px_8px_12px_rgba(0,0,0,0.15)]
-        "
-        > */}
       <div
         className="
             flex items-center justify-between

@@ -47,7 +47,7 @@ export function GatewayFormModal({
     <Modal
       open={open}
       onClose={() => onOpenChange(false)}
-      panelClassName="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto gap-4 rounded-xl bg-white p-6 shadow-lg"
+      panelClassName="flex max-h-[90vh] w-full max-w-[90vh] flex-col overflow-y-auto gap-4 rounded-xl bg-white p-6 shadow-lg"
     >
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-emerald-500">

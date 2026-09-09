@@ -23,7 +23,7 @@ export function GatewayDetailModal({
     <Modal
       open={open}
       onClose={() => onOpenChange(false)}
-      panelClassName="flex w-full max-w-[450px] flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0px_8px_12px_rgba(0,0,0,0.15)] gap-2"
+      panelClassName="flex w-full max-w-[50vh] flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0px_8px_12px_rgba(0,0,0,0.15)] gap-2"
     >
       {/* <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,10,10,0.5)] p-4 backdrop-blur-[5px]">
         <div className="flex w-full max-w-[450px] flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0px_8px_12px_rgba(0,0,0,0.15)]"> */}
