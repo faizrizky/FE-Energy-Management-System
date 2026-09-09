@@ -27,3 +27,37 @@
     @apply rounded-full bg-slate-200;
   }
 }
+
+@layer components {
+  /*
+   * react-day-picker's `animate` prop toggles these via
+   * `classList.add/remove(oneToken)` directly on the DOM node - it does
+   * NOT split on spaces, so each one must resolve to a single class
+   * (hence @apply-ing the utilities together here instead of listing
+   * them inline in the Calendar's classNames prop).
+   */
+  .rdp-weeks-after-enter {
+    @apply animate-in slide-in-from-right-4 fade-in duration-300;
+  }
+  .rdp-weeks-after-exit {
+    @apply animate-out slide-out-to-left-4 fade-out duration-200;
+  }
+  .rdp-weeks-before-enter {
+    @apply animate-in slide-in-from-left-4 fade-in duration-300;
+  }
+  .rdp-weeks-before-exit {
+    @apply animate-out slide-out-to-right-4 fade-out duration-200;
+  }
+  .rdp-caption-after-enter {
+    @apply animate-in fade-in duration-300;
+  }
+  .rdp-caption-after-exit {
+    @apply animate-out fade-out duration-150;
+  }
+  .rdp-caption-before-enter {
+    @apply animate-in fade-in duration-300;
+  }
+  .rdp-caption-before-exit {
+    @apply animate-out fade-out duration-150;
+  }
+}
