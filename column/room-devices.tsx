@@ -45,22 +45,11 @@ export function getRoomDevicesColumns({
       </span>
     ),
     interval: (device: RoomDeviceDTO) => {
-      const isBelowMinimum = device.intervalMinutes < 60;
       return (
-        <div className="flex flex-col gap-0.5">
-          <input
-            type="number"
-            min={60}
-            defaultValue={device.intervalMinutes}
-            onBlur={(e) => onIntervalChange(device, Number(e.target.value))}
-            aria-invalid={isBelowMinimum}
-            className="h-6 w-[100px] rounded-md border border-slate-400 px-2 text-sm aria-[invalid=true]:border-status-error"
-          />
-          {isBelowMinimum && (
-            <span className="text-[10px] text-status-error">
-              Min 15 minutes
-            </span>
-          )}
+        <div className="flex flex-col gap-0.5 py-1">
+          <span className="text-slate-500">
+            {device.intervalMinutes} minute(s)
+          </span>
         </div>
       );
     },

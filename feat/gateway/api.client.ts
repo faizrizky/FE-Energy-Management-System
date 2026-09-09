@@ -6,15 +6,6 @@ import type {
 } from './dto';
 import type { GatewayFormValues } from './schema';
 
-/**
- * CLIENT-ONLY. Uses axios instance from lib/axios.ts. Import only from
- * "use client" components (modal.tsx, client.tsx).
- *
- * NOTE: lib/axios.ts response interceptor sudah unwrap `res.data.data` jadi
- * `res.data` secara otomatis untuk setiap response ber-shape { data: ... }.
- * Jangan unwrap dua kali di sini (`res.data.data`) — itu bikin `saved`
- * jadi undefined.
- */
 export interface GatewayListParams {
   page?: number;
   rowsPerPage?: number;

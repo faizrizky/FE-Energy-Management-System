@@ -1,11 +1,6 @@
 import { http } from '@/lib/http';
 import type { GatewayListResponseDTO, GatewayDetailDTO } from './dto';
 
-/**
- * SERVER-ONLY. Uses next/headers via lib/http.ts — only import from
- * Server Components (page.tsx). For mutations from client components,
- * use `gatewaysClientApi` in ./api.client.ts instead.
- */
 export interface GatewayListParams {
   page?: number;
   rowsPerPage?: number;

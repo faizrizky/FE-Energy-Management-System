@@ -13,7 +13,6 @@ export interface GatewayColumnHandlers {
   onDelete: (gateway: GatewayDTO) => void;
 }
 
-/** Column config for the Gateway list table (Figma node 25:25477). */
 export function getGatewayColumns({
   onToggleSelect,
   isSelected,

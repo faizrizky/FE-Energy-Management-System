@@ -33,6 +33,7 @@ import type {
 } from '@/feat/rooms/dto';
 import type { UserSummaryDTO } from '@/feat/user/dto';
 import { RoomFormModal } from './_partials/modal';
+import { RoomCard } from './_partials/room-card';
 import { Trash2 } from 'lucide-react';
 import { TableToolbar } from '@/components/shared/table-toolbar';
 import { useRealtimeEvent } from '@/hooks/use-realtime-event';
@@ -260,7 +261,7 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
     data.data.length > 0 && data.data.every((r) => selected.has(r.id));
 
   return (
-    <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-y-auto bg-slate-50 p-8">
+    <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-y-auto bg-slate-50 p-8 pb-24 md:pb-8">
       <PageHeader
         title="Rooms"
         description="Manage rooms and monitor connected electrical devices."
@@ -328,7 +329,11 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
               />
             </div>
 
-            <Button variant="outline" size="icon">
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-11 shrink-0 rounded-md md:size-8"
+            >
               <CalendarDays className="size-4" />
             </Button>
           </>
@@ -369,57 +374,74 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
           />
         ) : (
           <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={() =>
-                        setSelected(
-                          allSelected
-                            ? new Set()
-                            : new Set(sorted.map((r) => r.id))
-                        )
-                      }
-                    />
-                  </TableHead>
-                  <SortableTableHead
-                    sortKey="name"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Room
-                  </SortableTableHead>
-                  <TableHead>Gateway</TableHead>
-                  <TableHead>Device</TableHead>
-                  <SortableTableHead
-                    sortKey="usage"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Total usage(24H)
-                  </SortableTableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sorted.map((room) => (
-                  <TableRow key={room.id}>
-                    <TableCell>{columns.checkbox(room)}</TableCell>
-                    <TableCell>{columns.room(room)}</TableCell>
-                    <TableCell>{columns.gateway(room)}</TableCell>
-                    <TableCell>{columns.device(room)}</TableCell>
-                    <TableCell>{columns.usage(room)}</TableCell>
-                    <TableCell>{columns.status(room)}</TableCell>
-                    <TableCell>{columns.action(room)}</TableCell>
+            {/* mobile */}
+            <div className="flex w-full flex-col gap-3 md:hidden">
+              {sorted.map((room) => (
+                <RoomCard
+                  key={room.id}
+                  room={room}
+                  onTogglePower={handleTogglePower}
+                  onView={(r) =>
+                    (window.location.href = `/rooms/detail/${r.id}`)
+                  }
+                  onEdit={openEdit}
+                  onDelete={(r) => setDeleteTarget(r)}
+                />
+              ))}
+            </div>
+            <div className="hidden w-full md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={() =>
+                          setSelected(
+                            allSelected
+                              ? new Set()
+                              : new Set(sorted.map((r) => r.id))
+                          )
+                        }
+                      />
+                    </TableHead>
+                    <SortableTableHead
+                      sortKey="name"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Room
+                    </SortableTableHead>
+                    <TableHead>Gateway</TableHead>
+                    <TableHead>Device</TableHead>
+                    <SortableTableHead
+                      sortKey="usage"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Total usage(24H)
+                    </SortableTableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Action</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {sorted.map((room) => (
+                    <TableRow key={room.id}>
+                      <TableCell>{columns.checkbox(room)}</TableCell>
+                      <TableCell>{columns.room(room)}</TableCell>
+                      <TableCell>{columns.gateway(room)}</TableCell>
+                      <TableCell>{columns.device(room)}</TableCell>
+                      <TableCell>{columns.usage(room)}</TableCell>
+                      <TableCell>{columns.status(room)}</TableCell>
+                      <TableCell>{columns.action(room)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
 
             <Pagination
               page={page}
