@@ -4,6 +4,7 @@ import type {
   RoomSummaryDTO,
   RoomDetailDTO,
   RoomDeviceDTO,
+  RoomListItemDTO,
 } from './dto';
 
 export interface RoomListParams {
@@ -24,6 +25,14 @@ export interface RoomDetailParams {
 export const roomsApi = {
   getSummary: () =>
     http<RoomSummaryDTO>('/rooms/stats', { next: { revalidate: 30 } }),
+
+  listSummary: async (): Promise<RoomListItemDTO[]> => {
+    const result = await http<RoomListResponseDTO>(
+      '/rooms?page=1&rowsPerPage=1000',
+      { next: { revalidate: 30 } }
+    );
+    return result.data;
+  },
 
   list: ({
     page = 1,
