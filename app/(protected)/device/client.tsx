@@ -1,10 +1,13 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
-import { CalendarDays, Plus, Smartphone, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
+import { Plus, Smartphone, Trash2 } from 'lucide-react';
+import type { DateRange } from 'react-day-picker';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
+import { DateRangeFilter } from '@/components/shared/date-range-filter';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Button } from '@/components/ui/button';
@@ -36,6 +39,7 @@ import { TableToolbar } from '@/components/shared/table-toolbar';
 import { useRealtimeEvent } from '@/hooks/use-realtime-event';
 import type { DeviceStatusEventDTO } from '@/feat/device/dto';
 import { DeviceDetailModal } from './_partials/detail-modal';
+import { connectSocket } from '@/lib/socket';
 
 interface DeviceClientProps {
   initialData: DeviceListResponseDTO;
@@ -54,6 +58,10 @@ const DEVICE_SORT_ACCESSORS = {
   status: (d: DeviceDTO) => d.status,
 };
 
+function toApiDate(date: Date | undefined) {
+  return date ? date.toISOString().slice(0, 10) : undefined;
+}
+
 export function DeviceClient({
   initialData,
   rooms,
@@ -63,6 +71,8 @@ export function DeviceClient({
   const [page, setPage] = useState(initialData.page);
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
+  const [isFetching, setIsFetching] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{
     open: boolean;
@@ -78,25 +88,58 @@ export function DeviceClient({
   );
   const [detailLoading, setDetailLoading] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadDevicesRequestRef = useRef(0);
   const online = data.data.filter((d) => d.status === 'on').length;
 
   const loadDevices = useCallback(
-    async (nextPage: number, nextRowsPerPage: number, nextSearch: string) => {
+    async (
+      nextPage: number,
+      nextRowsPerPage: number,
+      nextSearch: string,
+      nextRange: DateRange | undefined
+    ) => {
+      const requestId = ++loadDevicesRequestRef.current;
+      setIsFetching(true);
       try {
         const result = await devicesClientApi.list({
           page: nextPage,
           rowsPerPage: nextRowsPerPage,
           search: nextSearch,
+          createdFrom: toApiDate(nextRange?.from),
+          createdTo: toApiDate(nextRange?.to),
         });
+        if (requestId !== loadDevicesRequestRef.current) return;
         setData(result);
       } catch (err) {
+        if (requestId !== loadDevicesRequestRef.current) return;
         toast.error(
           err instanceof Error ? err.message : 'Failed to load devices'
         );
+      } finally {
+        if (requestId === loadDevicesRequestRef.current) setIsFetching(false);
       }
     },
     []
   );
+
+  useEffect(() => {
+    const socket = connectSocket();
+    let timeout: ReturnType<typeof setTimeout>;
+
+    const scheduleRefresh = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(
+        () => loadDevices(page, rowsPerPage, search, dateRange),
+        3000
+      );
+    };
+
+    socket.on('device:status', scheduleRefresh);
+    return () => {
+      socket.off('device:status', scheduleRefresh);
+      clearTimeout(timeout);
+    };
+  }, [page, rowsPerPage, search, dateRange, loadDevices]);
 
   useRealtimeEvent<{ device: DeviceDTO }>('device:created', ({ device }) => {
     setData((prev) =>
@@ -144,19 +187,25 @@ export function DeviceClient({
 
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      loadDevices(1, rowsPerPage, value);
+      loadDevices(1, rowsPerPage, value, dateRange);
     }, SEARCH_DEBOUNCE_MS);
+  };
+
+  const handleDateRangeApply = (range: DateRange | undefined) => {
+    setDateRange(range);
+    setPage(1);
+    loadDevices(1, rowsPerPage, search, range);
   };
 
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
-    loadDevices(nextPage, rowsPerPage, search);
+    loadDevices(nextPage, rowsPerPage, search, dateRange);
   };
 
   const handleRowsPerPageChange = (nextRowsPerPage: number) => {
     setRowsPerPage(nextRowsPerPage);
     setPage(1);
-    loadDevices(1, nextRowsPerPage, search);
+    loadDevices(1, nextRowsPerPage, search, dateRange);
   };
 
   const handleTogglePower = async (device: DeviceDTO) => {
@@ -321,13 +370,10 @@ export function DeviceClient({
                 />
               </div>
 
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-11 shrink-0 rounded-md md:size-8"
-              >
-                <CalendarDays className="size-4" />
-              </Button>
+              <DateRangeFilter
+                value={dateRange}
+                onApply={handleDateRangeApply}
+              />
             </>
           }
         >
@@ -344,129 +390,135 @@ export function DeviceClient({
             </div>
           )}
 
-          {data.data.length === 0 ? (
-            <EmptyState
-              icon={Smartphone}
-              title={search ? 'No matching devices' : 'No devices yet'}
-              description={
-                search
-                  ? `No devices match "${search}". Try a different search term.`
-                  : 'Add your first device and connect it to a room and gateway.'
-              }
-              action={
-                !search && (
-                  <Button
-                    onClick={() => setModalState({ open: true })}
-                    className="w-[200px]"
-                  >
-                    <Plus className="size-4" /> Add device
-                  </Button>
-                )
-              }
-            />
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={allSelected}
-                        onCheckedChange={() =>
-                          setSelected(
-                            allSelected
-                              ? new Set()
-                              : new Set(sorted.map((d) => d.id))
-                          )
-                        }
-                      />
-                    </TableHead>
-                    <SortableTableHead
-                      sortKey="name"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
+          <motion.div
+            key={isFetching ? 'loading' : 'loaded'}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: isFetching ? 0.4 : 1 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="flex w-full flex-col items-end gap-4"
+          >
+            {data.data.length === 0 ? (
+              <EmptyState
+                icon={Smartphone}
+                title={
+                  search || dateRange?.from
+                    ? 'No matching devices'
+                    : 'No devices yet'
+                }
+                description={
+                  search
+                    ? `No devices match "${search}". Try a different search term.`
+                    : dateRange?.from
+                      ? 'No devices were created in this date range.'
+                      : 'Add your first device and connect it to a room and gateway.'
+                }
+                action={
+                  !search &&
+                  !dateRange?.from && (
+                    <Button
+                      onClick={() => setModalState({ open: true })}
+                      className="w-[200px]"
                     >
-                      Role
-                    </SortableTableHead>
-
-                    <SortableTableHead
-                      sortKey="component"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Component
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="room"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Room
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="gateway"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Gateway
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="tbDeviceId"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      ThingsBoard ID
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="inverval"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Interval
-                    </SortableTableHead>
-                    {/* <SortableTableHead
-                      sortKey="status"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Status
-                    </SortableTableHead> */}
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sorted.map((device) => (
-                    <TableRow key={device.id}>
-                      <TableCell>{columns.checkbox(device)}</TableCell>
-                      <TableCell>{columns.device(device)}</TableCell>
-                      <TableCell>{columns.component(device)}</TableCell>
-                      <TableCell>{columns.room(device)}</TableCell>
-                      <TableCell>{columns.gateway(device)}</TableCell>
-                      <TableCell>{columns.tbDeviceId(device)}</TableCell>
-                      <TableCell>{columns.interval(device)}</TableCell>
-                      {/* <TableCell>{columns.status(device)}</TableCell> */}
-                      <TableCell>{columns.action(device)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              <Pagination
-                page={page}
-                totalPages={data.totalPages}
-                onPageChange={handlePageChange}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={handleRowsPerPageChange}
+                      <Plus className="size-4" /> Add device
+                    </Button>
+                  )
+                }
               />
-            </>
-          )}
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={() =>
+                            setSelected(
+                              allSelected
+                                ? new Set()
+                                : new Set(sorted.map((d) => d.id))
+                            )
+                          }
+                        />
+                      </TableHead>
+                      <SortableTableHead
+                        sortKey="name"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Role
+                      </SortableTableHead>
+
+                      <SortableTableHead
+                        sortKey="component"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Component
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="room"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Room
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="gateway"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Gateway
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="tbDeviceId"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        ThingsBoard ID
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="inverval"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Interval
+                      </SortableTableHead>
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sorted.map((device) => (
+                      <TableRow key={device.id}>
+                        <TableCell>{columns.checkbox(device)}</TableCell>
+                        <TableCell>{columns.device(device)}</TableCell>
+                        <TableCell>{columns.component(device)}</TableCell>
+                        <TableCell>{columns.room(device)}</TableCell>
+                        <TableCell>{columns.gateway(device)}</TableCell>
+                        <TableCell>{columns.tbDeviceId(device)}</TableCell>
+                        <TableCell>{columns.interval(device)}</TableCell>
+                        <TableCell>{columns.action(device)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                <Pagination
+                  page={page}
+                  totalPages={data.totalPages}
+                  onPageChange={handlePageChange}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={handleRowsPerPageChange}
+                />
+              </>
+            )}
+          </motion.div>
         </TableToolbar>
 
         <DeviceFormModal
@@ -509,6 +561,11 @@ export function DeviceClient({
             const wasEditing = !!modalState.device;
             setModalState({ open: false });
             toast.success(wasEditing ? 'Device updated' : 'Device created');
+
+            if (!wasEditing) {
+              setPage(1);
+              loadDevices(1, rowsPerPage, search, dateRange);
+            }
           }}
         />
 

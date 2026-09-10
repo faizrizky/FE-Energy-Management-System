@@ -6,13 +6,27 @@ export interface DeviceListParams {
   page?: number;
   rowsPerPage?: number;
   search?: string;
+  createdFrom?: string;
+  createdTo?: string;
 }
 
 export const devicesClientApi = {
-  list: ({ page = 1, rowsPerPage = 10, search }: DeviceListParams = {}) =>
+  list: ({
+    page = 1,
+    rowsPerPage = 10,
+    search,
+    createdFrom,
+    createdTo,
+  }: DeviceListParams = {}) =>
     api
       .get<DeviceListResponseDTO>('/devices', {
-        params: { page, rowsPerPage, search: search || undefined },
+        params: {
+          page,
+          rowsPerPage,
+          search: search || undefined,
+          createdFrom,
+          createdTo,
+        },
       })
       .then((res) => res.data),
 
