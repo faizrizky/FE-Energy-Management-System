@@ -26,7 +26,7 @@ export function getScheduleColumns({
         onCheckedChange={() => onToggleSelect(schedule.id)}
       />
     ),
-    room: (schedule: ScheduleDTO) => (
+    schedule: (schedule: ScheduleDTO) => (
       <div className="flex flex-col gap-0.5 py-1">
         <span>{schedule.room?.name ?? schedule.roomId}</span>
         {schedule.room?.location && (

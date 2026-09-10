@@ -8,15 +8,6 @@ import type {
 } from './dto';
 import type { RoomFormValues } from './schema';
 
-/**
- * CLIENT-ONLY. Pakai axios instance dari lib/axios.ts (baca token dari
- * document.cookie), jadi aman dipanggil dari "use client" component:
- * modal.tsx, client.tsx, device-log-modal.tsx, dst.
- *
- * Untuk fetch awal data di Server Component (page.tsx), pakai `roomsApi`
- * di ./api.ts — JANGAN import file ini dari sana (gak akan error, tapi
- * kehilangan manfaat SSR/cache lib/http.ts).
- */
 export const roomsClientApi = {
   listDevices: (
     roomId: string,

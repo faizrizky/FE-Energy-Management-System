@@ -4,11 +4,22 @@ import { roomsApi } from '@/feat/rooms/api';
 import { usersApi } from '@/feat/user/api';
 import { RoomsClient } from './client';
 
-export default async function RoomsPage() {
+export default async function RoomsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ createdFrom?: string; createdTo?: string }>;
+}) {
+  const params = await searchParams;
+
   const [session, summary, firstPage, users] = await Promise.all([
     getSession(),
     roomsApi.getSummary(),
-    roomsApi.list({ page: 1, rowsPerPage: 10 }),
+    roomsApi.list({
+      page: 1,
+      rowsPerPage: 10,
+      createdFrom: params.createdFrom,
+      createdTo: params.createdTo,
+    }),
     usersApi.listSummary(),
   ]);
 

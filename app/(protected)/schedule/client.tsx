@@ -2,9 +2,11 @@
 
 import { useRef, useState } from 'react';
 import { Plus, CalendarDays, Trash2 } from 'lucide-react';
+import type { DateRange } from 'react-day-picker';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
+import { DateRangeFilter } from '@/components/shared/date-range-filter';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Button } from '@/components/ui/button';
@@ -53,6 +55,10 @@ const SCHEDULE_SORT_ACCESSORS = {
 
 type ScheduleTab = 'active' | 'upcoming';
 
+function toApiDate(date: Date | undefined) {
+  return date ? date.toISOString().slice(0, 10) : undefined;
+}
+
 export function ScheduleClient({
   initialData,
   initialOverallTotal,
@@ -74,6 +80,7 @@ export function ScheduleClient({
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<ScheduleTab>('active');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [overallTotal, setOverallTotal] = useState(initialOverallTotal);
   const [activeTotal, setActiveTotal] = useState(initialData.totalRows);
   const [upcomingTotal, setUpcomingTotal] = useState(initialUpcomingTotal);
@@ -92,25 +99,37 @@ export function ScheduleClient({
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadSchedulesRequestRef = useRef(0);
 
+  // PENTING: nextRange TIDAK punya default (`= dateRange`). Setiap
+  // pemanggilan loadSchedules WAJIB kirim dateRange eksplisit (baik yang
+  // lagi aktif atau nilai baru dari filter). Kalau dikasih default param,
+  // saat Clear (range=undefined) dia bakal ke-fallback ke closure lama
+  // yang stale — sama kayak bug di RoomsClient.
   const loadSchedules = async (
-    nextPage = page,
-    nextRowsPerPage = rowsPerPage,
-    nextSearch = search,
-    nextTab = tab
+    nextPage: number,
+    nextRowsPerPage: number,
+    nextSearch: string,
+    nextTab: ScheduleTab,
+    nextRange: DateRange | undefined
   ) => {
+    const requestId = ++loadSchedulesRequestRef.current;
     try {
       const result = await scheduleClientApi.list({
         status: nextTab,
         page: nextPage,
         rowsPerPage: nextRowsPerPage,
         search: nextSearch,
+        scheduledFrom: toApiDate(nextRange?.from),
+        scheduledTo: toApiDate(nextRange?.to),
       });
 
+      if (requestId !== loadSchedulesRequestRef.current) return;
       setData(result);
       if (nextTab === 'active') setActiveTotal(result.totalRows);
       else setUpcomingTotal(result.totalRows);
     } catch (err) {
+      if (requestId !== loadSchedulesRequestRef.current) return;
       toast.error(
         err instanceof Error ? err.message : 'Failed to load schedules'
       );
@@ -137,15 +156,15 @@ export function ScheduleClient({
   };
 
   useRealtimeEvent('schedule:created', () => {
-    loadSchedules(1, rowsPerPage, search);
+    loadSchedules(1, rowsPerPage, search, tab, dateRange);
     refreshCounts();
   });
   useRealtimeEvent('schedule:updated', () => {
-    loadSchedules(page, rowsPerPage, search);
+    loadSchedules(page, rowsPerPage, search, tab, dateRange);
     refreshCounts();
   });
   useRealtimeEvent('schedule:deleted', () => {
-    loadSchedules(page, rowsPerPage, search);
+    loadSchedules(page, rowsPerPage, search, tab, dateRange);
     refreshCounts();
   });
 
@@ -155,19 +174,25 @@ export function ScheduleClient({
 
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      loadSchedules(1, rowsPerPage, value);
+      loadSchedules(1, rowsPerPage, value, tab, dateRange);
     }, SEARCH_DEBOUNCE_MS);
+  };
+
+  const handleDateRangeApply = (range: DateRange | undefined) => {
+    setDateRange(range);
+    setPage(1);
+    loadSchedules(1, rowsPerPage, search, tab, range);
   };
 
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
-    loadSchedules(nextPage, rowsPerPage, search);
+    loadSchedules(nextPage, rowsPerPage, search, tab, dateRange);
   };
 
   const handleRowsPerPageChange = (nextRowsPerPage: number) => {
     setRowsPerPage(nextRowsPerPage);
     setPage(1);
-    loadSchedules(1, nextRowsPerPage, search);
+    loadSchedules(1, nextRowsPerPage, search, tab, dateRange);
   };
 
   const openScheduleDetail = async (schedule: ScheduleDTO) => {
@@ -232,11 +257,11 @@ export function ScheduleClient({
     setTab(nextTab);
     setPage(1);
     setSelected(new Set());
-    loadSchedules(1, rowsPerPage, search, nextTab);
+    loadSchedules(1, rowsPerPage, search, nextTab, dateRange);
   };
 
   const handleSave = async () => {
-    await loadSchedules(page, rowsPerPage, search);
+    await loadSchedules(page, rowsPerPage, search, tab, dateRange);
     await refreshCounts();
     setModalState({ open: false });
     toast.success('Schedule saved successfully');
@@ -250,7 +275,7 @@ export function ScheduleClient({
         loading: 'Deleting schedule...',
         success: 'Schedule deleted',
       });
-      await loadSchedules(page, rowsPerPage, search);
+      await loadSchedules(page, rowsPerPage, search, tab, dateRange);
       await refreshCounts();
       setSelected((previous) => {
         const next = new Set(previous);
@@ -276,7 +301,7 @@ export function ScheduleClient({
       );
       const failedCount = results.length - successfulIds.length;
 
-      await loadSchedules(page, rowsPerPage, search);
+      await loadSchedules(page, rowsPerPage, search, tab, dateRange);
       await refreshCounts();
 
       setSelected(new Set());
@@ -367,13 +392,7 @@ export function ScheduleClient({
               />
             </div>
 
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 shrink-0 rounded-md md:size-8"
-            >
-              <CalendarDays className="size-4" />
-            </Button>
+            <DateRangeFilter value={dateRange} onApply={handleDateRangeApply} />
           </div>
         }
       >
@@ -393,16 +412,21 @@ export function ScheduleClient({
         {data.data.length === 0 ? (
           <EmptyState
             icon={CalendarDays}
-            title={search ? 'No matching schedule' : 'No schedule'}
+            title={
+              search || dateRange?.from ? 'No matching schedule' : 'No schedule'
+            }
             description={
               search
                 ? `No schedules match "${search}". Try a different search term.`
-                : tab === 'active'
-                  ? 'There are no schedules running right now.'
-                  : 'There are no upcoming schedules.'
+                : dateRange?.from
+                  ? 'No schedules were scheduled in this date range.'
+                  : tab === 'active'
+                    ? 'There are no schedules running right now.'
+                    : 'There are no upcoming schedules.'
             }
             action={
-              !search && (
+              !search &&
+              !dateRange?.from && (
                 <Button
                   onClick={() => setModalState({ open: true })}
                   className="w-[200px]"
@@ -479,7 +503,7 @@ export function ScheduleClient({
                 {sorted.map((schedule) => (
                   <TableRow key={schedule.id}>
                     <TableCell>{columns.checkbox(schedule)}</TableCell>
-                    <TableCell>{columns.room(schedule)}</TableCell>
+                    <TableCell>{columns.schedule(schedule)}</TableCell>
                     <TableCell>{columns.component(schedule)}</TableCell>
                     <TableCell>{columns.deviceEui(schedule)}</TableCell>
                     <TableCell>{columns.date(schedule)}</TableCell>

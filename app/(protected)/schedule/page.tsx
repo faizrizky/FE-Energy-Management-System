@@ -12,11 +12,9 @@ export default async function SchedulePage() {
     await Promise.all([
       getSession(),
       scheduleApi.list({ page: 1, rowsPerPage: 10, status: 'active' }),
-      // Cuma butuh totalRows-nya buat kartu statistik - rowsPerPage kecil
-      // biar gak ikutan narik semua row.
       scheduleApi.list({ page: 1, rowsPerPage: 1 }),
       scheduleApi.list({ page: 1, rowsPerPage: 1, status: 'upcoming' }),
-      roomsApi.list({ page: 1, rowsPerPage: 10 }),
+      roomsApi.listSummary(),
       devicesApi.list(),
     ]);
 
@@ -27,7 +25,7 @@ export default async function SchedulePage() {
         initialData={activeSchedules}
         initialOverallTotal={overallMeta.totalRows}
         initialUpcomingTotal={upcomingMeta.totalRows}
-        rooms={rooms.data}
+        rooms={rooms}
         devices={devices.data}
       />
     </>

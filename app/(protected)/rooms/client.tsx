@@ -1,8 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 import { Plus, DoorOpen } from 'lucide-react';
 import type { DateRange } from 'react-day-picker';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
@@ -48,6 +50,7 @@ interface RoomsClientProps {
 }
 
 const SEARCH_DEBOUNCE_MS = 250;
+const NO_OVERRIDE = Symbol('no-override');
 
 const ROOMS_SORT_ACCESSORS = {
   name: (r: RoomListItemDTO) => r.name,
@@ -58,7 +61,16 @@ function toApiDate(date: Date | undefined) {
   return date ? date.toISOString().slice(0, 10) : undefined;
 }
 
+function parseUrlDate(value: string | null): Date | undefined {
+  if (!value) return undefined;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
 export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [data, setData] = useState<RoomListResponseDTO>(
     initialData ?? {
       data: [],
@@ -71,7 +83,11 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const [page, setPage] = useState(initialData.page);
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [isFetching, setIsFetching] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => ({
+    from: parseUrlDate(searchParams.get('createdFrom')),
+    to: parseUrlDate(searchParams.get('createdTo')),
+  }));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{
     open: boolean;
@@ -102,36 +118,41 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
     },
   };
 
-  const loadRooms = async (
-    nextPage = page,
-    nextRowsPerPage = rowsPerPage,
-    nextSearch = search,
-    nextRange = dateRange
-  ) => {
-    const requestId = ++loadRoomsRequestRef.current;
-    try {
-      const res = await api.get<RoomListResponseDTO>('/rooms', {
-        params: {
-          page: nextPage,
-          rowsPerPage: nextRowsPerPage,
-          search: nextSearch || undefined,
-          createdFrom: toApiDate(nextRange?.from),
-          createdTo: toApiDate(nextRange?.to),
-        },
-      });
-      // Ignore this response if a newer loadRooms call has since fired —
-      // otherwise a slow, now-stale request (e.g. an old filter) can
-      // resolve after a newer one and clobber the table with old data.
-      if (requestId !== loadRoomsRequestRef.current) return;
-      setData(res.data);
-    } catch (err) {
-      if (requestId !== loadRoomsRequestRef.current) return;
-      toast.error(err instanceof Error ? err.message : 'Failed to load rooms');
-    }
-  };
+  const loadRooms = useCallback(
+    async (
+      nextPage: number,
+      nextRowsPerPage: number,
+      nextSearch: string,
+      nextRange: DateRange | undefined
+    ) => {
+      const requestId = ++loadRoomsRequestRef.current;
+      setIsFetching(true);
+      try {
+        const res = await api.get<RoomListResponseDTO>('/rooms', {
+          params: {
+            page: nextPage,
+            rowsPerPage: nextRowsPerPage,
+            search: nextSearch || undefined,
+            createdFrom: toApiDate(nextRange?.from),
+            createdTo: toApiDate(nextRange?.to),
+          },
+        });
+        if (requestId !== loadRoomsRequestRef.current) return;
+        setData(res.data);
+      } catch (err) {
+        if (requestId !== loadRoomsRequestRef.current) return;
+        toast.error(
+          err instanceof Error ? err.message : 'Failed to load rooms'
+        );
+      } finally {
+        if (requestId === loadRoomsRequestRef.current) setIsFetching(false);
+      }
+    },
+    []
+  );
 
   useRealtimeEvent<{ room: RoomDTO }>('room:created', () => {
-    loadRooms(1, rowsPerPage, search);
+    loadRooms(1, rowsPerPage, search, dateRange);
     setPage(1);
   });
   useRealtimeEvent<{ room: RoomDTO }>('room:updated', ({ room }) => {
@@ -171,10 +192,9 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPage(1);
-
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      loadRooms(1, rowsPerPage, value);
+      loadRooms(1, rowsPerPage, value, dateRange);
     }, SEARCH_DEBOUNCE_MS);
   };
 
@@ -182,17 +202,24 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
     setDateRange(range);
     setPage(1);
     loadRooms(1, rowsPerPage, search, range);
+
+    const params = new URLSearchParams(searchParams.toString());
+    const from = toApiDate(range?.from);
+    const to = toApiDate(range?.to);
+    from ? params.set('createdFrom', from) : params.delete('createdFrom');
+    to ? params.set('createdTo', to) : params.delete('createdTo');
+    router.replace(`?${params.toString()}`, { scroll: false });
   };
 
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
-    loadRooms(nextPage, rowsPerPage, search);
+    loadRooms(nextPage, rowsPerPage, search, dateRange);
   };
 
   const handleRowsPerPageChange = (nextRowsPerPage: number) => {
     setRowsPerPage(nextRowsPerPage);
     setPage(1);
-    loadRooms(1, nextRowsPerPage, search);
+    loadRooms(1, nextRowsPerPage, search, dateRange);
   };
 
   const handleTogglePower = async (room: RoomListItemDTO) => {
@@ -367,112 +394,119 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
             </Button>
           </div>
         )}
-
-        {data.data.length === 0 ? (
-          <EmptyState
-            icon={DoorOpen}
-            title={
-              search || dateRange?.from ? 'No matching rooms' : 'No rooms yet'
-            }
-            description={
-              search
-                ? `No rooms match "${search}". Try a different search term.`
-                : dateRange?.from
-                  ? 'No rooms were created in this date range.'
-                  : 'Create your first room to connect your gateway and device.'
-            }
-            action={
-              !search &&
-              !dateRange?.from && (
-                <Button
-                  onClick={() => setModalState({ open: true })}
-                  className="w-[200px]"
-                >
-                  <Plus className="size-4" /> Add room
-                </Button>
-              )
-            }
-          />
-        ) : (
-          <>
-            {/* mobile */}
-            <div className="flex w-full flex-col gap-3 md:hidden">
-              {sorted.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  onTogglePower={handleTogglePower}
-                  onView={(r) =>
-                    (window.location.href = `/rooms/detail/${r.id}`)
-                  }
-                  onEdit={openEdit}
-                  onDelete={(r) => setDeleteTarget(r)}
-                />
-              ))}
-            </div>
-            <div className="hidden w-full md:block">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={allSelected}
-                        onCheckedChange={() =>
-                          setSelected(
-                            allSelected
-                              ? new Set()
-                              : new Set(sorted.map((r) => r.id))
-                          )
-                        }
-                      />
-                    </TableHead>
-                    <SortableTableHead
-                      sortKey="name"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Room
-                    </SortableTableHead>
-                    <TableHead>Gateway</TableHead>
-                    <TableHead>Device</TableHead>
-                    <SortableTableHead
-                      sortKey="usage"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Total usage(24H)
-                    </SortableTableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sorted.map((room) => (
-                    <TableRow key={room.id}>
-                      <TableCell>{columns.checkbox(room)}</TableCell>
-                      <TableCell>{columns.room(room)}</TableCell>
-                      <TableCell>{columns.gateway(room)}</TableCell>
-                      <TableCell>{columns.device(room)}</TableCell>
-                      <TableCell>{columns.usage(room)}</TableCell>
-                      <TableCell>{columns.status(room)}</TableCell>
-                      <TableCell>{columns.action(room)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            <Pagination
-              page={page}
-              totalPages={data.totalPages}
-              onPageChange={handlePageChange}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleRowsPerPageChange}
+        <motion.div
+          key={isFetching ? 'loading' : 'loaded'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isFetching ? 0.4 : 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="flex w-full flex-col items-end gap-4"
+        >
+          {data.data.length === 0 ? (
+            <EmptyState
+              icon={DoorOpen}
+              title={
+                search || dateRange?.from ? 'No matching rooms' : 'No rooms yet'
+              }
+              description={
+                search
+                  ? `No rooms match "${search}". Try a different search term.`
+                  : dateRange?.from
+                    ? 'No rooms were created in this date range.'
+                    : 'Create your first room to connect your gateway and device.'
+              }
+              action={
+                !search &&
+                !dateRange?.from && (
+                  <Button
+                    onClick={() => setModalState({ open: true })}
+                    className="w-[200px]"
+                  >
+                    <Plus className="size-4" /> Add room
+                  </Button>
+                )
+              }
             />
-          </>
-        )}
+          ) : (
+            <>
+              {/* mobile */}
+              <div className="flex w-full flex-col gap-3 md:hidden">
+                {sorted.map((room) => (
+                  <RoomCard
+                    key={room.id}
+                    room={room}
+                    onTogglePower={handleTogglePower}
+                    onView={(r) =>
+                      (window.location.href = `/rooms/detail/${r.id}`)
+                    }
+                    onEdit={openEdit}
+                    onDelete={(r) => setDeleteTarget(r)}
+                  />
+                ))}
+              </div>
+              <div className="hidden w-full md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={() =>
+                            setSelected(
+                              allSelected
+                                ? new Set()
+                                : new Set(sorted.map((r) => r.id))
+                            )
+                          }
+                        />
+                      </TableHead>
+                      <SortableTableHead
+                        sortKey="name"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Room
+                      </SortableTableHead>
+                      <TableHead>Gateway</TableHead>
+                      <TableHead>Device</TableHead>
+                      <SortableTableHead
+                        sortKey="usage"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Total usage(24H)
+                      </SortableTableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sorted.map((room) => (
+                      <TableRow key={room.id}>
+                        <TableCell>{columns.checkbox(room)}</TableCell>
+                        <TableCell>{columns.room(room)}</TableCell>
+                        <TableCell>{columns.gateway(room)}</TableCell>
+                        <TableCell>{columns.device(room)}</TableCell>
+                        <TableCell>{columns.usage(room)}</TableCell>
+                        <TableCell>{columns.status(room)}</TableCell>
+                        <TableCell>{columns.action(room)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Pagination
+                page={page}
+                totalPages={data.totalPages}
+                onPageChange={handlePageChange}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleRowsPerPageChange}
+              />
+            </>
+          )}
+        </motion.div>
       </TableToolbar>
 
       <RoomFormModal
@@ -495,7 +529,7 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
           toast.success(modalState.room ? 'Room updated' : 'Room created');
           if (!modalState.room) {
             setPage(1);
-            loadRooms(1, rowsPerPage, search);
+            loadRooms(1, rowsPerPage, search, dateRange);
           }
         }}
       />
