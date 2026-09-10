@@ -7,13 +7,29 @@ export interface UserListParams {
   rowsPerPage?: number;
   search?: string;
   roleId?: string;
+  createdFrom?: string;
+  createdTo?: string;
 }
 
 export const usersClientApi = {
-  list: ({ page = 1, rowsPerPage = 10, search, roleId }: UserListParams = {}) =>
+  list: ({
+    page = 1,
+    rowsPerPage = 10,
+    search,
+    roleId,
+    createdFrom,
+    createdTo,
+  }: UserListParams = {}) =>
     api
       .get<UserListResponseDTO>('/users', {
-        params: { page, rowsPerPage, search: search || undefined, roleId },
+        params: {
+          page,
+          rowsPerPage,
+          search: search || undefined,
+          roleId,
+          createdFrom,
+          createdTo,
+        },
       })
       .then((res) => res.data),
 

@@ -1,9 +1,12 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Plus, Users, Trash2, CalendarDays } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import { motion } from 'motion/react';
+import { Plus, Users, Trash2 } from 'lucide-react';
+import type { DateRange } from 'react-day-picker';
 import { PageHeader } from '@/components/shared/page-header';
 import { SearchInput } from '@/components/shared/search-input';
+import { DateRangeFilter } from '@/components/shared/date-range-filter';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Button } from '@/components/ui/button';
@@ -44,6 +47,10 @@ const USER_SORT_ACCESSORS = {
     u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : null,
 };
 
+function toApiDate(date: Date | undefined) {
+  return date ? date.toISOString().slice(0, 10) : undefined;
+}
+
 export function UserClient({ initialData, roles }: UserClientProps) {
   const [data, setData] = useState<UserListResponseDTO>(
     initialData ?? {
@@ -57,6 +64,8 @@ export function UserClient({ initialData, roles }: UserClientProps) {
   const [page, setPage] = useState(initialData.page);
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
+  const [isFetching, setIsFetching] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{
     open: boolean;
@@ -69,23 +78,38 @@ export function UserClient({ initialData, roles }: UserClientProps) {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadUsersRequestRef = useRef(0);
 
-  const loadUsers = async (
-    nextPage: number,
-    nextRowsPerPage: number,
-    nextSearch: string
-  ) => {
-    try {
-      const result = await usersClientApi.list({
-        page: nextPage,
-        rowsPerPage: nextRowsPerPage,
-        search: nextSearch,
-      });
-      setData(result);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load users');
-    }
-  };
+  const loadUsers = useCallback(
+    async (
+      nextPage: number,
+      nextRowsPerPage: number,
+      nextSearch: string,
+      nextRange: DateRange | undefined
+    ) => {
+      const requestId = ++loadUsersRequestRef.current;
+      setIsFetching(true);
+      try {
+        const result = await usersClientApi.list({
+          page: nextPage,
+          rowsPerPage: nextRowsPerPage,
+          search: nextSearch,
+          createdFrom: toApiDate(nextRange?.from),
+          createdTo: toApiDate(nextRange?.to),
+        });
+        if (requestId !== loadUsersRequestRef.current) return;
+        setData(result);
+      } catch (err) {
+        if (requestId !== loadUsersRequestRef.current) return;
+        toast.error(
+          err instanceof Error ? err.message : 'Failed to load users'
+        );
+      } finally {
+        if (requestId === loadUsersRequestRef.current) setIsFetching(false);
+      }
+    },
+    []
+  );
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -93,19 +117,25 @@ export function UserClient({ initialData, roles }: UserClientProps) {
 
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      loadUsers(1, rowsPerPage, value);
+      loadUsers(1, rowsPerPage, value, dateRange);
     }, SEARCH_DEBOUNCE_MS);
+  };
+
+  const handleDateRangeApply = (range: DateRange | undefined) => {
+    setDateRange(range);
+    setPage(1);
+    loadUsers(1, rowsPerPage, search, range);
   };
 
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
-    loadUsers(nextPage, rowsPerPage, search);
+    loadUsers(nextPage, rowsPerPage, search, dateRange);
   };
 
   const handleRowsPerPageChange = (nextRowsPerPage: number) => {
     setRowsPerPage(nextRowsPerPage);
     setPage(1);
-    loadUsers(1, nextRowsPerPage, search);
+    loadUsers(1, nextRowsPerPage, search, dateRange);
   };
 
   const handleConfirmDelete = async () => {
@@ -205,20 +235,10 @@ export function UserClient({ initialData, roles }: UserClientProps) {
         actions={
           <>
             <div className="min-w-0 flex-1 md:flex-none">
-              <SearchInput
-                value={search}
-                onChange={handleSearchChange}
-                placeholder="Search gateway..."
-              />
+              <SearchInput value={search} onChange={handleSearchChange} />
             </div>
 
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 shrink-0 rounded-md md:size-8"
-            >
-              <CalendarDays className="size-4" />
-            </Button>
+            <DateRangeFilter value={dateRange} onApply={handleDateRangeApply} />
           </>
         }
       >
@@ -234,101 +254,115 @@ export function UserClient({ initialData, roles }: UserClientProps) {
             </Button>
           </div>
         )}
-        {data.data.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title={search ? 'No matching users' : 'No users yet'}
-            description={
-              search
-                ? `No users match "${search}". Try a different search term.`
-                : 'Create your user to manage room, gateway, and device.'
-            }
-            action={
-              !search && (
-                <Button
-                  onClick={() => setModalState({ open: true })}
-                  className="w-[200px]"
-                >
-                  <Plus className="size-4" /> Add user
-                </Button>
-              )
-            }
-          />
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={() =>
-                        setSelected(
-                          allSelected
-                            ? new Set()
-                            : new Set(sorted.map((u) => u.id))
-                        )
-                      }
-                    />
-                  </TableHead>
-                  <SortableTableHead
-                    sortKey="fullName"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Name
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="address"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Address
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="role"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Role
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="lastActiveAt"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Last active
-                  </SortableTableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sorted.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{columns.checkbox(user)}</TableCell>
-                    <TableCell>{columns.user(user)}</TableCell>
-                    <TableCell>{columns.address(user)}</TableCell>
-                    <TableCell>{columns.role(user)}</TableCell>
-                    <TableCell>{columns.lastActive(user)}</TableCell>
-                    <TableCell>{columns.action(user)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
 
-            <Pagination
-              page={page}
-              totalPages={data.totalPages}
-              onPageChange={handlePageChange}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleRowsPerPageChange}
+        <motion.div
+          key={isFetching ? 'loading' : 'loaded'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isFetching ? 0.4 : 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="flex w-full flex-col items-end gap-4"
+        >
+          {data.data.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title={
+                search || dateRange?.from ? 'No matching users' : 'No users yet'
+              }
+              description={
+                search
+                  ? `No users match "${search}". Try a different search term.`
+                  : dateRange?.from
+                    ? 'No users were created in this date range.'
+                    : 'Create your user to manage room, gateway, and device.'
+              }
+              action={
+                !search &&
+                !dateRange?.from && (
+                  <Button
+                    onClick={() => setModalState({ open: true })}
+                    className="w-[200px]"
+                  >
+                    <Plus className="size-4" /> Add user
+                  </Button>
+                )
+              }
             />
-          </>
-        )}
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={() =>
+                          setSelected(
+                            allSelected
+                              ? new Set()
+                              : new Set(sorted.map((u) => u.id))
+                          )
+                        }
+                      />
+                    </TableHead>
+                    <SortableTableHead
+                      sortKey="fullName"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Name
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="address"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Address
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="role"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Role
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="lastActiveAt"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Last active
+                    </SortableTableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sorted.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{columns.checkbox(user)}</TableCell>
+                      <TableCell>{columns.user(user)}</TableCell>
+                      <TableCell>{columns.address(user)}</TableCell>
+                      <TableCell>{columns.role(user)}</TableCell>
+                      <TableCell>{columns.lastActive(user)}</TableCell>
+                      <TableCell>{columns.action(user)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <Pagination
+                page={page}
+                totalPages={data.totalPages}
+                onPageChange={handlePageChange}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleRowsPerPageChange}
+              />
+            </>
+          )}
+        </motion.div>
       </TableToolbar>
       <UserFormModal
         open={modalState.open}
