@@ -8,6 +8,8 @@ export interface ScheduleListParams {
   page?: number;
   rowsPerPage?: number;
   search?: string;
+  scheduledFrom?: string;
+  scheduledTo?: string;
 }
 
 export const scheduleClientApi = {
@@ -17,6 +19,8 @@ export const scheduleClientApi = {
     page = 1,
     rowsPerPage = 10,
     search,
+    scheduledFrom,
+    scheduledTo,
   }: ScheduleListParams = {}) =>
     api
       .get<ScheduleListResponseDTO>('/schedules', {
@@ -26,6 +30,8 @@ export const scheduleClientApi = {
           page,
           rowsPerPage,
           search: search || undefined,
+          scheduledFrom,
+          scheduledTo,
         },
       })
       .then((res) => res.data),
