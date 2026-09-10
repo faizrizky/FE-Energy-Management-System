@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { motion } from 'motion/react';
 import { Plus, CalendarDays, Trash2 } from 'lucide-react';
 import type { DateRange } from 'react-day-picker';
 import { PageHeader } from '@/components/shared/page-header';
@@ -79,6 +80,7 @@ export function ScheduleClient({
   const [page, setPage] = useState(initialData.page);
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
+  const [isFetching, setIsFetching] = useState(false);
   const [tab, setTab] = useState<ScheduleTab>('active');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [overallTotal, setOverallTotal] = useState(initialOverallTotal);
@@ -101,11 +103,6 @@ export function ScheduleClient({
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadSchedulesRequestRef = useRef(0);
 
-  // PENTING: nextRange TIDAK punya default (`= dateRange`). Setiap
-  // pemanggilan loadSchedules WAJIB kirim dateRange eksplisit (baik yang
-  // lagi aktif atau nilai baru dari filter). Kalau dikasih default param,
-  // saat Clear (range=undefined) dia bakal ke-fallback ke closure lama
-  // yang stale — sama kayak bug di RoomsClient.
   const loadSchedules = async (
     nextPage: number,
     nextRowsPerPage: number,
@@ -114,6 +111,7 @@ export function ScheduleClient({
     nextRange: DateRange | undefined
   ) => {
     const requestId = ++loadSchedulesRequestRef.current;
+    setIsFetching(true);
     try {
       const result = await scheduleClientApi.list({
         status: nextTab,
@@ -133,6 +131,8 @@ export function ScheduleClient({
       toast.error(
         err instanceof Error ? err.message : 'Failed to load schedules'
       );
+    } finally {
+      if (requestId === loadSchedulesRequestRef.current) setIsFetching(false);
     }
   };
 
@@ -409,121 +409,131 @@ export function ScheduleClient({
           </div>
         )}
 
-        {data.data.length === 0 ? (
-          <EmptyState
-            icon={CalendarDays}
-            title={
-              search || dateRange?.from ? 'No matching schedule' : 'No schedule'
-            }
-            description={
-              search
-                ? `No schedules match "${search}". Try a different search term.`
-                : dateRange?.from
-                  ? 'No schedules were scheduled in this date range.'
-                  : tab === 'active'
-                    ? 'There are no schedules running right now.'
-                    : 'There are no upcoming schedules.'
-            }
-            action={
-              !search &&
-              !dateRange?.from && (
-                <Button
-                  onClick={() => setModalState({ open: true })}
-                  className="w-[200px]"
-                >
-                  <Plus className="size-4" />
-                  Add schedule
-                </Button>
-              )
-            }
-          />
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={togglePageSelection}
-                    />
-                  </TableHead>
-                  <SortableTableHead
-                    sortKey="room"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
+        <motion.div
+          key={isFetching ? 'loading' : 'loaded'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isFetching ? 0.4 : 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="flex w-full flex-col items-end gap-4"
+        >
+          {data.data.length === 0 ? (
+            <EmptyState
+              icon={CalendarDays}
+              title={
+                search || dateRange?.from
+                  ? 'No matching schedule'
+                  : 'No schedule'
+              }
+              description={
+                search
+                  ? `No schedules match "${search}". Try a different search term.`
+                  : dateRange?.from
+                    ? 'No schedules were scheduled in this date range.'
+                    : tab === 'active'
+                      ? 'There are no schedules running right now.'
+                      : 'There are no upcoming schedules.'
+              }
+              action={
+                !search &&
+                !dateRange?.from && (
+                  <Button
+                    onClick={() => setModalState({ open: true })}
+                    className="w-[200px]"
                   >
-                    Room
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="component"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Component
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="deviceEui"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Device EUI
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="date"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Start Date
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="time"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Time
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="repeat"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Repeat
-                  </SortableTableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sorted.map((schedule) => (
-                  <TableRow key={schedule.id}>
-                    <TableCell>{columns.checkbox(schedule)}</TableCell>
-                    <TableCell>{columns.schedule(schedule)}</TableCell>
-                    <TableCell>{columns.component(schedule)}</TableCell>
-                    <TableCell>{columns.deviceEui(schedule)}</TableCell>
-                    <TableCell>{columns.date(schedule)}</TableCell>
-                    <TableCell>{columns.time(schedule)}</TableCell>
-                    <TableCell>{columns.repeat(schedule)}</TableCell>
-                    <TableCell>{columns.action(schedule)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-
-            <Pagination
-              page={page}
-              totalPages={data.totalPages}
-              onPageChange={handlePageChange}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleRowsPerPageChange}
+                    <Plus className="size-4" />
+                    Add schedule
+                  </Button>
+                )
+              }
             />
-          </>
-        )}
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={togglePageSelection}
+                      />
+                    </TableHead>
+                    <SortableTableHead
+                      sortKey="room"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Room
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="component"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Component
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="deviceEui"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Device EUI
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="date"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Start Date
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="time"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Time
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="repeat"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Repeat
+                    </SortableTableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sorted.map((schedule) => (
+                    <TableRow key={schedule.id}>
+                      <TableCell>{columns.checkbox(schedule)}</TableCell>
+                      <TableCell>{columns.schedule(schedule)}</TableCell>
+                      <TableCell>{columns.component(schedule)}</TableCell>
+                      <TableCell>{columns.deviceEui(schedule)}</TableCell>
+                      <TableCell>{columns.date(schedule)}</TableCell>
+                      <TableCell>{columns.time(schedule)}</TableCell>
+                      <TableCell>{columns.repeat(schedule)}</TableCell>
+                      <TableCell>{columns.action(schedule)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <Pagination
+                page={page}
+                totalPages={data.totalPages}
+                onPageChange={handlePageChange}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleRowsPerPageChange}
+              />
+            </>
+          )}
+        </motion.div>
       </TableToolbar>
 
       <ScheduleFormModal
