@@ -10,13 +10,27 @@ export interface GatewayListParams {
   page?: number;
   rowsPerPage?: number;
   search?: string;
+  createdFrom?: string;
+  createdTo?: string;
 }
 
 export const gatewaysClientApi = {
-  list: ({ page = 1, rowsPerPage = 10, search }: GatewayListParams = {}) =>
+  list: ({
+    page = 1,
+    rowsPerPage = 10,
+    search,
+    createdFrom,
+    createdTo,
+  }: GatewayListParams = {}) =>
     api
       .get<GatewayListResponseDTO>('/gateways', {
-        params: { page, rowsPerPage, search: search || undefined },
+        params: {
+          page,
+          rowsPerPage,
+          search: search || undefined,
+          createdFrom,
+          createdTo,
+        },
       })
       .then((res) => res.data),
 

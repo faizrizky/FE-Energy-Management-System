@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
-import { Plus, Router, CalendarDays, Trash2 } from 'lucide-react';
-
+import { useCallback, useRef, useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { Plus, Router, Trash2 } from 'lucide-react';
+import type { DateRange } from 'react-day-picker';
 import { PageHeader } from '@/components/shared/page-header';
 import { SearchInput } from '@/components/shared/search-input';
+import { DateRangeFilter } from '@/components/shared/date-range-filter';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Button } from '@/components/ui/button';
@@ -37,7 +39,6 @@ import type { UserSummaryDTO } from '@/feat/user/dto';
 import { GatewayFormModal } from './_partials/modal';
 import { GatewayDetailModal } from './_partials/detail-modal';
 import { StatusDot } from '@/components/shared/status-dot';
-import { useEffect } from 'react';
 import { connectSocket } from '@/lib/socket';
 
 interface GatewayClientProps {
@@ -52,11 +53,17 @@ const GATEWAY_SORT_ACCESSORS = {
   status: (g: GatewayDTO) => g.status,
 };
 
+function toApiDate(date: Date | undefined) {
+  return date ? date.toISOString().slice(0, 10) : undefined;
+}
+
 export function GatewayClient({ initialData, users }: GatewayClientProps) {
   const [data, setData] = useState(initialData);
   const [page, setPage] = useState(initialData.page);
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
+  const [isFetching, setIsFetching] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{
     open: boolean;
@@ -74,26 +81,41 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
   );
   const [detailLoading, setDetailLoading] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadGatewaysRequestRef = useRef(0);
 
   const online = data.data.filter(
     (gateway) => gateway.status === 'online'
   ).length;
 
   const loadGateways = useCallback(
-    async (nextPage: number, nextRowsPerPage: number, nextSearch: string) => {
+    async (
+      nextPage: number,
+      nextRowsPerPage: number,
+      nextSearch: string,
+      nextRange: DateRange | undefined
+    ) => {
+      setIsFetching(true);
+      const requestId = ++loadGatewaysRequestRef.current;
       try {
         const result = await gatewaysClientApi.list({
           page: nextPage,
           rowsPerPage: nextRowsPerPage,
           search: nextSearch,
+          createdFrom: toApiDate(nextRange?.from),
+          createdTo: toApiDate(nextRange?.to),
         });
+        if (requestId !== loadGatewaysRequestRef.current) return;
         setData(result);
       } catch (err) {
+        if (requestId !== loadGatewaysRequestRef.current) return;
         toast.error(
           err instanceof Error ? err.message : 'Failed to load gateways'
         );
+      } finally {
+        if (requestId === loadGatewaysRequestRef.current) setIsFetching(false);
       }
     },
+
     []
   );
 
@@ -103,7 +125,10 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
 
     const scheduleRefresh = () => {
       clearTimeout(timeout);
-      timeout = setTimeout(() => loadGateways(page, rowsPerPage, search), 3000);
+      timeout = setTimeout(
+        () => loadGateways(page, rowsPerPage, search, dateRange),
+        3000
+      );
     };
 
     socket.on('device:status', scheduleRefresh);
@@ -111,7 +136,7 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
       socket.off('device:status', scheduleRefresh);
       clearTimeout(timeout);
     };
-  }, [page, rowsPerPage, search]);
+  }, [page, rowsPerPage, search, dateRange, loadGateways]);
 
   useRealtimeEvent<{ gateway: GatewayDTO }>(
     'gateway:created',
@@ -149,19 +174,25 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
 
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      loadGateways(1, rowsPerPage, value);
+      loadGateways(1, rowsPerPage, value, dateRange);
     }, SEARCH_DEBOUNCE_MS);
+  };
+
+  const handleDateRangeApply = (range: DateRange | undefined) => {
+    setDateRange(range);
+    setPage(1);
+    loadGateways(1, rowsPerPage, search, range);
   };
 
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
-    loadGateways(nextPage, rowsPerPage, search);
+    loadGateways(nextPage, rowsPerPage, search, dateRange);
   };
 
   const handleRowsPerPageChange = (nextRowsPerPage: number) => {
     setRowsPerPage(nextRowsPerPage);
     setPage(1);
-    loadGateways(1, nextRowsPerPage, search);
+    loadGateways(1, nextRowsPerPage, search, dateRange);
   };
 
   const openGatewayDetail = async (gateway: GatewayDTO) => {
@@ -299,13 +330,10 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
                 />
               </div>
 
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-11 shrink-0 rounded-md md:size-8"
-              >
-                <CalendarDays className="size-4" />
-              </Button>
+              <DateRangeFilter
+                value={dateRange}
+                onApply={handleDateRangeApply}
+              />
             </>
           }
         >
@@ -321,117 +349,132 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
               </Button>
             </div>
           )}
-          {data.data.length === 0 ? (
-            <EmptyState
-              icon={Router}
-              title={search ? 'No matching gateways' : 'No gateways yet'}
-              description={
-                search
-                  ? `No gateways match "${search}". Try a different search term.`
-                  : 'Add your first gateway to start connecting devices.'
-              }
-              action={
-                !search && (
-                  <Button
-                    onClick={() => setModalState({ open: true })}
-                    className="w-[200px]"
-                  >
-                    <Plus className="size-4" />
-                    Add gateway
-                  </Button>
-                )
-              }
-            />
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={allSelected}
-                        onCheckedChange={() =>
-                          setSelected(
-                            allSelected
-                              ? new Set()
-                              : new Set(sorted.map((gateway) => gateway.id))
-                          )
-                        }
-                      />
-                    </TableHead>
-
-                    <SortableTableHead
-                      sortKey="name"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
+          <motion.div
+            key={isFetching ? 'loading' : 'loaded'}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: isFetching ? 0.4 : 1 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="flex w-full flex-col items-end gap-4"
+          >
+            {data.data.length === 0 ? (
+              <EmptyState
+                icon={Router}
+                title={
+                  search || dateRange?.from
+                    ? 'No matching gateways'
+                    : 'No gateways yet'
+                }
+                description={
+                  search
+                    ? `No gateways match "${search}". Try a different search term.`
+                    : dateRange?.from
+                      ? 'No gateways were created in this date range.'
+                      : 'Add your first gateway to start connecting devices.'
+                }
+                action={
+                  !search &&
+                  !dateRange?.from && (
+                    <Button
+                      onClick={() => setModalState({ open: true })}
+                      className="w-[200px]"
                     >
-                      Gateway
-                    </SortableTableHead>
-
-                    <TableHead>Model unit</TableHead>
-                    <TableHead>Simcard</TableHead>
-                    <TableHead>Installation</TableHead>
-                    <TableHead>Source</TableHead>
-
-                    <SortableTableHead
-                      sortKey="status"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Status
-                    </SortableTableHead>
-
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-
-                <TableBody>
-                  {sorted.map((gateway) => (
-                    <TableRow key={gateway.id}>
-                      <TableCell>{columns.checkbox(gateway)}</TableCell>
-
-                      <TableCell>{columns.gateway(gateway)}</TableCell>
-
-                      <TableCell>{columns.modelUnit(gateway)}</TableCell>
-
-                      <TableCell>{columns.simcard(gateway)}</TableCell>
-
-                      <TableCell>{columns.installation(gateway)}</TableCell>
-
-                      <TableCell>{columns.source(gateway)}</TableCell>
-
-                      <TableCell>
-                        <StatusDot
-                          label={
-                            gateway.status?.toLowerCase() === 'online'
-                              ? 'Online'
-                              : 'Offline'
-                          }
-                          tone={
-                            gateway.status?.toLowerCase() === 'online'
-                              ? 'success'
-                              : 'error'
+                      <Plus className="size-4" />
+                      Add gateway
+                    </Button>
+                  )
+                }
+              />
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={() =>
+                            setSelected(
+                              allSelected
+                                ? new Set()
+                                : new Set(sorted.map((gateway) => gateway.id))
+                            )
                           }
                         />
-                      </TableCell>
+                      </TableHead>
 
-                      <TableCell>{columns.action(gateway)}</TableCell>
+                      <SortableTableHead
+                        sortKey="name"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Gateway
+                      </SortableTableHead>
+
+                      <TableHead>Model unit</TableHead>
+                      <TableHead>Simcard</TableHead>
+                      <TableHead>Installation</TableHead>
+                      <TableHead>Source</TableHead>
+
+                      <SortableTableHead
+                        sortKey="status"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Status
+                      </SortableTableHead>
+
+                      <TableHead>Action</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
 
-              <Pagination
-                page={page}
-                totalPages={data.totalPages}
-                onPageChange={handlePageChange}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={handleRowsPerPageChange}
-              />
-            </>
-          )}
+                  <TableBody>
+                    {sorted.map((gateway) => (
+                      <TableRow key={gateway.id}>
+                        <TableCell>{columns.checkbox(gateway)}</TableCell>
+
+                        <TableCell>{columns.gateway(gateway)}</TableCell>
+
+                        <TableCell>{columns.modelUnit(gateway)}</TableCell>
+
+                        <TableCell>{columns.simcard(gateway)}</TableCell>
+
+                        <TableCell>{columns.installation(gateway)}</TableCell>
+
+                        <TableCell>{columns.source(gateway)}</TableCell>
+
+                        <TableCell>
+                          <StatusDot
+                            label={
+                              gateway.status?.toLowerCase() === 'online'
+                                ? 'Online'
+                                : 'Offline'
+                            }
+                            tone={
+                              gateway.status?.toLowerCase() === 'online'
+                                ? 'success'
+                                : 'error'
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell>{columns.action(gateway)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                <Pagination
+                  page={page}
+                  totalPages={data.totalPages}
+                  onPageChange={handlePageChange}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={handleRowsPerPageChange}
+                />
+              </>
+            )}
+          </motion.div>
         </TableToolbar>
 
         <GatewayFormModal
@@ -459,7 +502,7 @@ export function GatewayClient({ initialData, users }: GatewayClientProps) {
 
             if (!modalState.gateway) {
               setPage(1);
-              loadGateways(1, rowsPerPage, search);
+              loadGateways(1, rowsPerPage, search, dateRange);
             }
           }}
         />

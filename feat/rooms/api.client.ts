@@ -8,18 +8,33 @@ import type {
 } from './dto';
 import type { RoomFormValues } from './schema';
 
+export interface RoomDeviceListParams {
+  roomId: string;
+  page?: number;
+  rowsPerPage?: number;
+  search?: string;
+  scheduledFrom?: string;
+  scheduledTo?: string;
+}
+
 export const roomsClientApi = {
-  listDevices: (
-    roomId: string,
-    {
-      page = 1,
-      rowsPerPage = 10,
-      search,
-    }: { page?: number; rowsPerPage?: number; search?: string } = {}
-  ) =>
+  listDevices: ({
+    roomId,
+    page = 1,
+    rowsPerPage = 10,
+    search,
+    scheduledFrom,
+    scheduledTo,
+  }: RoomDeviceListParams) =>
     api
       .get<RoomDeviceListResponseDTO>(`/rooms/${roomId}/devices`, {
-        params: { page, rowsPerPage, search: search || undefined },
+        params: {
+          page,
+          rowsPerPage,
+          search: search || undefined,
+          scheduledFrom,
+          scheduledTo,
+        },
       })
       .then((res) => res.data),
 

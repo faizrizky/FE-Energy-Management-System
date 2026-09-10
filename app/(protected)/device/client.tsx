@@ -430,14 +430,14 @@ export function DeviceClient({
                     >
                       Interval
                     </SortableTableHead>
-                    <SortableTableHead
+                    {/* <SortableTableHead
                       sortKey="status"
                       activeKey={sortKey}
                       direction={direction}
                       onSort={toggleSort}
                     >
                       Status
-                    </SortableTableHead>
+                    </SortableTableHead> */}
                     <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -451,7 +451,7 @@ export function DeviceClient({
                       <TableCell>{columns.gateway(device)}</TableCell>
                       <TableCell>{columns.tbDeviceId(device)}</TableCell>
                       <TableCell>{columns.interval(device)}</TableCell>
-                      <TableCell>{columns.status(device)}</TableCell>
+                      {/* <TableCell>{columns.status(device)}</TableCell> */}
                       <TableCell>{columns.action(device)}</TableCell>
                     </TableRow>
                   ))}
