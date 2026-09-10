@@ -387,7 +387,6 @@ export function ScheduleClient({
               <SearchInput
                 value={search}
                 onChange={handleSearchChange}
-                placeholder="Search..."
                 className="flex-1 md:flex-none"
               />
             </div>

@@ -365,7 +365,6 @@ export function DeviceClient({
                 <SearchInput
                   value={search}
                   onChange={handleSearchChange}
-                  placeholder="Search by name, EUI, or room..."
                   className="flex-1 md:flex-none"
                 />
               </div>

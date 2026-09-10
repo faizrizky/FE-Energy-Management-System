@@ -371,11 +371,7 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
         actions={
           <>
             <div className="min-w-0 flex-1 md:flex-none">
-              <SearchInput
-                value={search}
-                onChange={handleSearchChange}
-                placeholder="Search gateway..."
-              />
+              <SearchInput value={search} onChange={handleSearchChange} />
             </div>
 
             <DateRangeFilter value={dateRange} onApply={handleDateRangeApply} />
