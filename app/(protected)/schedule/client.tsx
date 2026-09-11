@@ -34,6 +34,7 @@ import { ScheduleFormModal } from './_partials/modal';
 import { ScheduleDetailModal } from './_partials/detail-modal';
 import { TableToolbar } from '@/components/shared/table-toolbar';
 import { useRealtimeEvent } from '@/hooks/use-realtime-event';
+import { ScheduleCard } from './_partials/schedule-card';
 
 interface ScheduleClientProps {
   initialData: ScheduleListResponseDTO;
@@ -447,81 +448,96 @@ export function ScheduleClient({
             />
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={allSelected}
-                        onCheckedChange={togglePageSelection}
-                      />
-                    </TableHead>
-                    <SortableTableHead
-                      sortKey="room"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Room
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="component"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Component
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="deviceEui"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Device EUI
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="date"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Start Date
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="time"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Time
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="repeat"
-                      activeKey={sortKey}
-                      direction={direction}
-                      onSort={toggleSort}
-                    >
-                      Repeat
-                    </SortableTableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sorted.map((schedule) => (
-                    <TableRow key={schedule.id}>
-                      <TableCell>{columns.checkbox(schedule)}</TableCell>
-                      <TableCell>{columns.schedule(schedule)}</TableCell>
-                      <TableCell>{columns.component(schedule)}</TableCell>
-                      <TableCell>{columns.deviceEui(schedule)}</TableCell>
-                      <TableCell>{columns.date(schedule)}</TableCell>
-                      <TableCell>{columns.time(schedule)}</TableCell>
-                      <TableCell>{columns.repeat(schedule)}</TableCell>
-                      <TableCell>{columns.action(schedule)}</TableCell>
+              {/* mobile */}
+              <div className="flex w-full flex-col gap-3 md:hidden">
+                {sorted.map((schedule) => (
+                  <ScheduleCard
+                    key={schedule.id}
+                    schedule={schedule}
+                    onEdit={(schedule) =>
+                      setModalState({ open: true, schedule })
+                    }
+                    onDelete={(r) => setDeleteTarget(r)}
+                  />
+                ))}
+              </div>
+              <div className="hidden w-full md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={togglePageSelection}
+                        />
+                      </TableHead>
+                      <SortableTableHead
+                        sortKey="room"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Room
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="component"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Component
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="deviceEui"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Device EUI
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="date"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Start Date
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="time"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Time
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="repeat"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Repeat
+                      </SortableTableHead>
+                      <TableHead>Action</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {sorted.map((schedule) => (
+                      <TableRow key={schedule.id}>
+                        <TableCell>{columns.checkbox(schedule)}</TableCell>
+                        <TableCell>{columns.schedule(schedule)}</TableCell>
+                        <TableCell>{columns.component(schedule)}</TableCell>
+                        <TableCell>{columns.deviceEui(schedule)}</TableCell>
+                        <TableCell>{columns.date(schedule)}</TableCell>
+                        <TableCell>{columns.time(schedule)}</TableCell>
+                        <TableCell>{columns.repeat(schedule)}</TableCell>
+                        <TableCell>{columns.action(schedule)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               <Pagination
                 page={page}

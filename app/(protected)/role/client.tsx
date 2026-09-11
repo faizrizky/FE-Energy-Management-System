@@ -1,10 +1,13 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Plus, UserCog, Trash2, CalendarDays } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import { motion } from 'motion/react';
+import { Plus, UserCog, Trash2 } from 'lucide-react';
+import type { DateRange } from 'react-day-picker';
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
+import { DateRangeFilter } from '@/components/shared/date-range-filter';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Button } from '@/components/ui/button';
@@ -59,6 +62,8 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
   const [page, setPage] = useState(initialData.page);
   const [rowsPerPage, setRowsPerPage] = useState(initialData.rowsPerPage);
   const [search, setSearch] = useState('');
+  const [isFetching, setIsFetching] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{
     open: boolean;
@@ -71,23 +76,31 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadRolesRequestRef = useRef(0);
 
-  const loadRoles = async (
-    nextPage: number,
-    nextRowsPerPage: number,
-    nextSearch: string
-  ) => {
-    try {
-      const result = await rolesClientApi.list({
-        page: nextPage,
-        rowsPerPage: nextRowsPerPage,
-        search: nextSearch,
-      });
-      setData(result);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load roles');
-    }
-  };
+  const loadRoles = useCallback(
+    async (nextPage: number, nextRowsPerPage: number, nextSearch: string) => {
+      const requestId = ++loadRolesRequestRef.current;
+      setIsFetching(true);
+      try {
+        const result = await rolesClientApi.list({
+          page: nextPage,
+          rowsPerPage: nextRowsPerPage,
+          search: nextSearch,
+        });
+        if (requestId !== loadRolesRequestRef.current) return;
+        setData(result);
+      } catch (err) {
+        if (requestId !== loadRolesRequestRef.current) return;
+        toast.error(
+          err instanceof Error ? err.message : 'Failed to load roles'
+        );
+      } finally {
+        if (requestId === loadRolesRequestRef.current) setIsFetching(false);
+      }
+    },
+    []
+  );
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -97,6 +110,12 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
     searchTimeoutRef.current = setTimeout(() => {
       loadRoles(1, rowsPerPage, value);
     }, SEARCH_DEBOUNCE_MS);
+  };
+
+  const handleDateRangeApply = (range: DateRange | undefined) => {
+    setDateRange(range);
+    setPage(1);
+    loadRoles(1, rowsPerPage, search);
   };
 
   const handlePageChange = (nextPage: number) => {
@@ -230,108 +249,122 @@ export function RoleClient({ initialData, permissions }: RoleClientProps) {
         actions={
           <>
             <div className="min-w-0 flex-1 md:flex-none">
-              <SearchInput
-                value={search}
-                onChange={handleSearchChange}
-                placeholder="Search gateway..."
-              />
+              <SearchInput value={search} onChange={handleSearchChange} />
             </div>
-
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 shrink-0 rounded-md md:size-8"
-            >
-              <CalendarDays className="size-4" />
-            </Button>
           </>
         }
       >
-        {data.data.length === 0 ? (
-          <EmptyState
-            icon={UserCog}
-            title={search ? 'No matching roles' : 'No roles yet'}
-            description={
-              search
-                ? `No roles match "${search}". Try a different search term.`
-                : 'Create a role and assign the permissions its members need.'
-            }
-            action={
-              !search && (
-                <Button
-                  onClick={() => setModalState({ open: true })}
-                  className="w-[200px]"
-                >
-                  <Plus className="size-4" /> Add role
-                </Button>
-              )
-            }
-          />
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={() =>
-                        setSelected(
-                          allSelected
-                            ? new Set()
-                            : new Set(sorted.map((r) => r.id))
-                        )
-                      }
-                    />
-                  </TableHead>
-                  <SortableTableHead
-                    sortKey="name"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Role
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="users"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Users
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="permissions"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Permission
-                  </SortableTableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sorted.map((role) => (
-                  <TableRow key={role.id}>
-                    <TableCell>{columns.checkbox(role)}</TableCell>
-                    <TableCell>{columns.role(role)}</TableCell>
-                    <TableCell>{columns.users(role)}</TableCell>
-                    <TableCell>{columns.permissionCount(role)}</TableCell>
-                    <TableCell>{columns.action(role)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <Pagination
-              page={page}
-              totalPages={data.totalPages}
-              onPageChange={handlePageChange}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleRowsPerPageChange}
-            />
-          </>
+        {selected.size > 0 && (
+          <div className="flex w-full items-center">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              Delete ({selected.size})
+            </Button>
+          </div>
         )}
+
+        <motion.div
+          key={isFetching ? 'loading' : 'loaded'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isFetching ? 0.4 : 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="flex w-full flex-col items-end gap-4"
+        >
+          {data.data.length === 0 ? (
+            <EmptyState
+              icon={UserCog}
+              title={
+                search || dateRange?.from ? 'No matching roles' : 'No roles yet'
+              }
+              description={
+                search
+                  ? `No roles match "${search}". Try a different search term.`
+                  : dateRange?.from
+                    ? 'No roles were created in this date range.'
+                    : 'Create a role and assign the permissions its members need.'
+              }
+              action={
+                !search &&
+                !dateRange?.from && (
+                  <Button
+                    onClick={() => setModalState({ open: true })}
+                    className="w-[200px]"
+                  >
+                    <Plus className="size-4" /> Add role
+                  </Button>
+                )
+              }
+            />
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={() =>
+                          setSelected(
+                            allSelected
+                              ? new Set()
+                              : new Set(sorted.map((r) => r.id))
+                          )
+                        }
+                      />
+                    </TableHead>
+                    <SortableTableHead
+                      sortKey="name"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Role
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="users"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Users
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="permissions"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Permission
+                    </SortableTableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sorted.map((role) => (
+                    <TableRow key={role.id}>
+                      <TableCell>{columns.checkbox(role)}</TableCell>
+                      <TableCell>{columns.role(role)}</TableCell>
+                      <TableCell>{columns.users(role)}</TableCell>
+                      <TableCell>{columns.permissionCount(role)}</TableCell>
+                      <TableCell>{columns.action(role)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <Pagination
+                page={page}
+                totalPages={data.totalPages}
+                onPageChange={handlePageChange}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleRowsPerPageChange}
+              />
+            </>
+          )}
+        </motion.div>
       </TableToolbar>
 
       <RoleFormModal
