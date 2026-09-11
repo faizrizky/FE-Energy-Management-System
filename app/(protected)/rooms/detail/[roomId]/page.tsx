@@ -1,4 +1,3 @@
-// app/(protected)/rooms/detail/[roomId]/page.tsx
 import { getSession } from '@/lib/auth';
 import { Header } from '@/components/shared/header';
 import { roomsApi } from '@/feat/rooms/api';
@@ -10,16 +9,17 @@ export default async function RoomDetailPage({
 }: {
   params: { roomId: string };
 }) {
-  const [session, room, users] = await Promise.all([
+  const [session, room, devices, users] = await Promise.all([
     getSession(),
-    roomsApi.getById(params.roomId, { page: 1, rowsPerPage: 10 }),
+    roomsApi.getById(params.roomId),
+    roomsApi.listDevices(params.roomId, { page: 1, rowsPerPage: 10 }),
     usersApi.listSummary(),
   ]);
 
   return (
     <>
       <Header breadcrumb={['Rooms', room.name]} user={session!} />
-      <RoomDetailClient room={room} users={users} />
+      <RoomDetailClient room={room} devices={devices} users={users} />
     </>
   );
 }

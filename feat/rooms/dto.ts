@@ -53,13 +53,7 @@ export interface RoomDetailDTO extends RoomDTO {
     peakKwh: number;
     highestComponent: { name: string; kwh: number };
   };
-  devices: {
-    data: RoomDeviceDTO[];
-    page: number;
-    rowsPerPage: number;
-    totalRows: number;
-    totalPages: number;
-  };
+  devices?: RoomDeviceListResponseDTO;
 }
 
 export interface RoomDeviceDTO {

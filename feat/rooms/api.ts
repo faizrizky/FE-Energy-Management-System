@@ -5,6 +5,7 @@ import type {
   RoomDetailDTO,
   RoomDeviceDTO,
   RoomListItemDTO,
+  RoomDeviceListResponseDTO,
 } from './dto';
 
 export interface RoomListParams {
@@ -68,20 +69,20 @@ export const roomsApi = {
       next: { revalidate: 15 },
     });
   },
-  getDeviceinRoomById: (
-    roomId: string,
-    { page = 1, rowsPerPage = 10, search }: RoomDetailParams = {}
-  ) => {
-    const query = new URLSearchParams({
-      page: String(page),
-      rowsPerPage: String(rowsPerPage),
-      ...(search ? { search } : {}),
-    });
-    return http<RoomDetailDTO>(`/rooms/${roomId}/devices?${query.toString()}`, {
-      next: { revalidate: 15 },
-    });
-  },
 
+  listDevices: (roomId: string, params: RoomListParams = {}) => {
+    const query = new URLSearchParams({
+      page: String(params.page ?? 1),
+      rowsPerPage: String(params.rowsPerPage ?? 10),
+      ...(params.search ? { search: params.search } : {}),
+      ...(params.createdFrom ? { createdFrom: params.createdFrom } : {}),
+      ...(params.createdTo ? { createdTo: params.createdTo } : {}),
+    });
+    return http<RoomDeviceListResponseDTO>(
+      `/rooms/${roomId}/devices?${query.toString()}`,
+      { next: { revalidate: 15 } }
+    );
+  },
   getDevices: (roomId: string) =>
     http<RoomDeviceDTO[]>(`/rooms/${roomId}/devices`, {
       next: { revalidate: 15 },

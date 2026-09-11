@@ -1,18 +1,13 @@
-// app/(protected)/rooms/detail/[roomId]/client.tsx
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  CalendarDays,
-  DoorOpen,
-  Pencil,
-  Plus,
-  Trash2,
-} from 'lucide-react';
+import type { DateRange } from 'react-day-picker';
+import { ArrowLeft, DoorOpen, Plus, Trash2 } from 'lucide-react';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
+import { DateRangeFilter } from '@/components/shared/date-range-filter';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -34,6 +29,7 @@ import { devicesClientApi } from '@/feat/device/api.client';
 import type {
   RoomDetailDTO,
   RoomDeviceDTO,
+  RoomDeviceListResponseDTO,
   RoomDeviceLogEntryDTO,
   RoomDTO,
   RoomUsageSummaryDTO,
@@ -49,6 +45,7 @@ import { useTableSort } from '@/lib/use-table-sort';
 
 interface RoomDetailClientProps {
   room: RoomDetailDTO;
+  devices: RoomDeviceListResponseDTO;
   users: UserSummaryDTO[];
 }
 
@@ -62,13 +59,23 @@ interface LogModalState {
 const SEARCH_DEBOUNCE_MS = 250;
 const USAGE_REFRESH_DEBOUNCE_MS = 3000;
 
-export function RoomDetailClient({ room, users }: RoomDetailClientProps) {
+function toApiDate(date: Date | undefined) {
+  return date ? date.toISOString().slice(0, 10) : undefined;
+}
+
+export function RoomDetailClient({
+  room,
+  devices,
+  users,
+}: RoomDetailClientProps) {
   const [roomInfo, setRoomInfo] = useState(room);
   const [usage, setUsage] = useState<RoomUsageSummaryDTO>(room.usage);
-  const [devicesData, setDevicesData] = useState(room.devices);
-  const [page, setPage] = useState(room.devices.page);
-  const [rowsPerPage, setRowsPerPage] = useState(room.devices.rowsPerPage);
+  const [devicesData, setDevicesData] = useState(devices);
+  const [page, setPage] = useState(devices.page);
+  const [rowsPerPage, setRowsPerPage] = useState(devices.rowsPerPage);
   const [search, setSearch] = useState('');
+  const [isFetching, setIsFetching] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [logModal, setLogModal] = useState<LogModalState>({
     open: false,
@@ -90,6 +97,7 @@ export function RoomDetailClient({ room, users }: RoomDetailClientProps) {
   const usageRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
+  const loadDevicesRequestRef = useRef(0);
 
   const ROOM_DETAIL_SORT_ACCESSORS = {
     deviceEui: (d: RoomDeviceDTO) => d.deviceEui,
@@ -99,24 +107,37 @@ export function RoomDetailClient({ room, users }: RoomDetailClientProps) {
     isPowerOn: (d: RoomDeviceDTO) => (d.isPowerOn ? 1 : 0),
   };
 
-  const loadDevices = async (
-    nextPage = page,
-    nextRowsPerPage = rowsPerPage,
-    nextSearch = search
-  ) => {
-    try {
-      const result = await roomsClientApi.getById(roomInfo.id, {
-        page: nextPage,
-        rowsPerPage: nextRowsPerPage,
-        search: nextSearch || undefined,
-      });
-      setDevicesData(result.devices);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Failed to load devices'
-      );
-    }
-  };
+  const loadDevices = useCallback(
+    async (
+      nextPage: number,
+      nextRowsPerPage: number,
+      nextSearch: string,
+      nextRange: DateRange | undefined
+    ) => {
+      const requestId = ++loadDevicesRequestRef.current;
+      setIsFetching(true);
+      try {
+        const result = await roomsClientApi.listDevices(roomInfo.id, {
+          page: nextPage,
+          rowsPerPage: nextRowsPerPage,
+          search: nextSearch || undefined,
+          createdFrom: toApiDate(nextRange?.from),
+          createdTo: toApiDate(nextRange?.to),
+        });
+        console.log(result);
+        if (requestId !== loadDevicesRequestRef.current) return;
+        setDevicesData(result);
+      } catch (err) {
+        if (requestId !== loadDevicesRequestRef.current) return;
+        toast.error(
+          err instanceof Error ? err.message : 'Failed to load devices'
+        );
+      } finally {
+        if (requestId === loadDevicesRequestRef.current) setIsFetching(false);
+      }
+    },
+    [roomInfo.id]
+  );
 
   const refreshUsage = async () => {
     try {
@@ -141,23 +162,29 @@ export function RoomDetailClient({ room, users }: RoomDetailClientProps) {
     setPage(1);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      loadDevices(1, rowsPerPage, value);
+      loadDevices(1, rowsPerPage, value, dateRange);
     }, SEARCH_DEBOUNCE_MS);
+  };
+
+  const handleDateRangeApply = (range: DateRange | undefined) => {
+    setDateRange(range);
+    setPage(1);
+    loadDevices(1, rowsPerPage, search, range);
   };
 
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
-    loadDevices(nextPage, rowsPerPage, search);
+    loadDevices(nextPage, rowsPerPage, search, dateRange);
   };
 
   const handleRowsPerPageChange = (nextRowsPerPage: number) => {
     setRowsPerPage(nextRowsPerPage);
     setPage(1);
-    loadDevices(1, nextRowsPerPage, search);
+    loadDevices(1, nextRowsPerPage, search, dateRange);
   };
 
-  const devices = devicesData.data;
-  const online = devices.filter((d) => d.isPowerOn).length;
+  const deviceRows = devicesData.data;
+  const online = deviceRows.filter((device) => device.isPowerOn).length;
 
   const handleTogglePower = async (device: RoomDeviceDTO) => {
     const nextState = !device.isPowerOn;
@@ -284,7 +311,7 @@ export function RoomDetailClient({ room, users }: RoomDetailClientProps) {
   });
 
   const { sorted, sortKey, direction, toggleSort } = useTableSort(
-    devices,
+    deviceRows,
     ROOM_DETAIL_SORT_ACCESSORS
   );
 
@@ -307,14 +334,6 @@ export function RoomDetailClient({ room, users }: RoomDetailClientProps) {
             <h1 className="font-display text-[36px] font-bold leading-[44px] tracking-[-0.72px] text-emerald-500">
               {roomInfo.name}
             </h1>
-            {/* <button
-              type="button"
-              aria-label="Edit room"
-              onClick={() => setModalState({ open: true, room: roomInfo })}
-              className="flex size-8 shrink-0 items-center justify-center rounded-md border border-slate-400 bg-white hover:bg-slate-50"
-            >
-              <Pencil className="size-4 text-slate-600" />
-            </button> */}
           </div>
           <div className="flex flex-col gap-1 text-xs text-slate-600 md:flex-row md:items-center md:gap-4">
             <span>
@@ -380,7 +399,7 @@ export function RoomDetailClient({ room, users }: RoomDetailClientProps) {
 
               <span className="flex items-center gap-1.5 text-red-500">
                 <span className="size-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
-                {devices.length - online} Offline
+                {deviceRows.length - online} Offline
               </span>
             </div>
           </div>
@@ -396,13 +415,7 @@ export function RoomDetailClient({ room, users }: RoomDetailClientProps) {
               />
             </div>
 
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 shrink-0 rounded-md md:size-8"
-            >
-              <CalendarDays className="size-4" />
-            </Button>
+            <DateRangeFilter value={dateRange} onApply={handleDateRangeApply} />
           </>
         }
       >
@@ -426,123 +439,131 @@ export function RoomDetailClient({ room, users }: RoomDetailClientProps) {
           </div>
         )}
 
-        {sorted.length === 0 ? (
-          <EmptyState
-            icon={DoorOpen}
-            title={search ? 'No matching rooms' : 'No rooms yet'}
-            description={
-              search
-                ? `No rooms match "${search}". Try a different search term.`
-                : 'Create your first room to connect your gateway and device.'
-            }
-            action={
-              !search && (
-                <Button
-                  onClick={() => setModalState({ open: true })}
-                  className="w-[200px]"
-                >
-                  <Plus className="size-4" /> Add room
-                </Button>
-              )
-            }
-          />
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={() =>
-                        setSelected(
-                          allSelected
-                            ? new Set()
-                            : new Set(sorted.map((device) => device.id))
-                        )
-                      }
-                    />
-                  </TableHead>
-
-                  <SortableTableHead
-                    sortKey="deviceEui"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
+        <motion.div
+          key={isFetching ? 'loading' : 'loaded'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isFetching ? 0.4 : 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="flex w-full flex-col items-end gap-4"
+        >
+          {sorted.length === 0 ? (
+            <EmptyState
+              icon={DoorOpen}
+              title={search ? 'No matching devices' : 'No devices yet'}
+              description={
+                search
+                  ? `No devices match "${search}". Try a different search term.`
+                  : 'Add devices to this room from the Device page.'
+              }
+              action={
+                !search && (
+                  <Button
+                    onClick={() => setModalState({ open: true })}
+                    className="w-[200px]"
                   >
-                    Device
-                  </SortableTableHead>
-
-                  <SortableTableHead
-                    sortKey="deviceType"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Component
-                  </SortableTableHead>
-
-                  <SortableTableHead
-                    sortKey="usage"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Total usage(24H)
-                  </SortableTableHead>
-
-                  <SortableTableHead
-                    sortKey="intervalMinutes"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Interval
-                  </SortableTableHead>
-
-                  <SortableTableHead
-                    sortKey="isPowerOn"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Status
-                  </SortableTableHead>
-
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {sorted.map((device) => (
-                  <TableRow key={device.id}>
-                    <TableCell>{columns.checkbox(device)}</TableCell>
-
-                    <TableCell>{columns.device(device)}</TableCell>
-
-                    <TableCell>{columns.component(device)}</TableCell>
-
-                    <TableCell>{columns.usage(device)}</TableCell>
-
-                    <TableCell>{columns.interval(device)}</TableCell>
-
-                    <TableCell>{columns.status(device)}</TableCell>
-
-                    <TableCell>{columns.action(device)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-
-            <Pagination
-              page={page}
-              totalPages={devicesData.totalPages}
-              onPageChange={handlePageChange}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleRowsPerPageChange}
+                    <Plus className="size-4" /> Add room
+                  </Button>
+                )
+              }
             />
-          </>
-        )}
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={() =>
+                          setSelected(
+                            allSelected
+                              ? new Set()
+                              : new Set(sorted.map((device) => device.id))
+                          )
+                        }
+                      />
+                    </TableHead>
+
+                    <SortableTableHead
+                      sortKey="deviceEui"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Device
+                    </SortableTableHead>
+
+                    <SortableTableHead
+                      sortKey="deviceType"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Component
+                    </SortableTableHead>
+
+                    <SortableTableHead
+                      sortKey="usage"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Total usage(24H)
+                    </SortableTableHead>
+
+                    <SortableTableHead
+                      sortKey="intervalMinutes"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Interval
+                    </SortableTableHead>
+
+                    <SortableTableHead
+                      sortKey="isPowerOn"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Status
+                    </SortableTableHead>
+
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {sorted.map((device) => (
+                    <TableRow key={device.id}>
+                      <TableCell>{columns.checkbox(device)}</TableCell>
+
+                      <TableCell>{columns.device(device)}</TableCell>
+
+                      <TableCell>{columns.component(device)}</TableCell>
+
+                      <TableCell>{columns.usage(device)}</TableCell>
+
+                      <TableCell>{columns.interval(device)}</TableCell>
+
+                      <TableCell>{columns.status(device)}</TableCell>
+
+                      <TableCell>{columns.action(device)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <Pagination
+                page={page}
+                totalPages={devicesData.totalPages}
+                onPageChange={handlePageChange}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleRowsPerPageChange}
+              />
+            </>
+          )}
+        </motion.div>
       </TableToolbar>
 
       <DeviceLogModal
