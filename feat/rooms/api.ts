@@ -68,6 +68,19 @@ export const roomsApi = {
       next: { revalidate: 15 },
     });
   },
+  getDeviceinRoomById: (
+    roomId: string,
+    { page = 1, rowsPerPage = 10, search }: RoomDetailParams = {}
+  ) => {
+    const query = new URLSearchParams({
+      page: String(page),
+      rowsPerPage: String(rowsPerPage),
+      ...(search ? { search } : {}),
+    });
+    return http<RoomDetailDTO>(`/rooms/${roomId}/devices?${query.toString()}`, {
+      next: { revalidate: 15 },
+    });
+  },
 
   getDevices: (roomId: string) =>
     http<RoomDeviceDTO[]>(`/rooms/${roomId}/devices`, {

@@ -17,6 +17,14 @@ export interface RoomListParams {
   scheduledTo?: string;
 }
 
+export interface RoomDetailParams {
+  page?: number;
+  rowsPerPage?: number;
+  search?: string;
+  createdFrom?: string;
+  createdTo?: string;
+}
+
 export const roomsClientApi = {
   list: ({
     roomId,
@@ -38,12 +46,13 @@ export const roomsClientApi = {
       })
       .then((res) => res.data),
 
-  getById: (
-    roomId: string,
-    params?: { page?: number; rowsPerPage?: number; search?: string }
-  ) =>
+  getById: (roomId: string, params?: RoomDetailParams) =>
     api
       .get<RoomDetailDTO>(`/rooms/${roomId}`, { params })
+      .then((res) => res.data),
+  getDeviceinRoomById: (roomId: string, params?: RoomDetailParams) =>
+    api
+      .get<RoomDetailDTO>(`/rooms/${roomId}/devices`, { params })
       .then((res) => res.data),
 
   create: (payload: RoomFormValues) =>
