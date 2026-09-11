@@ -1,14 +1,14 @@
 'use client';
 
-import { useRef } from 'react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { motion } from 'motion/react';
+import type { DateRange } from 'react-day-picker';
 import {
   Download,
   FolderKanban,
   ChevronDown,
   FileText,
   FileSpreadsheet,
-  CalendarDays,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ import {
 import { PageHeader } from '@/components/shared/page-header';
 import { AnalyticCard } from '@/components/shared/analytic-card';
 import { SearchInput } from '@/components/shared/search-input';
+import { DateRangeFilter } from '@/components/shared/date-range-filter';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,6 +57,12 @@ const REPORT_SORT_ACCESSORS = {
   usage: (r: ReportDeviceRowDTO) => r.usageKwh,
 };
 
+const LIVE_REFRESH_DEBOUNCE_MS = 5000;
+
+function toApiDate(date: Date | undefined) {
+  return date ? date.toISOString().slice(0, 10) : undefined;
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -68,15 +75,57 @@ function downloadBlob(blob: Blob, filename: string) {
 export function ReportClient({
   summary,
   timeline,
-  rows,
-  range,
+  rows: initialRows,
+  range: initialRange,
 }: ReportClientProps) {
+  const [rows, setRows] = useState(initialRows);
+  const [range, setRange] = useState(initialRange);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [isFetching, setIsFetching] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [exporting, setExporting] = useState<null | 'csv' | 'xlsx' | 'pdf'>(
     null
   );
+
+  const loadReportRequestRef = useRef(0);
+  const rangeRef = useRef(range);
+  rangeRef.current = range;
+
+  const loadReport = useCallback(
+    async (nextRange: ReportExportParams, { silent = false } = {}) => {
+      const requestId = ++loadReportRequestRef.current;
+      if (!silent) setIsFetching(true);
+      try {
+        const result = await reportClientApi.getSummary(nextRange);
+        if (requestId !== loadReportRequestRef.current) return;
+        setRows(result);
+        setRange(nextRange);
+        if (!silent) setPage(1);
+      } catch (err) {
+        if (requestId !== loadReportRequestRef.current) return;
+        if (!silent) {
+          toast.error(
+            err instanceof Error ? err.message : 'Failed to load report'
+          );
+        }
+      } finally {
+        if (requestId === loadReportRequestRef.current && !silent) {
+          setIsFetching(false);
+        }
+      }
+    },
+    []
+  );
+
+  const handleDateRangeApply = (nextDateRange: DateRange | undefined) => {
+    setDateRange(nextDateRange);
+    if (!nextDateRange?.from) return;
+    const from = toApiDate(nextDateRange.from) ?? range.from;
+    const to = toApiDate(nextDateRange.to ?? nextDateRange.from) ?? range.to;
+    loadReport({ from, to });
+  };
 
   const filtered = useMemo(() => {
     const normalized = search.trim().toLowerCase();
@@ -88,16 +137,19 @@ export function ReportClient({
     );
   }, [rows, search]);
 
-  const notifiedRef = useRef(false);
+  // Data energi baru masuk lewat webhook device -> auto refresh rows buat
+  // range yang lagi ditampilkan, silent (no spinner/toast). Di-debounce
+  // karena webhook bisa nembak tiap beberapa detik per device yang nyala.
+  const liveRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   useRealtimeEvent('device:status', () => {
-    if (notifiedRef.current) return;
-    notifiedRef.current = true;
-    toast.message(
-      'Ada data energi terbaru masuk. Muat ulang halaman untuk melihat laporan terkini.',
-      {
-        duration: 8000,
-      }
-    );
+    if (liveRefreshTimeoutRef.current) {
+      clearTimeout(liveRefreshTimeoutRef.current);
+    }
+    liveRefreshTimeoutRef.current = setTimeout(() => {
+      loadReport(rangeRef.current, { silent: true });
+    }, LIVE_REFRESH_DEBOUNCE_MS);
   });
 
   const { sorted, sortKey, direction, toggleSort } = useTableSort(
@@ -198,86 +250,88 @@ export function ReportClient({
                 placeholder="Search by device, room..."
               />
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 shrink-0 rounded-md md:size-8"
-            >
-              <CalendarDays className="size-4" />
-            </Button>
+            <DateRangeFilter value={dateRange} onApply={handleDateRangeApply} />
           </div>
         </div>
 
-        {sorted.length === 0 ? (
-          <EmptyState
-            icon={FolderKanban}
-            title={search ? 'No matching reports' : 'No reports yet'}
-            description={
-              search
-                ? `No reports match "${search}". Try a different search term.`
-                : 'Reports will appear once devices start sending readings.'
-            }
-          />
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <SortableTableHead
-                    sortKey="deviceEui"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Device EUI
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="room"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Room
-                  </SortableTableHead>
-                  <TableHead>Date range</TableHead>
-                  <TableHead>Start (kWh)</TableHead>
-                  <TableHead>End (kWh)</TableHead>
-                  <SortableTableHead
-                    sortKey="usage"
-                    activeKey={sortKey}
-                    direction={direction}
-                    onSort={toggleSort}
-                  >
-                    Usage (kWh)
-                  </SortableTableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginated.map((row) => (
-                  <TableRow key={row.key}>
-                    <TableCell>{columns.device(row)}</TableCell>
-                    <TableCell>{columns.room(row)}</TableCell>
-                    <TableCell>{columns.dateRange(row)}</TableCell>
-                    <TableCell>{columns.start(row)}</TableCell>
-                    <TableCell>{columns.end(row)}</TableCell>
-                    <TableCell>{columns.usage(row)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-
-            <Pagination
-              page={safePage}
-              totalPages={totalPages}
-              onPageChange={setPage}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(next) => {
-                setRowsPerPage(next);
-                setPage(1);
-              }}
+        <motion.div
+          key={isFetching ? 'loading' : 'loaded'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isFetching ? 0.4 : 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="flex w-full flex-col items-end gap-4"
+        >
+          {sorted.length === 0 ? (
+            <EmptyState
+              icon={FolderKanban}
+              title={search ? 'No matching reports' : 'No reports yet'}
+              description={
+                search
+                  ? `No reports match "${search}". Try a different search term.`
+                  : 'Reports will appear once devices start sending readings.'
+              }
             />
-          </>
-        )}
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <SortableTableHead
+                      sortKey="deviceEui"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Device EUI
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="room"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Room
+                    </SortableTableHead>
+                    <TableHead>Date range</TableHead>
+                    <TableHead>Start (kWh)</TableHead>
+                    <TableHead>End (kWh)</TableHead>
+                    <SortableTableHead
+                      sortKey="usage"
+                      activeKey={sortKey}
+                      direction={direction}
+                      onSort={toggleSort}
+                    >
+                      Usage (kWh)
+                    </SortableTableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginated.map((row) => (
+                    <TableRow key={row.key}>
+                      <TableCell>{columns.device(row)}</TableCell>
+                      <TableCell>{columns.room(row)}</TableCell>
+                      <TableCell>{columns.dateRange(row)}</TableCell>
+                      <TableCell>{columns.start(row)}</TableCell>
+                      <TableCell>{columns.end(row)}</TableCell>
+                      <TableCell>{columns.usage(row)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <Pagination
+                page={safePage}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(next) => {
+                  setRowsPerPage(next);
+                  setPage(1);
+                }}
+              />
+            </>
+          )}
+        </motion.div>
       </div>
     </div>
   );

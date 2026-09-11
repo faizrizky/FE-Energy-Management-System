@@ -1,5 +1,5 @@
 import { api } from '@/lib/axios';
-import type { ReportExportParams } from './dto';
+import type { ReportDeviceRowDTO, ReportExportParams } from './dto';
 
 const MIME: Record<'csv' | 'xlsx' | 'pdf', string> = {
   csv: 'text/csv',
@@ -8,6 +8,13 @@ const MIME: Record<'csv' | 'xlsx' | 'pdf', string> = {
 };
 
 export const reportClientApi = {
+  getSummary: ({ from, to, roomId, deviceId }: ReportExportParams) =>
+    api
+      .get<ReportDeviceRowDTO[]>('/reports/summary', {
+        params: { from, to, roomId, deviceId },
+      })
+      .then((res) => res.data),
+
   export: async (
     { from, to, roomId, deviceId }: ReportExportParams,
     format: 'csv' | 'xlsx' | 'pdf'

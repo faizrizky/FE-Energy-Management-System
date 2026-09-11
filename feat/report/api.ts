@@ -1,5 +1,5 @@
 import { http } from '@/lib/http';
-import type { EnergyReadingDTO, ReportExportParams } from './dto';
+import type { ReportDeviceRowDTO, ReportExportParams } from './dto';
 
 function buildQuery({ from, to, roomId, deviceId }: ReportExportParams) {
   const query = new URLSearchParams({ from, to });
@@ -9,11 +9,8 @@ function buildQuery({ from, to, roomId, deviceId }: ReportExportParams) {
 }
 
 export const reportApi = {
-  // Same endpoint the "Export as CSV" button hits client-side
-  // (GET /reports/export) — called here without format=csv so the
-  // response stays JSON and can be aggregated for the table.
-  listReadings: (params: ReportExportParams) =>
-    http<EnergyReadingDTO[]>(`/reports/export?${buildQuery(params)}`, {
+  getSummary: (params: ReportExportParams) =>
+    http<ReportDeviceRowDTO[]>(`/reports/summary?${buildQuery(params)}`, {
       next: { revalidate: 60 },
     }),
 };

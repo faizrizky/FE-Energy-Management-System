@@ -12,7 +12,11 @@ export const rolesClientApi = {
   list: ({ page = 1, rowsPerPage = 10, search }: RoleListParams = {}) =>
     api
       .get<RoleListResponseDTO>('/roles', {
-        params: { page, rowsPerPage, search: search || undefined },
+        params: {
+          page,
+          rowsPerPage,
+          search: search || undefined,
+        },
       })
       .then((res) => res.data),
 
