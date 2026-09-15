@@ -1,6 +1,12 @@
 import { formatKwh, formatDate } from '@/lib/utils';
 import type { ReportDeviceRowDTO } from '@/feat/report/dto';
 
+/**
+ * Renderer tiap kolom tabel laporan: device, room, rentang waktu, pemakaian
+ * kWh.
+ *
+ * Dipake di: app/(protected)/report/client.tsx.
+ */
 export function getReportColumns() {
   return {
     device: (row: ReportDeviceRowDTO) => (

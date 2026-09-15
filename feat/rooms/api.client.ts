@@ -27,6 +27,13 @@ export interface RoomDeviceListParams {
 }
 
 export const roomsClientApi = {
+  /**
+   * Harusnya list room, tapi yang dipanggil malah GET /rooms/:roomId/devices
+   * dengan param scheduledFrom/To.
+   *
+   * Dipake di: Belom dipake (rooms/client.tsx manggil api.get('/rooms')
+   *   langsung).
+   */
   list: ({
     roomId,
     page = 1,
@@ -47,6 +54,11 @@ export const roomsClientApi = {
       })
       .then((res) => res.data),
 
+  /**
+   * GET /rooms/:id dari browser.
+   *
+   * Dipake di: rooms/client.tsx (buka modal edit).
+   */
   getById: (
     roomId: string,
     params?: { page?: number; rowsPerPage?: number; search?: string }
@@ -55,6 +67,12 @@ export const roomsClientApi = {
       .get<RoomDetailDTO>(`/rooms/${roomId}`, { params })
       .then((res) => res.data),
 
+  /**
+   * GET /rooms/:id/devices dari browser dengan paginasi, search, & filter
+   * tanggal.
+   *
+   * Dipake di: rooms/detail/[roomId]/client.tsx.
+   */
   listDevices: (
     roomId: string,
     {
@@ -77,15 +95,35 @@ export const roomsClientApi = {
       })
       .then((res) => res.data),
 
+  /**
+   * POST /rooms.
+   *
+   * Dipake di: rooms/_partials/modal.tsx.
+   */
   create: (payload: RoomFormValues) =>
     api.post<RoomDTO>('/rooms', payload).then((res) => res.data),
 
+  /**
+   * PATCH /rooms/:id.
+   *
+   * Dipake di: rooms/_partials/modal.tsx.
+   */
   update: (roomId: string, payload: RoomFormValues) =>
     api.patch<RoomDTO>(`/rooms/${roomId}`, payload).then((res) => res.data),
 
+  /**
+   * DELETE /rooms/:id.
+   *
+   * Dipake di: rooms/client.tsx.
+   */
   remove: (roomId: string) =>
     api.delete(`/rooms/${roomId}`).then(() => undefined),
 
+  /**
+   * POST /rooms/:id/power buat ON/OFF semua device di room.
+   *
+   * Dipake di: rooms/client.tsx.
+   */
   setPower: (roomId: string, isPowerOn: boolean) =>
     api
       .post<RoomPowerResultDTO>(`/rooms/${roomId}/power`, {
@@ -93,11 +131,21 @@ export const roomsClientApi = {
       })
       .then((res) => res.data),
 
+  /**
+   * GET /rooms/:id/devices/:deviceId/logs.
+   *
+   * Dipake di: rooms/detail/[roomId]/client.tsx (modal log).
+   */
   getDeviceLog: (roomId: string, deviceId: string) =>
     api
       .get<RoomDeviceLogEntryDTO[]>(`/rooms/${roomId}/devices/${deviceId}/logs`)
       .then((res) => res.data),
 
+  /**
+   * GET /rooms/:id/usage-summary.
+   *
+   * Dipake di: rooms/detail/[roomId]/client.tsx.
+   */
   getUsageSummary: (roomId: string) =>
     api
       .get<RoomUsageSummaryDTO>(`/rooms/${roomId}/usage-summary`)

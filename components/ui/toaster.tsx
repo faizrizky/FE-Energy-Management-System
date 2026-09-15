@@ -5,6 +5,12 @@ import { AnimatePresence, motion } from 'motion/react';
 import { subscribeToasts, type ToastItem } from '@/lib/toast-store';
 import { Toast } from './toast';
 
+/**
+ * Wadah semua toast di pojok bawah; subscribe ke toast-store dan animasiin
+ * toast yang masuk/keluar.
+ *
+ * Dipake di: app/layout.tsx.
+ */
 export function Toaster() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 

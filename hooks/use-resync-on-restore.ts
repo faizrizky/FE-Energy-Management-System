@@ -6,6 +6,13 @@ import { connectSocket } from '@/lib/socket';
 const consumedInitialData = new WeakMap<object, number>();
 const REMOUNT_GRACE_MS = 1000;
 
+/**
+ * Muat ulang data pas tampilan bisa basi: halaman dibalikin dari router cache
+ * (back/forward), dari bfcache browser, atau socket nyambung lagi.
+ *
+ * Dipake di: device/client.tsx, rooms/client.tsx,
+ *   rooms/detail/[roomId]/client.tsx.
+ */
 export function useResyncOnRestore(resync: () => void, initialData: object) {
   const resyncRef = useRef(resync);
   resyncRef.current = resync;

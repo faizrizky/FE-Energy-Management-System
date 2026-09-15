@@ -8,6 +8,11 @@ interface RoleDetailDrawerProps {
   onClose: () => void;
 }
 
+/**
+ * Drawer detail role, permission-nya dikelompokin per module.
+ *
+ * Dipake di: role/client.tsx.
+ */
 export function RoleDetailDrawer({ role, onClose }: RoleDetailDrawerProps) {
   if (!role) return null;
 

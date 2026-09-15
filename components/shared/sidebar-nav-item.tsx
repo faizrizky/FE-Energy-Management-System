@@ -13,6 +13,12 @@ export interface NavItem {
   onClick?: () => void;
 }
 
+/**
+ * Satu item menu sidebar; aktif kalo path sekarang sama atau di bawah
+ * href-nya.
+ *
+ * Dipake di: components/shared/sidebar.tsx.
+ */
 export function SidebarNavItem({ label, href, icon: Icon, onClick }: NavItem) {
   const pathname = usePathname();
   const isActive = pathname === href || pathname.startsWith(`${href}/`);

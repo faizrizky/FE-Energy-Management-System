@@ -16,9 +16,11 @@ export interface RoomsColumnHandlers {
 }
 
 /**
- * Column config for the Rooms list table (Figma node 16:5517).
- * Kept separate from the table markup so the same shape could later
- * back a headless table lib (tanstack-table, etc.) without a rewrite.
+ * Renderer tiap kolom tabel room: checkbox, nama/lokasi, gateway, device
+ * online/offline, usage 24 jam, switch power room + jumlah pending, tombol
+ * aksi.
+ *
+ * Dipake di: app/(protected)/rooms/client.tsx.
  */
 export function getRoomsColumns({
   onToggleSelect,

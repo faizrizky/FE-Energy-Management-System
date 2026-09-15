@@ -4,6 +4,11 @@ interface FieldProps {
   children: React.ReactNode;
 }
 
+/**
+ * Pembungkus input di form login: label bertanda wajib (*) sama pesan error.
+ *
+ * Dipake di: app/login/client.tsx → LoginClient.
+ */
 export function Field({ label, error, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1">

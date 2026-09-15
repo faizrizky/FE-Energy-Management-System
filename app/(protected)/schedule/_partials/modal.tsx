@@ -20,6 +20,12 @@ interface ScheduleFormModalProps {
   onSuccess: (schedule: ScheduleDTO) => void;
 }
 
+/**
+ * Modal tambah/edit schedule: ngisi default dari data lama, manggil
+ * create/update API, terus ngabarin parent lewat onSuccess.
+ *
+ * Dipake di: schedule/client.tsx.
+ */
 export function ScheduleFormModal({
   open,
   schedule,

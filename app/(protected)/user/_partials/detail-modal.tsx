@@ -11,6 +11,11 @@ interface UserDetailModalProps {
   onClose: () => void;
 }
 
+/**
+ * Modal detail user yang nampilin UserForm dalam mode read-only.
+ *
+ * Dipake di: user/client.tsx.
+ */
 export function UserDetailModal({
   user,
   roles,

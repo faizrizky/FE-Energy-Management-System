@@ -1,5 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
+/**
+ * Skeleton loading yang tampil pas halaman /rooms/detail/[roomId] lagi dimuat.
+ *
+ * Dipake di: Otomatis sama Next.js (loading.tsx) buat route
+ *   /rooms/detail/[roomId].
+ */
 export default function RoomDetailLoading() {
   return (
     <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-hidden bg-slate-50 p-8">

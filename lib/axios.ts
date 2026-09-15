@@ -20,6 +20,12 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+/**
+ * Baca cookie ems_token dari document.cookie (cuma jalan di browser).
+ *
+ * Dipake di: Request interceptor axios (file ini). lib/socket.ts punya salinan
+ *   fungsi yang sama.
+ */
 function readCookieToken() {
   if (typeof document === 'undefined') return undefined;
   const token = document.cookie
@@ -38,11 +44,22 @@ api.interceptors.request.use((config) => {
 let isRefreshing = false;
 let pendingQueue: Array<() => void> = [];
 
+/**
+ * Ngelanjutin semua request yang lagi nunggu refresh sesi selesai.
+ *
+ * Dipake di: Response interceptor axios (file ini).
+ */
 function resolveQueue() {
   pendingQueue.forEach((resolve) => resolve());
   pendingQueue = [];
 }
 
+/**
+ * Baca detik tunggu dari header retry-after atau ratelimit-reset di
+ * AxiosError.
+ *
+ * Dipake di: showRateLimitToast (file ini).
+ */
 function getRetryAfterSeconds(err: AxiosError): number | null {
   const headers = err.response?.headers;
   const retryAfter = headers?.['retry-after'];
@@ -53,6 +70,12 @@ function getRetryAfterSeconds(err: AxiosError): number | null {
 
 let lastRateLimitToastAt = 0;
 
+/**
+ * Munculin toast warning 429 sambil nyebutin berapa detik harus nunggu;
+ * maksimal sekali tiap 3 detik biar nggak spam.
+ *
+ * Dipake di: Response interceptor axios (file ini).
+ */
 function showRateLimitToast(err: AxiosError) {
   const now = Date.now();
   if (now - lastRateLimitToastAt < 3000) return;
@@ -71,6 +94,12 @@ function showRateLimitToast(err: AxiosError) {
   });
 }
 
+/**
+ * Panggil route Next POST /api/auth/refresh. Hasilnya ok, rate_limited,
+ * server_error, atau invalid.
+ *
+ * Dipake di: Response interceptor axios (file ini), pas dapet 401.
+ */
 async function refreshSession(): Promise<
   'ok' | 'rate_limited' | 'server_error' | 'invalid'
 > {

@@ -1,5 +1,11 @@
 import { cn } from '@/lib/utils';
 
+/**
+ * Titik status hijau/merah plus label (misal jumlah online/offline).
+ *
+ * Dipake di: gateway/client.tsx, analytic-card.tsx, column/gateway.tsx,
+ *   column/rooms.tsx.
+ */
 export function StatusDot({
   label,
   tone = 'success',

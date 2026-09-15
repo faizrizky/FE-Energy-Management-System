@@ -4,6 +4,12 @@ import { roomsApi } from '@/feat/rooms/api';
 import { usersApi } from '@/feat/user/api';
 import { RoomDetailClient } from './client';
 
+/**
+ * Server component halaman detail room: ambil session, detail room, halaman
+ * pertama device-nya, sama user buat form edit.
+ *
+ * Dipake di: Otomatis sama Next.js buat route /rooms/detail/[roomId].
+ */
 export default async function RoomDetailPage({
   params,
 }: {

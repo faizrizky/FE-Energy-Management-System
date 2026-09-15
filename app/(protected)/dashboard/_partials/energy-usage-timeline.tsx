@@ -26,6 +26,12 @@ interface EnergyUsageTimelineTabProps {
   dataByRange: Record<string, EnergyUsageTimelineDTO>;
 }
 
+/**
+ * Grafik timeline pemakaian energi dengan pilihan range (today, week, month,
+ * year) plus chip current, peak, average.
+ *
+ * Dipake di: dashboard/client.tsx → DashboardTabs.
+ */
 export function EnergyUsageTimelineTab({
   dataByRange,
 }: EnergyUsageTimelineTabProps) {
@@ -157,6 +163,11 @@ export function EnergyUsageTimelineTab({
   );
 }
 
+/**
+ * Chip kecil label + nilai kWh; warnanya merah kalo tone-nya danger.
+ *
+ * Dipake di: EnergyUsageTimelineTab (file ini).
+ */
 function StatChip({
   label,
   value,

@@ -8,6 +8,12 @@ interface ScheduleCardProps {
   onDelete: (schedule: ScheduleDTO) => void;
 }
 
+/**
+ * Kartu schedule versi mobile: room, device, tanggal, jam, tanda berulang,
+ * tombol edit & hapus.
+ *
+ * Dipake di: schedule/client.tsx (tampilan mobile).
+ */
 export function ScheduleCard({
   schedule,
   onEdit,

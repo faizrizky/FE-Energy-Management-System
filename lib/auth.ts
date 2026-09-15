@@ -34,6 +34,13 @@ export class ServerUnavailableError extends Error {
   }
 }
 
+/**
+ * Simpen cookie token: access token (bisa dibaca JS, 55 menit) & refresh token
+ * (httpOnly, 7 hari); secure di production.
+ *
+ * Dipake di: feat/auth/actions.ts → loginAction,
+ *   app/api/auth/refresh/route.ts.
+ */
 export async function setAuthCookies({
   accessToken,
   refreshToken,
@@ -58,20 +65,42 @@ export async function setAuthCookies({
   });
 }
 
+/**
+ * Hapus cookie access & refresh token.
+ *
+ * Dipake di: feat/auth/actions.ts → logoutAction,
+ *   app/api/auth/refresh/route.ts (kalo refresh ditolak).
+ */
 export async function clearAuthCookies() {
   const store = await cookies();
   store.delete(ACCESS_TOKEN_COOKIE);
   store.delete(REFRESH_TOKEN_COOKIE);
 }
 
+/**
+ * Baca cookie access token di server.
+ *
+ * Dipake di: getSession (file ini), lib/http.ts → http.
+ */
 export async function getAccessToken(): Promise<string | undefined> {
   return (await cookies()).get(ACCESS_TOKEN_COOKIE)?.value;
 }
 
+/**
+ * Baca cookie refresh token di server.
+ *
+ * Dipake di: feat/auth/actions.ts → logoutAction,
+ *   app/api/auth/refresh/route.ts.
+ */
 export async function getRefreshTokenValue(): Promise<string | undefined> {
   return (await cookies()).get(REFRESH_TOKEN_COOKIE)?.value;
 }
 
+/**
+ * GET /auth/me pake access token (tanpa cache).
+ *
+ * Dipake di: getSession (file ini).
+ */
 async function fetchMe(token: string) {
   return fetch(`${BASE_URL}/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -79,6 +108,14 @@ async function fetchMe(token: string) {
   });
 }
 
+/**
+ * Ambil user yang login dari server dengan retry 2x. Balikin null kalo belom
+ * login atau token ditolak; lempar RateLimitedError / ServerUnavailableError
+ * kalo backend lagi bermasalah.
+ *
+ * Dipake di: app/(protected)/layout.tsx, semua page.tsx terproteksi,
+ *   app/login/page.tsx, app/page.tsx.
+ */
 export async function getSession(): Promise<SessionUser | null> {
   const token = await getAccessToken();
   if (!token) return null;

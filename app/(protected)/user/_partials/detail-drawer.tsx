@@ -9,6 +9,11 @@ interface UserDetailDrawerProps {
   onClose: () => void;
 }
 
+/**
+ * Drawer detail user dari samping.
+ *
+ * Dipake di: Belom dipake (halaman User pake UserDetailModal).
+ */
 export function UserDetailDrawer({ user, onClose }: UserDetailDrawerProps) {
   if (!user) return null;
 
@@ -52,6 +57,11 @@ export function UserDetailDrawer({ user, onClose }: UserDetailDrawerProps) {
   );
 }
 
+/**
+ * Baris label–nilai buat nampilin detail data.
+ *
+ * Dipake di: UserDetailDrawer (file ini).
+ */
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4">

@@ -7,6 +7,11 @@ import { cn } from '@/lib/utils';
 export const DropdownMenu = DropdownMenuPrimitive.Root;
 export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
+/**
+ * Isi dropdown menu (portal + styling).
+ *
+ * Dipake di: report/client.tsx (menu export), notification-bell.tsx.
+ */
 export const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
@@ -25,6 +30,11 @@ export const DropdownMenuContent = React.forwardRef<
 ));
 DropdownMenuContent.displayName = 'DropdownMenuContent';
 
+/**
+ * Item dropdown menu; bisa warna merah buat aksi destructive.
+ *
+ * Dipake di: report/client.tsx (pilihan format export).
+ */
 export const DropdownMenuItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {

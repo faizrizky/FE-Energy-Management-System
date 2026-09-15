@@ -6,6 +6,11 @@ import { cn } from "@/lib/utils";
 
 export const Tabs = TabsPrimitive.Root;
 
+/**
+ * Wadah tombol Tabs Radix.
+ *
+ * Dipake di: Belom dipake.
+ */
 export const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
@@ -21,6 +26,11 @@ export const TabsList = React.forwardRef<
 ));
 TabsList.displayName = "TabsList";
 
+/**
+ * Tombol tab Radix.
+ *
+ * Dipake di: Belom dipake.
+ */
 export const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>

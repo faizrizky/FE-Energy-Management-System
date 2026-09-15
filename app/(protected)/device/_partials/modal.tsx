@@ -19,6 +19,12 @@ interface DeviceFormModalProps {
   onSuccess: (device: DeviceDTO) => void;
 }
 
+/**
+ * Modal tambah/edit device: manggil create/update API, munculin toast, terus
+ * ngabarin parent lewat onSuccess.
+ *
+ * Dipake di: device/client.tsx.
+ */
 export function DeviceFormModal({
   open,
   device,

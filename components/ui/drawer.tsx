@@ -11,6 +11,11 @@ interface DrawerProps {
   side?: 'left' | 'right';
 }
 
+/**
+ * Panel samping (Radix Dialog) dari kiri atau kanan.
+ *
+ * Dipake di: components/shared/app-shell.tsx → MobileDrawer.
+ */
 export function Drawer({
   open,
   onClose,

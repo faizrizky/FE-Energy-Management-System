@@ -12,6 +12,14 @@ interface HttpOptions {
   next?: NextFetchRequestConfig;
 }
 
+/**
+ * Fetch dari server (server component) ke backend pake token dari cookie (atau
+ * DEV_API_TOKEN kalo nggak ada), buka envelope data, dan lempar error pake
+ * pesan dari backend (401 dikasih status khusus).
+ *
+ * Dipake di: semua file feat/<fitur>/api.ts (alarm, dashboard, device,
+ *   gateway, report, role, rooms, schedule, user).
+ */
 export async function http<TResponse>(
   path: string,
   { method = 'GET', body, cache, next }: HttpOptions = {}

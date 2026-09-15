@@ -12,6 +12,11 @@ export interface UserListParams {
 }
 
 export const usersClientApi = {
+  /**
+   * GET /users dari browser dengan filter role, search, tanggal, & paginasi.
+   *
+   * Dipake di: user/client.tsx.
+   */
   list: ({
     page = 1,
     rowsPerPage = 10,
@@ -33,6 +38,11 @@ export const usersClientApi = {
       })
       .then((res) => res.data),
 
+  /**
+   * POST /users; password kosong nggak dikirim.
+   *
+   * Dipake di: user/_partials/modal.tsx.
+   */
   create: (payload: UserFormValues) =>
     api
       .post<UserDTO>('/users', {
@@ -41,6 +51,11 @@ export const usersClientApi = {
       })
       .then((res) => res.data),
 
+  /**
+   * PUT /users/:id; password kosong nggak dikirim.
+   *
+   * Dipake di: user/_partials/modal.tsx.
+   */
   update: (id: string, payload: UserFormValues) =>
     api
       .put<UserDTO>(`/users/${id}`, {
@@ -49,5 +64,10 @@ export const usersClientApi = {
       })
       .then((res) => res.data),
 
+  /**
+   * DELETE /users/:id.
+   *
+   * Dipake di: user/client.tsx.
+   */
   remove: (id: string) => api.delete(`/users/${id}`).then(() => undefined),
 };

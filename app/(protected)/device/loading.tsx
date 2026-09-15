@@ -1,5 +1,10 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
+/**
+ * Skeleton loading yang tampil pas halaman /device lagi dimuat.
+ *
+ * Dipake di: Otomatis sama Next.js (loading.tsx) buat route /device.
+ */
 export default function DeviceLoading() {
   return (
     <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-hidden bg-slate-50 p-8">

@@ -10,6 +10,13 @@ interface ErrorStateProps {
   onAction?: () => void;
 }
 
+/**
+ * Tampilan error satu layar penuh dengan tombol link (actionHref) atau tombol
+ * aksi (onAction).
+ *
+ * Dipake di: app/(protected)/layout.tsx, app/error.tsx, app/maintenance,
+ *   app/not-found.tsx, app/unauthorized.
+ */
 export function ErrorState({
   title,
   description,

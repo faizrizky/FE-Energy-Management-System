@@ -18,6 +18,12 @@ interface RoomFormProps {
   submitting?: boolean;
 }
 
+/**
+ * Form tambah/edit room: nama, PIC (dipilih dari list user), kontak, lokasi,
+ * deskripsi, penanda critical.
+ *
+ * Dipake di: rooms/_partials/modal.tsx → RoomFormModal.
+ */
 export function RoomForm({
   users,
   isEdit,
@@ -129,6 +135,11 @@ export function RoomForm({
   );
 }
 
+/**
+ * Pembungkus input form: label, hint, sama pesan error di bawahnya.
+ *
+ * Dipake di: RoomForm (file ini).
+ */
 function Field({
   label,
   required,
@@ -156,6 +167,11 @@ function Field({
   );
 }
 
+/**
+ * Pembungkus <select> native biar ada ikon panah di kanan.
+ *
+ * Dipake di: RoomForm (file ini).
+ */
 function SelectField({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative w-full">

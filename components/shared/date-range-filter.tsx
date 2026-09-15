@@ -17,6 +17,13 @@ interface DateRangeFilterProps {
   onApply: (range: DateRange | undefined) => void;
 }
 
+/**
+ * Popover pilih rentang tanggal (2 bulan di desktop, 1 di mobile). Filternya
+ * baru diterapin pas klik Apply.
+ *
+ * Dipake di: Halaman Device, Gateway, Report, Rooms, Room detail, Schedule,
+ *   User.
+ */
 export function DateRangeFilter({ value, onApply }: DateRangeFilterProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRange | undefined>(value);

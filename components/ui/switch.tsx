@@ -11,6 +11,11 @@ export interface SwitchProps extends React.ComponentPropsWithoutRef<
   offLabel?: string;
 }
 
+/**
+ * Switch Radix ON/OFF dengan label teks di dalamnya.
+ *
+ * Dipake di: components/shared/device-power-control.tsx.
+ */
 export const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitive.Root>,
   SwitchProps

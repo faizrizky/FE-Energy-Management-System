@@ -22,6 +22,12 @@ const PROTECTED_PREFIXES = [
 
 const REFRESH_MARGIN_SECONDS = 60;
 
+/**
+ * Baca waktu exp dari payload JWT tanpa verifikasi signature. Balikin null
+ * kalo token-nya rusak.
+ *
+ * Dipake di: isExpiredOrExpiringSoon (file ini).
+ */
 function getTokenExpiry(token: string): number | null {
   try {
     const payload = token.split('.')[1];
@@ -34,12 +40,24 @@ function getTokenExpiry(token: string): number | null {
   }
 }
 
+/**
+ * True kalo access token udah atau bentar lagi (≤ 60 detik) kadaluarsa, atau
+ * exp-nya nggak kebaca.
+ *
+ * Dipake di: middleware (file ini).
+ */
 function isExpiredOrExpiringSoon(token: string): boolean {
   const exp = getTokenExpiry(token);
   if (exp === null) return true;
   return exp - Date.now() / 1000 <= REFRESH_MARGIN_SECONDS;
 }
 
+/**
+ * Pasang cookie token baru ke response: access token bisa dibaca JS, refresh
+ * token httpOnly.
+ *
+ * Dipake di: middleware (file ini), abis refresh berhasil.
+ */
 function applySessionCookies(
   response: NextResponse,
   tokens: { accessToken: string; refreshToken: string }
@@ -61,12 +79,25 @@ function applySessionCookies(
   });
 }
 
+/**
+ * Bikin redirect ke /login sambil bawa path sekarang di redirectTo.
+ *
+ * Dipake di: middleware (file ini).
+ */
 function redirectToLogin(request: NextRequest) {
   const loginUrl = new URL('/login', request.url);
   loginUrl.searchParams.set('redirectTo', request.nextUrl.pathname);
   return NextResponse.redirect(loginUrl);
 }
 
+/**
+ * Penjaga halaman yang butuh login. Kalo access token nggak ada atau mau
+ * habis, coba refresh pake refresh token. Redirect ke login kalo gagal, tapi
+ * tetep lanjut (mode degraded) kalo backend lagi rate limit atau error.
+ *
+ * Dipake di: Otomatis sama Next.js buat path di config.matcher (dashboard,
+ *   rooms, schedule, gateway, device, user, role, report, alarm).
+ */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isProtected = PROTECTED_PREFIXES.some(

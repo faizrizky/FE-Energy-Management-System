@@ -7,6 +7,11 @@ import { cn } from '@/lib/utils';
 export const Popover = PopoverPrimitive.Root;
 export const PopoverTrigger = PopoverPrimitive.Trigger;
 
+/**
+ * Isi popover (portal, rata kanan secara default).
+ *
+ * Dipake di: components/shared/date-range-filter.tsx.
+ */
 export const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>

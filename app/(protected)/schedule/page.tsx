@@ -7,6 +7,12 @@ import { scheduleApi } from '@/feat/schedule/api';
 
 import { ScheduleClient } from './client';
 
+/**
+ * Server component halaman /schedule: ambil schedule aktif, total semua &
+ * upcoming, sama room & device buat form.
+ *
+ * Dipake di: Otomatis sama Next.js buat route /schedule.
+ */
 export default async function SchedulePage() {
   const [session, activeSchedules, overallMeta, upcomingMeta, rooms, devices] =
     await Promise.all([

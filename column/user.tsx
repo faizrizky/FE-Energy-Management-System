@@ -12,6 +12,11 @@ export interface UserColumnHandlers {
   onDelete: (user: UserDTO) => void;
 }
 
+/**
+ * Pilih warna badge role: admin hijau, PIC biru muda, lainnya biru.
+ *
+ * Dipake di: getUserColumns (file ini).
+ */
 function roleBadgeClass(roleName?: string) {
   const key = (roleName ?? '').toLowerCase();
   if (key.includes('admin')) return 'bg-emerald-100 text-emerald-700';
@@ -19,6 +24,12 @@ function roleBadgeClass(roleName?: string) {
   return 'bg-blue-100 text-blue-700';
 }
 
+/**
+ * Renderer tiap kolom tabel user: checkbox, nama, alamat, badge role, terakhir
+ * aktif, tombol aksi.
+ *
+ * Dipake di: app/(protected)/user/client.tsx.
+ */
 export function getUserColumns({
   onToggleSelect,
   isSelected,

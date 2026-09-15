@@ -24,8 +24,19 @@ export interface RoomDetailParams {
 }
 
 export const roomsApi = {
+  /**
+   * GET /rooms/stats dari server (tanpa cache).
+   *
+   * Dipake di: rooms/page.tsx.
+   */
   getSummary: () => http<RoomSummaryDTO>('/rooms/stats', { cache: 'no-store' }),
 
+  /**
+   * Ngambil sampe 1000 room sekaligus dari server buat dropdown, langsung
+   * balikin array-nya.
+   *
+   * Dipake di: schedule/page.tsx.
+   */
   listSummary: async (): Promise<RoomListItemDTO[]> => {
     const result = await http<RoomListResponseDTO>(
       '/rooms?page=1&rowsPerPage=1000',
@@ -34,6 +45,12 @@ export const roomsApi = {
     return result.data;
   },
 
+  /**
+   * GET /rooms dari server (tanpa cache) dengan paginasi, search, & filter
+   * tanggal.
+   *
+   * Dipake di: rooms/page.tsx, device/page.tsx.
+   */
   list: ({
     page = 1,
     rowsPerPage = 10,
@@ -55,6 +72,11 @@ export const roomsApi = {
     });
   },
 
+  /**
+   * GET /rooms/:id dari server (tanpa cache).
+   *
+   * Dipake di: rooms/detail/[roomId]/page.tsx.
+   */
   getById: (
     roomId: string,
     { page = 1, rowsPerPage = 10, search }: RoomDetailParams = {}
@@ -69,6 +91,11 @@ export const roomsApi = {
     });
   },
 
+  /**
+   * GET /rooms/:id/devices dari server (tanpa cache).
+   *
+   * Dipake di: rooms/detail/[roomId]/page.tsx.
+   */
   listDevices: (roomId: string, params: RoomListParams = {}) => {
     const query = new URLSearchParams({
       page: String(params.page ?? 1),
@@ -82,6 +109,12 @@ export const roomsApi = {
       { cache: 'no-store' }
     );
   },
+
+  /**
+   * GET /rooms/:id/devices tanpa paginasi dari server.
+   *
+   * Dipake di: Belom dipake.
+   */
   getDevices: (roomId: string) =>
     http<RoomDeviceDTO[]>(`/rooms/${roomId}/devices`, {
       cache: 'no-store',

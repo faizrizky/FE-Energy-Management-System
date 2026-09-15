@@ -17,6 +17,14 @@ interface RoomFormModalProps {
   onSuccess: (room: RoomDTO) => void;
 }
 
+/**
+ * Modal tambah/edit room: manggil create/update API terus ngabarin parent
+ * lewat onSuccess.
+ *
+ * Dipake di:
+ * - rooms/client.tsx
+ * - rooms/detail/[roomId]/client.tsx (edit room dari halaman detail).
+ */
 export function RoomFormModal({
   open,
   room,

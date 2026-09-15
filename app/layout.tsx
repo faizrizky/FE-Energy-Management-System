@@ -21,6 +21,11 @@ export const metadata: Metadata = {
   description: "Monitor energy usage and system status across your facility.",
 };
 
+/**
+ * Layout paling luar: pasang font Inter & Oxanium, CSS global, sama Toaster.
+ *
+ * Dipake di: Otomatis sama Next.js buat semua halaman.
+ */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>

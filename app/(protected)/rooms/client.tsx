@@ -59,16 +59,34 @@ const ROOMS_SORT_ACCESSORS = {
   usage: (r: RoomListItemDTO) => r.totalUsage24hKwh,
 };
 
+/**
+ * Ngubah Date jadi string YYYY-MM-DD (UTC) buat param filter tanggal ke API.
+ * (Fungsi yang sama ditulis ulang di 7 halaman.)
+ *
+ * Dipake di: Komponen client di file ini (loadX, filter tanggal).
+ */
 function toApiDate(date: Date | undefined) {
   return date ? date.toISOString().slice(0, 10) : undefined;
 }
 
+/**
+ * Baca tanggal dari query URL. Balikin undefined kalo kosong atau nggak valid.
+ *
+ * Dipake di: RoomsClient (file ini), buat isi awal filter tanggal.
+ */
 function parseUrlDate(value: string | null): Date | undefined {
   if (!value) return undefined;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
 
+/**
+ * Isi halaman Rooms: statistik, tabel & kartu, search, filter tanggal
+ * (disimpen di URL), paginasi, hapus, power ON/OFF per room, sinkron lewat
+ * socket, dan muat ulang pas halaman dibalikin dari cache.
+ *
+ * Dipake di: rooms/page.tsx.
+ */
 export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();

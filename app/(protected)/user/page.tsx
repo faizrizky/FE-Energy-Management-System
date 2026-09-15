@@ -4,6 +4,12 @@ import { usersApi } from '@/feat/user/api';
 import { rolesApi } from '@/feat/role/api';
 import { UserClient } from './client';
 
+/**
+ * Server component halaman /user: ambil session, list user, sama role buat
+ * dropdown.
+ *
+ * Dipake di: Otomatis sama Next.js buat route /user.
+ */
 export default async function UserPage() {
   const [session, users, roles] = await Promise.all([
     getSession(),

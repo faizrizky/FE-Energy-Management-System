@@ -7,6 +7,11 @@ import { cn } from '@/lib/utils';
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
+/**
+ * Kalender react-day-picker dengan styling EMS.
+ *
+ * Dipake di: components/shared/date-range-filter.tsx.
+ */
 export function Calendar({
   className,
   classNames,

@@ -10,6 +10,13 @@ interface SearchInputProps {
   className?: string;
 }
 
+/**
+ * Input search dengan ikon kaca pembesar dan tombol clear yang muncul kalo ada
+ * isinya.
+ *
+ * Dipake di: Halaman Dashboard, Device, Gateway, Report, Role, Rooms, Room
+ *   detail, Schedule, User.
+ */
 export function SearchInput({
   value,
   onChange,

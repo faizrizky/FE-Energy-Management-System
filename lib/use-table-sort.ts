@@ -3,6 +3,13 @@ import { useMemo, useState } from 'react';
 
 export type SortDirection = 'asc' | 'desc';
 
+/**
+ * Hook sort tabel di client: klik kolom asc → desc → balik tanpa sort, nilai
+ * kosong selalu di akhir, teks berisi angka diurutin natural.
+ *
+ * Dipake di: dashboard/_partials (active-schedules, top-risky-rooms), halaman
+ *   Device, Gateway, Report, Role, Rooms, Room detail, Schedule, User.
+ */
 export function useTableSort<T>(
   data: T[],
   accessors: Record<string, (item: T) => string | number | null | undefined>

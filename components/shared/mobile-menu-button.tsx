@@ -3,6 +3,11 @@
 import { Menu } from 'lucide-react';
 import { useSidebar } from './sidebar-context';
 
+/**
+ * Tombol buat buka sidebar di layar kecil.
+ *
+ * Dipake di: components/shared/header.tsx.
+ */
 export function MobileMenuButton() {
   const { setOpen } = useSidebar();
   return (

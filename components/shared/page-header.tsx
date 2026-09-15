@@ -8,6 +8,12 @@ interface PageHeaderProps {
   className?: string;
 }
 
+/**
+ * Judul halaman + deskripsi + slot buat tombol aksi.
+ *
+ * Dipake di: Halaman Alarm, Device, Gateway, Report, Role, Rooms, Schedule,
+ *   User.
+ */
 export function PageHeader({
   title,
   description,

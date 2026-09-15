@@ -19,6 +19,12 @@ interface GatewayFormProps {
   submitting?: boolean;
 }
 
+/**
+ * Form tambah/edit gateway: nama, EUI, simcard, tanggal instalasi, sumber
+ * daya, model, installer, deskripsi.
+ *
+ * Dipake di: gateway/_partials/modal.tsx → GatewayFormModal.
+ */
 export function GatewayForm({
   users,
   defaultValues,
@@ -157,6 +163,11 @@ export function GatewayForm({
   );
 }
 
+/**
+ * Pembungkus input form: label, hint, sama pesan error di bawahnya.
+ *
+ * Dipake di: GatewayForm (file ini).
+ */
 function Field({
   label,
   required,
@@ -184,6 +195,11 @@ function Field({
   );
 }
 
+/**
+ * Pembungkus <select> native biar ada ikon panah di kanan.
+ *
+ * Dipake di: GatewayForm (file ini).
+ */
 function SelectField({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative w-full">

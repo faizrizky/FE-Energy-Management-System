@@ -18,6 +18,12 @@ interface GatewayFormModalProps {
   onSuccess: (gateway: GatewayDTO) => void;
 }
 
+/**
+ * Modal tambah/edit gateway: manggil create/update API terus ngabarin parent
+ * lewat onSuccess.
+ *
+ * Dipake di: gateway/client.tsx.
+ */
 export function GatewayFormModal({
   open,
   gateway,

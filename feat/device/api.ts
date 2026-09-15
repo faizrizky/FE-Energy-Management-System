@@ -8,6 +8,11 @@ export interface DeviceListParams {
 }
 
 export const devicesApi = {
+  /**
+   * GET /devices dari server (tanpa cache) buat data awal halaman.
+   *
+   * Dipake di: device/page.tsx, schedule/page.tsx.
+   */
   list: ({ page = 1, rowsPerPage = 10, search }: DeviceListParams = {}) => {
     const query = new URLSearchParams({
       page: String(page),
@@ -19,6 +24,11 @@ export const devicesApi = {
     });
   },
 
+  /**
+   * GET /devices/:id dari server (tanpa cache).
+   *
+   * Dipake di: Belom dipake.
+   */
   getById: (id: string) =>
     http<DeviceDTO>(`/devices/${id}`, { cache: 'no-store' }),
 };

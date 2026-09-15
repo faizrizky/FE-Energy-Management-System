@@ -4,6 +4,11 @@ import * as React from "react";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
 import { cn } from "@/lib/utils";
 
+/**
+ * Avatar Radix bentuk kotak rounded.
+ *
+ * Dipake di: components/shared/header.tsx.
+ */
 export const Avatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
@@ -17,6 +22,12 @@ export const Avatar = React.forwardRef<
 Avatar.displayName = "Avatar";
 
 export const AvatarImage = AvatarPrimitive.Image;
+
+/**
+ * Isi avatar pas gambarnya nggak ada/gagal (biasanya inisial nama).
+ *
+ * Dipake di: components/shared/header.tsx.
+ */
 export const AvatarFallback = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Fallback>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback>

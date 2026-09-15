@@ -8,6 +8,13 @@ import {
   ServerUnavailableError,
 } from '@/lib/auth';
 
+/**
+ * Layout semua halaman yang butuh login: cek session, redirect ke /login kalo
+ * belom login, tampilin ErrorState kalo backend lagi rate limit atau error,
+ * lalu bungkus konten pake AppShell.
+ *
+ * Dipake di: Otomatis sama Next.js buat semua route di app/(protected).
+ */
 export default async function ProtectedLayout({
   children,
 }: {

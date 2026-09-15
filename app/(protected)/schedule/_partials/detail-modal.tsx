@@ -16,6 +16,12 @@ interface ScheduleDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Modal detail schedule: room, device, action, tanggal, jam, pola ulang,
+ * status, pembuat.
+ *
+ * Dipake di: schedule/client.tsx.
+ */
 export function ScheduleDetailModal({
   open,
   schedule,
@@ -115,6 +121,11 @@ export function ScheduleDetailModal({
   );
 }
 
+/**
+ * Baris label–nilai buat nampilin detail data.
+ *
+ * Dipake di: ScheduleDetailModal (file ini).
+ */
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4">
@@ -124,6 +135,11 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/**
+ * Badge status schedule: hijau kalo active, abu-abu kalo selain itu.
+ *
+ * Dipake di: ScheduleDetailModal (file ini).
+ */
 function StatusBadge({ status }: { status: string }) {
   const active = status === 'active';
   return (
@@ -146,6 +162,12 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/**
+ * Ngubah pola ulang schedule jadi teks: "Every day", daftar nama hari, atau
+ * "Does not repeat".
+ *
+ * Dipake di: ScheduleDetailModal (file ini).
+ */
 function formatRepeat(schedule: ScheduleDTO) {
   if (schedule.repeatType === 'daily') return 'Every day';
   if (schedule.repeatType === 'weekly') {

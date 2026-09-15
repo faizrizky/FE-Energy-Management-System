@@ -8,6 +8,11 @@ export interface GatewayListParams {
 }
 
 export const gatewaysApi = {
+  /**
+   * GET /gateways dari server (tanpa cache).
+   *
+   * Dipake di: gateway/page.tsx, device/page.tsx (dropdown gateway).
+   */
   list: ({ page = 1, rowsPerPage = 10, search }: GatewayListParams = {}) => {
     const query = new URLSearchParams({
       page: String(page),
@@ -19,6 +24,11 @@ export const gatewaysApi = {
     });
   },
 
+  /**
+   * GET /gateways/:id dari server (tanpa cache).
+   *
+   * Dipake di: Belom dipake.
+   */
   getById: (id: string) =>
     http<GatewayDetailDTO>(`/gateways/${id}`, { cache: 'no-store' }),
 };

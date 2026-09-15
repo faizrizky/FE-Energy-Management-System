@@ -6,6 +6,12 @@ import { dashboardApi } from '@/feat/dashboard/api';
 import { formatKwh, formatNumber } from '@/lib/utils';
 import { DashboardSearch, DashboardTabs } from './client';
 
+/**
+ * Server component halaman /dashboard: ambil ringkasan, timeline & top risky
+ * rooms buat 4 range, sama schedule aktif/upcoming sekaligus.
+ *
+ * Dipake di: Otomatis sama Next.js buat route /dashboard.
+ */
 export default async function DashboardPage() {
   const [
     session,

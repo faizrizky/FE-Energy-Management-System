@@ -13,6 +13,11 @@ interface ScheduleDetailDrawerProps {
   onClose: () => void;
 }
 
+/**
+ * Drawer detail schedule dari samping.
+ *
+ * Dipake di: Belom dipake (halaman Schedule pake ScheduleDetailModal).
+ */
 export function ScheduleDetailDrawer({
   schedule,
   onClose,
@@ -124,6 +129,11 @@ export function ScheduleDetailDrawer({
   );
 }
 
+/**
+ * Baris label–nilai buat nampilin detail data.
+ *
+ * Dipake di: ScheduleDetailDrawer (file ini).
+ */
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4">
@@ -133,6 +143,11 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/**
+ * Badge status schedule: hijau kalo active, abu-abu kalo selain itu.
+ *
+ * Dipake di: ScheduleDetailDrawer (file ini).
+ */
 function StatusBadge({ status }: { status: string }) {
   const active = status === 'active';
   return (
@@ -155,6 +170,12 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/**
+ * Ngubah pola ulang schedule jadi teks: "Every day", daftar nama hari, atau
+ * "Does not repeat".
+ *
+ * Dipake di: ScheduleDetailDrawer (file ini).
+ */
 function formatRepeat(schedule: ScheduleDTO) {
   if (schedule.repeatType === 'daily') return 'Every day';
   if (schedule.repeatType === 'weekly') {

@@ -12,6 +12,12 @@ export interface ScheduleColumnHandlers {
   onDelete: (schedule: ScheduleDTO) => void;
 }
 
+/**
+ * Renderer tiap kolom tabel schedule: checkbox, room, device, tanggal, jam,
+ * pola ulang, tombol aksi.
+ *
+ * Dipake di: app/(protected)/schedule/client.tsx.
+ */
 export function getScheduleColumns({
   onToggleSelect,
   isSelected,

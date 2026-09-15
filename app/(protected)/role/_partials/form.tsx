@@ -19,6 +19,12 @@ interface RoleFormProps {
   submitting?: boolean;
 }
 
+/**
+ * Form tambah/edit role: nama, deskripsi, sama checklist permission per
+ * module. Role sistem dibatasi.
+ *
+ * Dipake di: role/_partials/modal.tsx → RoleFormModal.
+ */
 export function RoleForm({
   permissions,
   isSystem,
@@ -179,6 +185,11 @@ export function RoleForm({
   );
 }
 
+/**
+ * Pembungkus input form: label, hint, sama pesan error di bawahnya.
+ *
+ * Dipake di: RoleForm (file ini).
+ */
 function Field({
   label,
   error,

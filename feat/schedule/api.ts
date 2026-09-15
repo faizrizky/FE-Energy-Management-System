@@ -10,6 +10,11 @@ export interface ScheduleListParams {
 }
 
 export const scheduleApi = {
+  /**
+   * GET /schedules dari server (tanpa cache).
+   *
+   * Dipake di: schedule/page.tsx, dashboard/page.tsx.
+   */
   list: ({
     roomId,
     status,
@@ -29,6 +34,11 @@ export const scheduleApi = {
     });
   },
 
+  /**
+   * GET /schedules/:id dari server (tanpa cache).
+   *
+   * Dipake di: Belom dipake.
+   */
   getById: (scheduleId: string) =>
     http<ScheduleDTO>(`/schedules/${scheduleId}`, {
       cache: 'no-store',

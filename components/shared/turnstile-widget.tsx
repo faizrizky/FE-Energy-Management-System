@@ -33,6 +33,12 @@ interface TurnstileWidgetProps {
   onExpire?: () => void;
 }
 
+/**
+ * Render widget captcha Cloudflare Turnstile: load script, render widget,
+ * callback verify/expire, dan buka fungsi reset lewat ref.
+ *
+ * Dipake di: TurnstileWidget (file ini).
+ */
 function TurnstileWidgetInner(
   { onVerify, onExpire }: TurnstileWidgetProps,
   ref: React.ForwardedRef<TurnstileWidgetHandle>
@@ -96,5 +102,10 @@ function TurnstileWidgetInner(
   );
 }
 
+/**
+ * Versi forwardRef dari TurnstileWidgetInner biar parent bisa manggil reset().
+ *
+ * Dipake di: app/login/client.tsx → LoginClient.
+ */
 export const TurnstileWidget = forwardRef(TurnstileWidgetInner);
 TurnstileWidget.displayName = 'TurnstileWidget';

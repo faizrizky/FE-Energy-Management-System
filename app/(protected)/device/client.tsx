@@ -66,10 +66,23 @@ const DEVICE_SORT_ACCESSORS = {
   status: (d: DeviceDTO) => d.status,
 };
 
+/**
+ * Ngubah Date jadi string YYYY-MM-DD (UTC) buat param filter tanggal ke API.
+ * (Fungsi yang sama ditulis ulang di 7 halaman.)
+ *
+ * Dipake di: Komponen client di file ini (loadX, filter tanggal).
+ */
 function toApiDate(date: Date | undefined) {
   return date ? date.toISOString().slice(0, 10) : undefined;
 }
 
+/**
+ * Isi halaman Device: tabel & kartu, search, filter tanggal, paginasi, hapus
+ * satuan/banyak, detail, power ON/OFF + batal, sinkron lewat socket, dan muat
+ * ulang pas halaman dibalikin dari cache.
+ *
+ * Dipake di: device/page.tsx.
+ */
 export function DeviceClient({
   initialData,
   rooms,

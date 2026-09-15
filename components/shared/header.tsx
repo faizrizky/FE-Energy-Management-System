@@ -14,6 +14,12 @@ interface HeaderProps {
 // Notification fetch failing (e.g. ThingsBoard unreachable) must not take
 // down every page that renders <Header/> — degrade to an empty bell
 // instead of throwing.
+/**
+ * Ngambil 5 alarm terbaru buat lonceng notifikasi. Kalo gagal balikin [];
+ * endpoint alarm udah dihapus di backend, jadi sekarang selalu kosong.
+ *
+ * Dipake di: Header (file ini).
+ */
 async function loadRecentAlarms(): Promise<AlarmDTO[]> {
   try {
     const result = await alarmApi.list({ pageSize: 5 });
@@ -23,6 +29,13 @@ async function loadRecentAlarms(): Promise<AlarmDTO[]> {
   }
 }
 
+/**
+ * Header atas halaman (server component): tombol menu mobile, breadcrumb,
+ * lonceng notifikasi, avatar & info user.
+ *
+ * Dipake di: page.tsx halaman Alarm, Dashboard, Device, Gateway, Report, Role,
+ *   Rooms, Room detail, Schedule, User.
+ */
 export async function Header({ breadcrumb, user }: HeaderProps) {
   const alarms = await loadRecentAlarms();
 

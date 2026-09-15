@@ -15,6 +15,12 @@ interface RoleFormModalProps {
   onSuccess: (role: RoleDTO) => void;
 }
 
+/**
+ * Modal tambah/edit role: manggil create/update API terus ngabarin parent
+ * lewat onSuccess.
+ *
+ * Dipake di: role/client.tsx.
+ */
 export function RoleFormModal({
   open,
   role,

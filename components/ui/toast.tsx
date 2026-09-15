@@ -21,6 +21,12 @@ const VARIANT_ICON: Record<ToastVariant, React.ReactNode> = {
   default: null,
 };
 
+/**
+ * Satu toast: ikon sesuai varian, judul, deskripsi, tombol aksi, sama tombol
+ * dismiss.
+ *
+ * Dipake di: components/ui/toaster.tsx.
+ */
 export function Toast({ item }: { item: ToastItem }) {
   const isPlain = item.variant === "default";
 

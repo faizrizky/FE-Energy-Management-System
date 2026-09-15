@@ -47,10 +47,22 @@ const USER_SORT_ACCESSORS = {
     u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : null,
 };
 
+/**
+ * Ngubah Date jadi string YYYY-MM-DD (UTC) buat param filter tanggal ke API.
+ * (Fungsi yang sama ditulis ulang di 7 halaman.)
+ *
+ * Dipake di: Komponen client di file ini (loadX, filter tanggal).
+ */
 function toApiDate(date: Date | undefined) {
   return date ? date.toISOString().slice(0, 10) : undefined;
 }
 
+/**
+ * Isi halaman User: tabel, search, filter tanggal, paginasi, hapus
+ * satuan/banyak, detail, sama modal form.
+ *
+ * Dipake di: user/page.tsx.
+ */
 export function UserClient({ initialData, roles }: UserClientProps) {
   const [data, setData] = useState<UserListResponseDTO>(
     initialData ?? {

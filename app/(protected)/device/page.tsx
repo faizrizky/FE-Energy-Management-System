@@ -5,6 +5,12 @@ import { roomsApi } from '@/feat/rooms/api';
 import { gatewaysApi } from '@/feat/gateway/api';
 import { DeviceClient } from './client';
 
+/**
+ * Server component halaman /device: ambil session, list device, room, sama
+ * gateway (buat dropdown form).
+ *
+ * Dipake di: Otomatis sama Next.js buat route /device.
+ */
 export default async function DevicePage() {
   const [session, devices, roomsRes, gatewaysRes] = await Promise.all([
     getSession(),

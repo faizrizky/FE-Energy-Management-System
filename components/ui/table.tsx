@@ -9,6 +9,12 @@ interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
   wrapperClassName?: string;
 }
 
+/**
+ * Tabel dengan wrapper yang bisa di-scroll horizontal.
+ *
+ * Dipake di: Tabel di halaman Alarm, Dashboard, Device, Gateway, Report, Role,
+ *   Rooms, Room detail, Schedule, User, DeviceLogModal.
+ */
 export function Table({ className, wrapperClassName, ...props }: TableProps) {
   return (
     <div
@@ -25,6 +31,11 @@ export function Table({ className, wrapperClassName, ...props }: TableProps) {
   );
 }
 
+/**
+ * <thead> dengan background abu muda.
+ *
+ * Dipake di: Semua tabel di atas.
+ */
 export function TableHeader(
   props: React.HTMLAttributes<HTMLTableSectionElement>
 ) {
@@ -32,10 +43,10 @@ export function TableHeader(
 }
 
 /**
- * Wraps children in AnimatePresence so individual <TableRow> mount/unmount
- * (add, remove, filter, delete) animate. AnimatePresence itself renders no
- * DOM node - only its children (the actual <tr>s) end up under <tbody>, so
- * this stays valid table markup.
+ * <tbody> yang ngebungkus baris pake AnimatePresence biar tambah/hapus baris
+ * ada animasinya.
+ *
+ * Dipake di: Semua tabel di atas.
  */
 export function TableBody({
   className,
@@ -79,6 +90,11 @@ export interface TableRowProps extends Omit<
   custom?: number;
 }
 
+/**
+ * Baris tabel beranimasi (fade in dengan delay sesuai urutan).
+ *
+ * Dipake di: Semua tabel di atas.
+ */
 export function TableRow({ className, custom, ...props }: TableRowProps) {
   return (
     <motion.tr
@@ -93,6 +109,11 @@ export function TableRow({ className, custom, ...props }: TableRowProps) {
   );
 }
 
+/**
+ * Sel header <th>.
+ *
+ * Dipake di: Semua tabel di atas.
+ */
 export function TableHead({
   className,
   ...props
@@ -108,6 +129,11 @@ export function TableHead({
   );
 }
 
+/**
+ * Sel data <td>.
+ *
+ * Dipake di: Semua tabel di atas.
+ */
 export function TableCell({
   className,
   ...props
@@ -124,6 +150,12 @@ export interface SortableTableHeadProps extends React.ThHTMLAttributes<HTMLTable
   onSort: (key: string) => void;
 }
 
+/**
+ * Header kolom yang bisa diklik buat sort, lengkap sama ikon arah sort.
+ *
+ * Dipake di: Tabel Dashboard, Device, Gateway, Report, Role, Rooms, Room
+ *   detail, Schedule, User (pasangan useTableSort).
+ */
 export function SortableTableHead({
   sortKey,
   activeKey,

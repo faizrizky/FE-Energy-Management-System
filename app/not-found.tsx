@@ -1,5 +1,10 @@
 import { ErrorState } from '@/components/shared/error-state';
 
+/**
+ * Halaman 404 buat route yang nggak ada.
+ *
+ * Dipake di: Otomatis sama Next.js.
+ */
 export default function NotFound() {
   return (
     <ErrorState

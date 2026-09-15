@@ -33,6 +33,11 @@ const SCHEDULE_SORT_ACCESSORS = {
   date: (s: ActiveScheduleDTO) => new Date(s.startDate).getTime(),
 };
 
+/**
+ * Tab jadwal di dashboard: pilih active atau upcoming, tabelnya bisa di-sort.
+ *
+ * Dipake di: dashboard/client.tsx → DashboardTabs.
+ */
 export function ActiveSchedulesTab({
   activeSchedules,
   upcomingSchedules,

@@ -9,6 +9,12 @@ import type {
   DevicePowerStatus,
 } from '@/feat/device/dto';
 
+/**
+ * Munculin toast hasil perintah power: sukses atau gagal (cancelled nggak ada
+ * toast).
+ *
+ * Dipake di: useDeviceCommands (file ini).
+ */
 function notify(event: DeviceCommandEventDTO) {
   const label = event.deviceName ?? 'Device';
   const action = event.action.toUpperCase();
@@ -25,8 +31,11 @@ function notify(event: DeviceCommandEventDTO) {
 }
 
 /**
- * Terapkan event `device:command` ke satu baris device. `applySuccess` dipakai
- * karena tiap list menyimpan status power dengan field yang berbeda.
+ * Nerapin event device:command ke satu baris data: pending ngisi
+ * pendingCommand, final ngosongin pending-nya dan (kalo sukses) update status.
+ * Event lama yang telat datang diabaikan.
+ *
+ * Dipake di: device/client.tsx, rooms/detail/[roomId]/client.tsx.
  */
 export function reduceCommandEvent<
   T extends { pendingCommand?: DevicePendingCommandDTO | null },
@@ -64,8 +73,12 @@ export function reduceCommandEvent<
 }
 
 /**
- * Dengarkan hasil perintah relay. Toast sukses/gagal hanya untuk perintah
- * yang dikirim dari tab ini (didaftarkan lewat `track`).
+ * Hook dengerin socket device:command: nyaring event dobel, toast cuma buat
+ * perintah yang dikirim dari tab ini, dan track() buat daftarin respons API
+ * (kalo hasil akhirnya udah nyampe duluan lewat socket, itu yang dibalikin).
+ *
+ * Dipake di: device/client.tsx, rooms/client.tsx,
+ *   rooms/detail/[roomId]/client.tsx.
  */
 export function useDeviceCommands(
   onEvent: (event: DeviceCommandEventDTO) => void

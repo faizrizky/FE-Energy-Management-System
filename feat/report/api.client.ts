@@ -8,6 +8,11 @@ const MIME: Record<'csv' | 'xlsx' | 'pdf', string> = {
 };
 
 export const reportClientApi = {
+  /**
+   * GET /reports/summary dari browser dengan filter tanggal, room, device.
+   *
+   * Dipake di: report/client.tsx.
+   */
   getSummary: ({ from, to, roomId, deviceId }: ReportExportParams) =>
     api
       .get<ReportDeviceRowDTO[]>('/reports/summary', {
@@ -15,6 +20,12 @@ export const reportClientApi = {
       })
       .then((res) => res.data),
 
+  /**
+   * GET /reports/export sebagai blob, terus dibungkus jadi Blob dengan MIME
+   * sesuai format (csv/xlsx/pdf).
+   *
+   * Dipake di: report/client.tsx (tombol export).
+   */
   export: async (
     { from, to, roomId, deviceId }: ReportExportParams,
     format: 'csv' | 'xlsx' | 'pdf'

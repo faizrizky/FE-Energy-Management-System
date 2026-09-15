@@ -57,10 +57,22 @@ const SCHEDULE_SORT_ACCESSORS = {
 
 type ScheduleTab = 'active' | 'upcoming';
 
+/**
+ * Ngubah Date jadi string YYYY-MM-DD (UTC) buat param filter tanggal ke API.
+ * (Fungsi yang sama ditulis ulang di 7 halaman.)
+ *
+ * Dipake di: Komponen client di file ini (loadX, filter tanggal).
+ */
 function toApiDate(date: Date | undefined) {
   return date ? date.toISOString().slice(0, 10) : undefined;
 }
 
+/**
+ * Isi halaman Schedule: tab active/upcoming, total, tabel & kartu, search,
+ * filter tanggal, paginasi, hapus, detail, dan sinkron lewat socket.
+ *
+ * Dipake di: schedule/page.tsx.
+ */
 export function ScheduleClient({
   initialData,
   initialOverallTotal,

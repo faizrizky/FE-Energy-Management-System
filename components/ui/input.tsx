@@ -1,6 +1,11 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Input teks standar; border-nya merah kalo aria-invalid.
+ *
+ * Dipake di: Form device, gateway, role, rooms, schedule, user.
+ */
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (
     <input

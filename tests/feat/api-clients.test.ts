@@ -29,7 +29,8 @@ import { gatewaysApi } from '@/feat/gateway/api';
 import { scheduleApi } from '@/feat/schedule/api';
 import { reportApi } from '@/feat/report/api';
 
-const mocked = vi.mocked(api);
+type MockFn = ReturnType<typeof vi.fn>;
+const mocked = api as unknown as Record<'get' | 'post' | 'put' | 'patch' | 'delete', MockFn>;
 
 beforeEach(() => {
   for (const fn of Object.values(mocked)) {

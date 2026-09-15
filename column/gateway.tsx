@@ -13,6 +13,12 @@ export interface GatewayColumnHandlers {
   onDelete: (gateway: GatewayDTO) => void;
 }
 
+/**
+ * Renderer tiap kolom tabel gateway: checkbox, info gateway, status
+ * online/offline, installer, tanggal, tombol aksi.
+ *
+ * Dipake di: app/(protected)/gateway/client.tsx.
+ */
 export function getGatewayColumns({
   onToggleSelect,
   isSelected,

@@ -4,6 +4,12 @@ import { roomsApi } from '@/feat/rooms/api';
 import { usersApi } from '@/feat/user/api';
 import { RoomsClient } from './client';
 
+/**
+ * Server component halaman /rooms: ambil session, statistik, list room (filter
+ * tanggal dari URL), sama user buat form.
+ *
+ * Dipake di: Otomatis sama Next.js buat route /rooms.
+ */
 export default async function RoomsPage({
   searchParams,
 }: {

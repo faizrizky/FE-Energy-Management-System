@@ -9,7 +9,12 @@ interface TableActionButtonProps {
   "aria-label": string;
 }
 
-/** Small square icon button used in table rows (eye / edit / trash / log). */
+/**
+ * Tombol ikon kecil buat aksi di baris tabel (lihat, edit, hapus, log).
+ *
+ * Dipake di: column/device, gateway, role, room-devices, rooms, schedule,
+ *   user.
+ */
 export function TableActionButton({
   icon: Icon,
   onClick,

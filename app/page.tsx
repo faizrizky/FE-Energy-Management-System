@@ -5,6 +5,12 @@ import {
   ServerUnavailableError,
 } from '@/lib/auth';
 
+/**
+ * Route "/": langsung redirect ke /dashboard kalo udah login, ke /login kalo
+ * belom.
+ *
+ * Dipake di: Otomatis sama Next.js buat route /.
+ */
 export default async function RootPage() {
   let session = null;
   try {

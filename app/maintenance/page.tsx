@@ -1,5 +1,10 @@
 import { ErrorState } from '@/components/shared/error-state';
 
+/**
+ * Halaman maintenance / server lagi sibuk.
+ *
+ * Dipake di: Route /maintenance. Belom ada kode yang ngarahin ke sini.
+ */
 export default function MaintenancePage() {
   return (
     <ErrorState

@@ -1,5 +1,10 @@
 const HERO_IMAGE = '/login-hero.webp';
 
+/**
+ * Background gambar hero di halaman login versi mobile.
+ *
+ * Dipake di: app/login/client.tsx → LoginClient.
+ */
 export function LoginHeroBackground() {
   return (
     <div className="pointer-events-none absolute inset-0 md:hidden">
@@ -13,6 +18,11 @@ export function LoginHeroBackground() {
   );
 }
 
+/**
+ * Panel hero kiri di halaman login versi desktop (logo, tagline, gambar).
+ *
+ * Dipake di: app/login/client.tsx → LoginClient.
+ */
 export function LoginHeroPanel() {
   return (
     <section
@@ -65,6 +75,11 @@ export function LoginHeroPanel() {
   );
 }
 
+/**
+ * Ikon petir SVG buat logo EMS.
+ *
+ * Dipake di: LoginHeroPanel (file ini).
+ */
 function ZapIcon() {
   return (
     <svg

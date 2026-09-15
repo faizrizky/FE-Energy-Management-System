@@ -27,6 +27,11 @@ interface TopRiskyRoomsTabProps {
   dataByRange: Record<string, RiskyRoomDTO[]>;
 }
 
+/**
+ * Tabel 5 room paling boros per range, bisa di-sort per kolom.
+ *
+ * Dipake di: dashboard/client.tsx → DashboardTabs.
+ */
 export function TopRiskyRoomsTab({ dataByRange }: TopRiskyRoomsTabProps) {
   const [range, setRange] = useState<(typeof RANGES)[number]['value']>('today');
   const rooms = dataByRange[range] ?? [];

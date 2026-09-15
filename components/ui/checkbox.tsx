@@ -5,6 +5,12 @@ import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Checkbox Radix dengan ikon centang.
+ *
+ * Dipake di: Kolom pilih baris di semua tabel, form role (permission), form
+ *   room.
+ */
 export const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>

@@ -15,8 +15,11 @@ interface DevicePowerControlProps {
 }
 
 /**
- * Switch ON/OFF relay. Saat perintah masih menunggu meter, tampil spinner
- * (klik switch lagi = perintah baru menggantikan yang lama).
+ * Switch ON/OFF relay. Pas perintah masih nunggu meter, muncul spinner &
+ * tombol batal; klik switch lagi berarti ganti perintah.
+ *
+ * Dipake di: column/device.tsx, column/room-devices.tsx, column/rooms.tsx,
+ *   rooms/_partials/room-card.tsx.
  */
 export function DevicePowerControl({
   checked,

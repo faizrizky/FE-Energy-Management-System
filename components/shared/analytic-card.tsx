@@ -17,6 +17,13 @@ interface AnalyticCardProps {
   index?: number;
 }
 
+/**
+ * Kartu statistik: judul, nilai, unit, ikon, breakdown (misal online/offline),
+ * dengan animasi muncul.
+ *
+ * Dipake di: Halaman Dashboard, Device, Report, Role, Rooms, Room detail,
+ *   Schedule.
+ */
 export function AnalyticCard({
   title,
   value,

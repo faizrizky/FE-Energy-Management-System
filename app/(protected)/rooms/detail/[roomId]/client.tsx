@@ -67,10 +67,23 @@ interface LogModalState {
 const SEARCH_DEBOUNCE_MS = 250;
 const USAGE_REFRESH_DEBOUNCE_MS = 3000;
 
+/**
+ * Ngubah Date jadi string YYYY-MM-DD (UTC) buat param filter tanggal ke API.
+ * (Fungsi yang sama ditulis ulang di 7 halaman.)
+ *
+ * Dipake di: Komponen client di file ini (loadX, filter tanggal).
+ */
 function toApiDate(date: Date | undefined) {
   return date ? date.toISOString().slice(0, 10) : undefined;
 }
 
+/**
+ * Isi halaman detail room: info room, ringkasan usage, tabel device, power per
+ * device + batal, log perintah, edit room, hapus device, sinkron lewat socket,
+ * dan muat ulang pas halaman dibalikin dari cache.
+ *
+ * Dipake di: rooms/detail/[roomId]/page.tsx.
+ */
 export function RoomDetailClient({
   room,
   devices,

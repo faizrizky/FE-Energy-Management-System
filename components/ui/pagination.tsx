@@ -13,6 +13,13 @@ interface PaginationProps {
   onRowsPerPageChange: (rows: number) => void;
 }
 
+/**
+ * Paginasi desktop (rows per page, nomor halaman, prev/next) plus dock mobile
+ * yang muncul pas scroll mentok bawah.
+ *
+ * Dipake di: Halaman Alarm, Device, Gateway, Report, Role, Rooms, Room detail,
+ *   Schedule, User.
+ */
 export function Pagination({
   page,
   totalPages,

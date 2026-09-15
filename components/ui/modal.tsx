@@ -10,6 +10,12 @@ interface ModalProps {
   panelClassName?: string;
 }
 
+/**
+ * Dialog di tengah layar (Radix); manggil onClose pas ditutup.
+ *
+ * Dipake di: Modal form & detail device/gateway/rooms/schedule,
+ *   DeviceLogModal, ConfirmDialog.
+ */
 export function Modal({ open, onClose, children, panelClassName }: ModalProps) {
   return (
     <DialogPrimitive.Root

@@ -18,6 +18,12 @@ export type RefreshResult =
   | { status: 'server_error' }
   | { status: 'invalid' };
 
+/**
+ * Baca detik tunggu dari header retry-after atau ratelimit-reset di Response
+ * fetch. (lib/axios.ts punya versi sendiri buat AxiosError.)
+ *
+ * Dipake di: requestTokenRefresh (file ini).
+ */
 function getRetryAfterSeconds(res: Response): number | null {
   const retryAfter = res.headers.get('retry-after');
   if (retryAfter) return Number(retryAfter) || null;
@@ -25,6 +31,12 @@ function getRetryAfterSeconds(res: Response): number | null {
   return reset ? Number(reset) || null : null;
 }
 
+/**
+ * Minta pasangan token baru ke backend. Hasilnya ok, rate_limited, invalid
+ * (401/403), atau server_error.
+ *
+ * Dipake di: middleware.ts, app/api/auth/refresh/route.ts.
+ */
 export async function requestTokenRefresh(
   refreshToken: string
 ): Promise<RefreshResult> {

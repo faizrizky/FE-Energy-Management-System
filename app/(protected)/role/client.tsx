@@ -49,6 +49,12 @@ const ROLE_SORT_ACCESSORS = {
   permissions: (r: RoleDTO) => r.permissions?.length ?? 0,
 };
 
+/**
+ * Isi halaman Role: tabel, search, paginasi, hapus satuan/banyak, detail
+ * drawer, sama modal form.
+ *
+ * Dipake di: role/page.tsx.
+ */
 export function RoleClient({ initialData, permissions }: RoleClientProps) {
   const [data, setData] = useState<RoleListResponseDTO>(
     initialData ?? {

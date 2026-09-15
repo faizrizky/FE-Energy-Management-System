@@ -1,5 +1,10 @@
 import type { AlarmDTO } from '@/feat/alarm/dto';
 
+/**
+ * Format waktu alarm (timestamp) jadi "YYYY-MM-DD HH:mm".
+ *
+ * Dipake di: getAlarmColumns (file ini).
+ */
 export function formatAlarmDate(ts: number) {
   const d = new Date(ts);
   const date = new Intl.DateTimeFormat('en-CA', {
@@ -15,6 +20,11 @@ export function formatAlarmDate(ts: number) {
   return `${date} ${time}`;
 }
 
+/**
+ * Teks waktu relatif: "just now", "5 min ago", "2 hours ago", "3 days ago".
+ *
+ * Dipake di: components/shared/notification-bell.tsx.
+ */
 export function timeAgo(ts: number) {
   const minutes = Math.floor((Date.now() - ts) / 60000);
   if (minutes < 1) return 'just now';
@@ -25,10 +35,20 @@ export function timeAgo(ts: number) {
   return `${days} day${days > 1 ? 's' : ''} ago`;
 }
 
+/**
+ * Kalimat alarm: "<tipe> detected on <device> in <room>".
+ *
+ * Dipake di: getAlarmColumns (file ini).
+ */
 export function alarmMessage(alarm: AlarmDTO) {
   return `${alarm.type} detected on ${alarm.deviceName} in ${alarm.roomName}`;
 }
 
+/**
+ * Renderer tiap kolom tabel alarm (tanggal, subjek, pesan, status).
+ *
+ * Dipake di: app/(protected)/alarm/client.tsx.
+ */
 export function getAlarmColumns() {
   return {
     date: (alarm: AlarmDTO) => (

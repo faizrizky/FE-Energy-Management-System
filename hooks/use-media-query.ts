@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
+/**
+ * True kalo media query cocok, ikut update pas ukuran layar berubah.
+ *
+ * Dipake di: components/shared/date-range-filter.tsx.
+ */
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);
 

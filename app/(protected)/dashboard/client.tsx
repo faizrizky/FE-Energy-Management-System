@@ -20,6 +20,12 @@ const TABS = [
   { value: 'active-schedules', label: 'Active Schedules' },
 ] as const;
 
+/**
+ * Judul dashboard plus kotak search. Nilai search-nya cuma disimpen di state,
+ * belom dipake buat filter apa-apa.
+ *
+ * Dipake di: dashboard/page.tsx.
+ */
 export function DashboardSearch() {
   const [search, setSearch] = useState('');
   return (
@@ -54,6 +60,12 @@ interface DashboardTabsProps {
   upcomingSchedules: ActiveScheduleDTO[];
 }
 
+/**
+ * Tab konten dashboard (timeline energi, top risky rooms, schedule) dan auto
+ * refresh halaman pas ada event socket device, room, atau schedule.
+ *
+ * Dipake di: dashboard/page.tsx.
+ */
 export function DashboardTabs({
   timelineByRange,
   riskyByRange,

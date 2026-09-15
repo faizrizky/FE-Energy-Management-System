@@ -59,10 +59,21 @@ const REPORT_SORT_ACCESSORS = {
 
 const LIVE_REFRESH_DEBOUNCE_MS = 5000;
 
+/**
+ * Ngubah Date jadi string YYYY-MM-DD (UTC) buat param filter tanggal ke API.
+ * (Fungsi yang sama ditulis ulang di 7 halaman.)
+ *
+ * Dipake di: Komponen client di file ini (loadX, filter tanggal).
+ */
 function toApiDate(date: Date | undefined) {
   return date ? date.toISOString().slice(0, 10) : undefined;
 }
 
+/**
+ * Download Blob lewat link sementara terus langsung dibuang URL-nya.
+ *
+ * Dipake di: ReportClient (file ini), pas export CSV/XLSX/PDF.
+ */
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -72,6 +83,13 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Isi halaman Report: kartu ringkasan, grafik, tabel laporan per device,
+ * filter tanggal, search, export CSV/XLSX/PDF, dan refresh otomatis abis ada
+ * event device:status.
+ *
+ * Dipake di: report/page.tsx.
+ */
 export function ReportClient({
   summary,
   timeline,

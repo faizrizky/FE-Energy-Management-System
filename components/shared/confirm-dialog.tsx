@@ -18,6 +18,13 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
+/**
+ * Dialog konfirmasi hapus: bisa satuan atau banyak (label jamak otomatis),
+ * tombolnya disabled pas lagi proses.
+ *
+ * Dipake di: Halaman Device, Gateway, Role, Rooms, Room detail, Schedule,
+ *   User.
+ */
 export function ConfirmDialog({
   open,
   title,

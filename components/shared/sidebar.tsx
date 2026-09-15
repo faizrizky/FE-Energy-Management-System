@@ -54,6 +54,12 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+/**
+ * Sidebar navigasi: logo, grup menu, sama tombol logout (putus socket dulu
+ * baru logoutAction).
+ *
+ * Dipake di: components/shared/app-shell.tsx (desktop & drawer mobile).
+ */
 export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   return (
     <aside className="flex h-screen w-[250px] shrink-0 flex-col justify-between overflow-hidden border-r border-emerald-200 bg-white p-2">

@@ -39,6 +39,12 @@ const DAYS = [
   { value: 0, label: 'Sunday', short: 'Sun' },
 ];
 
+/**
+ * Form tambah/edit schedule: room, device (opsional), action, tanggal, jam
+ * mulai/selesai, pola ulang, sama hari buat yang weekly.
+ *
+ * Dipake di: schedule/_partials/modal.tsx → ScheduleFormModal.
+ */
 export function ScheduleForm({
   rooms,
   devices,
@@ -357,6 +363,11 @@ export function ScheduleForm({
   );
 }
 
+/**
+ * Pembungkus input form: label, hint, sama pesan error di bawahnya.
+ *
+ * Dipake di: ScheduleForm (file ini).
+ */
 function Field({
   label,
   required,
@@ -386,6 +397,11 @@ function Field({
   );
 }
 
+/**
+ * Pembungkus <select> native biar ada ikon panah di kanan.
+ *
+ * Dipake di: ScheduleForm (file ini).
+ */
 function SelectField({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative w-full">
@@ -395,6 +411,11 @@ function SelectField({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Kartu pilihan pola ulang (none/daily/weekly) yang bisa diklik.
+ *
+ * Dipake di: ScheduleForm (file ini).
+ */
 function RepeatOption({
   active,
   title,

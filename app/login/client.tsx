@@ -22,6 +22,13 @@ interface LoginClientProps {
 
 const CAPTCHA_ENABLED = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
 
+/**
+ * Form login: username/email, password (bisa di-show), captcha Turnstile kalo
+ * aktif. Manggil loginAction terus redirect ke redirectTo; captcha di-reset
+ * kalo gagal.
+ *
+ * Dipake di: app/login/page.tsx.
+ */
 export function LoginClient({ redirectTo }: LoginClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();

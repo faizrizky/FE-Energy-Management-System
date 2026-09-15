@@ -17,6 +17,12 @@ interface DeviceFormProps {
   submitting?: boolean;
 }
 
+/**
+ * Form tambah/edit device (react-hook-form + zod): nama, EUI, tipe, room,
+ * gateway, devEUI ChirpStack, interval.
+ *
+ * Dipake di: device/_partials/modal.tsx → DeviceFormModal.
+ */
 export function DeviceForm({
   rooms,
   gateways,
@@ -142,6 +148,11 @@ export function DeviceForm({
   );
 }
 
+/**
+ * Pembungkus input form: label, hint, sama pesan error di bawahnya.
+ *
+ * Dipake di: DeviceForm (file ini).
+ */
 function Field({
   label,
   error,

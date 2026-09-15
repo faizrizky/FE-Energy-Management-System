@@ -6,6 +6,11 @@ interface SegmentTabsProps<T extends string> {
   options: { value: T; label: string }[];
 }
 
+/**
+ * Tab segmen generik (value + label); tab aktif warnanya hijau.
+ *
+ * Dipake di: dashboard/client.tsx → DashboardTabs.
+ */
 export function SegmentTabs<T extends string>({
   value,
   onValueChange,

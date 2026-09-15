@@ -12,6 +12,11 @@ interface GatewayDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Modal detail gateway (read-only) plus state loading.
+ *
+ * Dipake di: gateway/client.tsx.
+ */
 export function GatewayDetailModal({
   open,
   gateway,
@@ -92,6 +97,11 @@ export function GatewayDetailModal({
   );
 }
 
+/**
+ * Baris label–nilai buat nampilin detail data.
+ *
+ * Dipake di: GatewayDetailModal (file ini).
+ */
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-6">

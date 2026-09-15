@@ -17,6 +17,12 @@ export interface DeviceListParams {
 }
 
 export const devicesClientApi = {
+  /**
+   * GET /devices dari browser dengan paginasi, search (kosong dibuang), &
+   * filter tanggal.
+   *
+   * Dipake di: device/client.tsx.
+   */
   list: ({
     page = 1,
     rowsPerPage = 10,
@@ -36,9 +42,19 @@ export const devicesClientApi = {
       })
       .then((res) => res.data),
 
+  /**
+   * GET /devices/:id dari browser.
+   *
+   * Dipake di: device/client.tsx (modal detail).
+   */
   getById: (id: string) =>
     api.get<DeviceDetailDTO>(`/devices/${id}`).then((res) => res.data),
 
+  /**
+   * POST /devices; devEUI kosong dikirim null.
+   *
+   * Dipake di: device/_partials/modal.tsx.
+   */
   create: (payload: DeviceFormValues) =>
     api
       .post<DeviceDTO>('/devices', {
@@ -47,6 +63,11 @@ export const devicesClientApi = {
       })
       .then((res) => res.data),
 
+  /**
+   * PUT /devices/:id; devEUI kosong dikirim null.
+   *
+   * Dipake di: device/_partials/modal.tsx.
+   */
   update: (id: string, payload: DeviceFormValues) =>
     api
       .put<DeviceDTO>(`/devices/${id}`, {
@@ -55,9 +76,19 @@ export const devicesClientApi = {
       })
       .then((res) => res.data),
 
+  /**
+   * DELETE /devices/:id.
+   *
+   * Dipake di: device/client.tsx, rooms/detail/[roomId]/client.tsx.
+   */
   remove: (id: string) => api.delete(`/devices/${id}`).then(() => undefined),
 
-  /** Membalas status `pending`; hasil akhir datang lewat socket `device:command`. */
+  /**
+   * POST /devices/:id/power buat ON/OFF. Balikannya status pending; hasil
+   * akhirnya nyusul lewat socket device:command.
+   *
+   * Dipake di: device/client.tsx, rooms/detail/[roomId]/client.tsx.
+   */
   setPower: (id: string, isPowerOn: boolean) =>
     api
       .post<DeviceCommandEventDTO>(`/devices/${id}/power`, {
@@ -65,6 +96,11 @@ export const devicesClientApi = {
       })
       .then((res) => res.data),
 
+  /**
+   * POST /devices/:id/power/cancel buat batalin perintah yang masih pending.
+   *
+   * Dipake di: device/client.tsx, rooms/detail/[roomId]/client.tsx.
+   */
   cancelPower: (id: string) =>
     api
       .post<DeviceCancelPowerResultDTO>(`/devices/${id}/power/cancel`)

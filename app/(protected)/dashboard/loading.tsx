@@ -1,8 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Route-level skeleton — Next.js renders this automatically while
- * page.tsx (a Server Component) is fetching data.
+ * Skeleton loading yang tampil pas halaman /dashboard lagi dimuat.
+ *
+ * Dipake di: Otomatis sama Next.js (loading.tsx) buat route /dashboard.
  */
 export default function DashboardLoading() {
   return (

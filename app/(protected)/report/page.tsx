@@ -6,10 +6,21 @@ import { ReportClient } from './client';
 
 const REPORT_RANGE_DAYS = 30;
 
+/**
+ * Ngubah Date jadi YYYY-MM-DD (UTC).
+ *
+ * Dipake di: ReportPage (file ini).
+ */
 function toIsoDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Server component halaman /report: ambil ringkasan dashboard, timeline, sama
+ * laporan per device buat beberapa hari terakhir.
+ *
+ * Dipake di: Otomatis sama Next.js buat route /report.
+ */
 export default async function ReportPage() {
   const to = new Date();
   const from = new Date(to);

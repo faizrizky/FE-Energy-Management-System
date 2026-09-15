@@ -14,6 +14,12 @@ interface NotificationBellProps {
   alarms: AlarmDTO[];
 }
 
+/**
+ * Lonceng notifikasi + dropdown alarm terbaru; ada titik merah kalo masih ada
+ * alarm yang belom di-ack.
+ *
+ * Dipake di: components/shared/header.tsx.
+ */
 export function NotificationBell({ alarms }: NotificationBellProps) {
   const hasUnread = alarms.some((a) => a.status === 'ACTIVE_UNACK');
 

@@ -6,6 +6,14 @@ import {
 } from '@/lib/auth';
 import { requestTokenRefresh } from '@/lib/auth-shared';
 
+/**
+ * Route handler buat refresh sesi dari browser: ambil refresh token dari
+ * cookie httpOnly, minta token baru ke backend, simpen cookie baru. Bales 401
+ * (sesi habis, cookie dihapus), 429, atau 503 sesuai kondisi.
+ *
+ * Dipake di: lib/axios.ts → refreshSession (fetch POST /api/auth/refresh pas
+ *   dapet 401).
+ */
 export async function POST() {
   const refreshToken = await getRefreshTokenValue();
   if (!refreshToken) {

@@ -22,6 +22,11 @@ interface DeviceLogModalProps {
   onClose: (open: boolean) => void;
 }
 
+/**
+ * Modal riwayat perintah satu device, bisa di-search.
+ *
+ * Dipake di: rooms/detail/[roomId]/client.tsx.
+ */
 export function DeviceLogModal({
   device,
   logs,

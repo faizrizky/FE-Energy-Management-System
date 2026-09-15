@@ -25,6 +25,13 @@ interface AlarmClientProps {
 
 type AlarmTab = 'unread' | 'all';
 
+/**
+ * Isi halaman notifikasi/alarm: tab unread vs semua, paginasi di client, sama
+ * tombol acknowledge. Endpoint /alarms udah nggak ada di backend, jadi datanya
+ * selalu kosong.
+ *
+ * Dipake di: app/(protected)/alarm/page.tsx.
+ */
 export function AlarmClient({ initialData }: AlarmClientProps) {
   const [alarms, setAlarms] = useState<AlarmDTO[]>(initialData ?? []);
   const [tab, setTab] = useState<AlarmTab>('unread');

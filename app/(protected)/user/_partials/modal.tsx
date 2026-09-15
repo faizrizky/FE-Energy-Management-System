@@ -16,6 +16,12 @@ interface UserFormModalProps {
   onSuccess: (user: UserDTO) => void;
 }
 
+/**
+ * Modal tambah/edit user: manggil create/update API terus ngabarin parent
+ * lewat onSuccess.
+ *
+ * Dipake di: user/client.tsx.
+ */
 export function UserFormModal({
   open,
   user,

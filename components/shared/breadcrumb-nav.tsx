@@ -1,6 +1,11 @@
 import { ChevronRight } from "lucide-react";
 import { Fragment } from "react";
 
+/**
+ * Breadcrumb teks dengan pemisah panah; item terakhir di-highlight.
+ *
+ * Dipake di: components/shared/header.tsx.
+ */
 export function BreadcrumbNav({ items }: { items: string[] }) {
   return (
     <div className="flex h-10 items-center gap-1 rounded-lg">

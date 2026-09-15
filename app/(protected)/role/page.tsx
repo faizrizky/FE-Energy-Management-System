@@ -3,6 +3,12 @@ import { Header } from '@/components/shared/header';
 import { rolesApi } from '@/feat/role/api';
 import { RoleClient } from './client';
 
+/**
+ * Server component halaman /role: ambil session, list role, sama katalog
+ * permission.
+ *
+ * Dipake di: Otomatis sama Next.js buat route /role.
+ */
 export default async function RolePage() {
   const [session, roles, permissions] = await Promise.all([
     getSession(),

@@ -15,7 +15,12 @@ export interface RoomDevicesColumnHandlers {
   onIntervalChange: (device: RoomDeviceDTO, minutes: number) => void;
 }
 
-/** Column config for the "Rooms - device list" table (Figma node 18:9068). */
+/**
+ * Renderer tiap kolom tabel device di Room detail: devEUI/EUI, tipe, usage 24
+ * jam, interval, switch power + batal, tombol log & hapus.
+ *
+ * Dipake di: app/(protected)/rooms/detail/[roomId]/client.tsx.
+ */
 export function getRoomDevicesColumns({
   onToggleSelect,
   isSelected,

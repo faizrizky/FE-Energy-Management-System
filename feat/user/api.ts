@@ -9,6 +9,11 @@ export interface UserListParams {
 }
 
 export const usersApi = {
+  /**
+   * GET /users dari server (tanpa cache).
+   *
+   * Dipake di: user/page.tsx.
+   */
   list: ({
     page = 1,
     rowsPerPage = 10,
@@ -26,6 +31,13 @@ export const usersApi = {
     });
   },
 
+  /**
+   * Ngambil sampe 1000 user sekaligus dari server buat dropdown PIC/installer,
+   * langsung balikin array-nya.
+   *
+   * Dipake di: rooms/page.tsx, rooms/detail/[roomId]/page.tsx,
+   *   gateway/page.tsx.
+   */
   listSummary: async (): Promise<UserDTO[]> => {
     const result = await http<UserListResponseDTO>(
       '/users?page=1&rowsPerPage=1000',
@@ -34,6 +46,11 @@ export const usersApi = {
     return result.data;
   },
 
+  /**
+   * GET /users/:id dari server (tanpa cache).
+   *
+   * Dipake di: Belom dipake.
+   */
   getById: (id: string) =>
     http<UserDTO>(`/users/${id}`, { cache: 'no-store' }),
 };

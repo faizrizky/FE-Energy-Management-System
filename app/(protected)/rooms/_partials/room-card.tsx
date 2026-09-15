@@ -11,6 +11,12 @@ interface RoomCardProps {
   onDelete: (room: RoomListItemDTO) => void;
 }
 
+/**
+ * Kartu room versi mobile: nama, lokasi, gateway, device online/offline, usage
+ * 24 jam, switch power + jumlah pending, tombol edit & hapus.
+ *
+ * Dipake di: rooms/client.tsx (tampilan mobile).
+ */
 export function RoomCard({
   room,
   onTogglePower,

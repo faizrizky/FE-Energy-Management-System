@@ -31,6 +31,13 @@ export interface ButtonProps
     React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {}
 
+/**
+ * Tombol standar dengan varian (primary, outline, ghost, destructive) &
+ * ukuran; bisa asChild buat bungkus Link.
+ *
+ * Dipake di: Hampir semua form & halaman, ConfirmDialog, DateRangeFilter,
+ *   ErrorState, LoginClient.
+ */
 export const Button = React.forwardRef<
   HTMLButtonElement,
   ButtonProps & { asChild?: boolean }

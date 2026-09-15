@@ -19,6 +19,14 @@ interface UserFormProps {
   readOnly?: boolean;
 }
 
+/**
+ * Form tambah/edit user: nama, username, email, telepon, alamat, role,
+ * password (opsional pas edit). Bisa mode read-only buat detail.
+ *
+ * Dipake di:
+ * - user/_partials/modal.tsx → UserFormModal
+ * - user/_partials/detail-modal.tsx → UserDetailModal.
+ */
 export function UserForm({
   roles,
   isEdit,
@@ -173,6 +181,11 @@ export function UserForm({
   );
 }
 
+/**
+ * Pembungkus input form: label, hint, sama pesan error di bawahnya.
+ *
+ * Dipake di: UserForm (file ini).
+ */
 function Field({
   label,
   error,
@@ -196,6 +209,11 @@ function Field({
   );
 }
 
+/**
+ * Pembungkus <select> native biar ada ikon panah di kanan.
+ *
+ * Dipake di: UserForm (file ini).
+ */
 function SelectField({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative w-full">

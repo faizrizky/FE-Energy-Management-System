@@ -10,6 +10,12 @@ interface LoginPageProps {
   searchParams: Promise<{ redirectTo?: string }>;
 }
 
+/**
+ * getSession versi aman: kalo backend lagi rate limit atau error dianggep
+ * belom login, bukan ngelempar error.
+ *
+ * Dipake di: LoginPage (file ini).
+ */
 async function safeGetSession() {
   try {
     return await getSession();
@@ -24,6 +30,12 @@ async function safeGetSession() {
   }
 }
 
+/**
+ * Halaman /login: kalo udah login langsung dilempar ke redirectTo (cuma path
+ * internal yang diawali '/'), kalo belom nampilin LoginClient.
+ *
+ * Dipake di: Otomatis sama Next.js buat route /login.
+ */
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const [session, params] = await Promise.all([safeGetSession(), searchParams]);
 

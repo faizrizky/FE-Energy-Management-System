@@ -3,6 +3,13 @@
 import { useEffect, useRef } from 'react';
 import { connectSocket } from '@/lib/socket';
 
+/**
+ * Subscribe satu event socket; handler yang dipanggil selalu versi terbaru,
+ * dan listener dilepas pas unmount.
+ *
+ * Dipake di: Client halaman Device, Gateway, Report, Rooms, Room detail,
+ *   Schedule, dan hooks/use-device-commands.ts.
+ */
 export function useRealtimeEvent<T = unknown>(
   event: string,
   handler: (payload: T) => void

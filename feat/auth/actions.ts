@@ -17,6 +17,12 @@ export interface LoginActionResult {
   lockedOut?: boolean;
 }
 
+/**
+ * Server action logout: cabut refresh token di backend (kalo gagal tetep
+ * lanjut), hapus cookie, terus redirect ke /login.
+ *
+ * Dipake di: components/shared/sidebar.tsx (tombol Log out).
+ */
 export async function logoutAction(): Promise<void> {
   const refreshToken = await getRefreshTokenValue();
 
@@ -35,6 +41,13 @@ export async function logoutAction(): Promise<void> {
   redirect('/login');
 }
 
+/**
+ * Server action login: validasi input, POST /auth/login (plus captcha), simpen
+ * cookie token kalo berhasil. Balikin { success, message, lockedOut } buat
+ * ditampilin form.
+ *
+ * Dipake di: app/login/client.tsx → LoginClient.
+ */
 export async function loginAction(
   values: LoginFormValues,
   captchaToken?: string

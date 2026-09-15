@@ -9,6 +9,11 @@ interface FadeInUpProps {
   className?: string;
 }
 
+/**
+ * Animasi muncul dari bawah dengan delay sesuai urutan (index).
+ *
+ * Dipake di: components/shared/analytic-card.tsx.
+ */
 export function FadeInUp({ children, index = 0, className }: FadeInUpProps) {
   return (
     <motion.div

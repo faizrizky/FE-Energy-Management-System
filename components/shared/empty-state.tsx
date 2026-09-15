@@ -8,6 +8,12 @@ interface EmptyStateProps {
   action?: ReactNode;
 }
 
+/**
+ * Tampilan pas data kosong: ikon, judul, deskripsi, sama tombol aksi opsional.
+ *
+ * Dipake di: Halaman Alarm, Device, Gateway, Report, Role, Rooms, Room detail,
+ *   Schedule, User.
+ */
 export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
     <div className="flex w-full flex-1 flex-col items-center justify-center gap-4 py-10">

@@ -14,6 +14,13 @@ export interface DeviceColumnHandlers {
   onDelete: (device: DeviceDTO) => void;
 }
 
+/**
+ * Renderer tiap kolom tabel device: checkbox, nama/EUI, tipe, room, gateway,
+ * devEUI ("Not mapped" kalo kosong), interval, switch power + batal, tombol
+ * aksi.
+ *
+ * Dipake di: app/(protected)/device/client.tsx.
+ */
 export function getDeviceColumns({
   onToggleSelect,
   isSelected,

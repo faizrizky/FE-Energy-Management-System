@@ -8,6 +8,13 @@ interface TableToolbarProps {
   className?: string;
 }
 
+/**
+ * Bar di atas tabel: ringkasan di kiri, aksi (search/filter) di kanan,
+ * tabelnya di dalam.
+ *
+ * Dipake di: Halaman Device, Gateway, Role, Rooms, Room detail, Schedule,
+ *   User.
+ */
 export function TableToolbar({
   summary,
   actions,

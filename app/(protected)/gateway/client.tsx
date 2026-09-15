@@ -53,10 +53,22 @@ const GATEWAY_SORT_ACCESSORS = {
   status: (g: GatewayDTO) => g.status,
 };
 
+/**
+ * Ngubah Date jadi string YYYY-MM-DD (UTC) buat param filter tanggal ke API.
+ * (Fungsi yang sama ditulis ulang di 7 halaman.)
+ *
+ * Dipake di: Komponen client di file ini (loadX, filter tanggal).
+ */
 function toApiDate(date: Date | undefined) {
   return date ? date.toISOString().slice(0, 10) : undefined;
 }
 
+/**
+ * Isi halaman Gateway: tabel, search, filter tanggal, paginasi, hapus, detail,
+ * dan refresh otomatis pas ada event socket.
+ *
+ * Dipake di: gateway/page.tsx.
+ */
 export function GatewayClient({ initialData, users }: GatewayClientProps) {
   const [data, setData] = useState(initialData);
   const [page, setPage] = useState(initialData.page);

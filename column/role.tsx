@@ -11,6 +11,12 @@ export interface RoleColumnHandlers {
   onDelete: (role: RoleDTO) => void;
 }
 
+/**
+ * Renderer tiap kolom tabel role: checkbox, nama, jumlah user, jumlah
+ * permission, tombol aksi.
+ *
+ * Dipake di: app/(protected)/role/client.tsx.
+ */
 export function getRoleColumns({
   onToggleSelect,
   isSelected,

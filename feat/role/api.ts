@@ -8,6 +8,11 @@ export interface RoleListParams {
 }
 
 export const rolesApi = {
+  /**
+   * GET /roles dari server (tanpa cache).
+   *
+   * Dipake di: role/page.tsx.
+   */
   list: ({ page = 1, rowsPerPage = 10, search }: RoleListParams = {}) => {
     const query = new URLSearchParams({
       page: String(page),
@@ -19,6 +24,12 @@ export const rolesApi = {
     });
   },
 
+  /**
+   * Ngambil sampe 1000 role sekaligus dari server buat dropdown, langsung
+   * balikin array-nya.
+   *
+   * Dipake di: user/page.tsx.
+   */
   listSummary: async (): Promise<RoleDTO[]> => {
     const result = await http<RoleListResponseDTO>(
       '/roles?page=1&rowsPerPage=1000',
@@ -27,9 +38,20 @@ export const rolesApi = {
     return result.data;
   },
 
+  /**
+   * GET /roles/:id dari server (tanpa cache).
+   *
+   * Dipake di: Belom dipake.
+   */
   getById: (id: string) =>
     http<RoleDTO>(`/roles/${id}`, { cache: 'no-store' }),
 
+  /**
+   * GET /roles/permissions dari server, di-cache 5 menit karena katalognya
+   * jarang berubah.
+   *
+   * Dipake di: role/page.tsx.
+   */
   listPermissions: () =>
     http<PermissionDTO[]>('/roles/permissions', { next: { revalidate: 300 } }),
 };

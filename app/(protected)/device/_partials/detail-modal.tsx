@@ -12,6 +12,11 @@ interface DeviceDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Modal detail device (read-only) plus state loading.
+ *
+ * Dipake di: device/client.tsx.
+ */
 export function DeviceDetailModal({
   open,
   device,
@@ -76,6 +81,11 @@ export function DeviceDetailModal({
   );
 }
 
+/**
+ * Baris label–nilai buat nampilin detail data.
+ *
+ * Dipake di: DeviceDetailModal (file ini).
+ */
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-6">

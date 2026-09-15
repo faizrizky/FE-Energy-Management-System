@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Base shimmer block. All feature-level skeletons (dashboard, rooms, ...)
- * compose this primitive instead of re-implementing the pulse animation.
+ * Blok abu-abu berkedip buat placeholder loading.
+ *
+ * Dipake di: Semua loading.tsx, DeviceLogModal.
  */
 export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (

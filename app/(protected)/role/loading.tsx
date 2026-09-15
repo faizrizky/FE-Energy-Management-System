@@ -1,5 +1,10 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
+/**
+ * Skeleton loading yang tampil pas halaman /role lagi dimuat.
+ *
+ * Dipake di: Otomatis sama Next.js (loading.tsx) buat route /role.
+ */
 export default function RoleLoading() {
   return (
     <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-hidden bg-slate-50 p-8">
