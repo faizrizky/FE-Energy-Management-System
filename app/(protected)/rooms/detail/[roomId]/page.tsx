@@ -13,12 +13,14 @@ import { RoomDetailClient } from './client';
 export default async function RoomDetailPage({
   params,
 }: {
-  params: { roomId: string };
+  params: Promise<{ roomId: string }>;
 }) {
+  // Next 15: params sekarang Promise, jadi harus di-await dulu.
+  const { roomId } = await params;
   const [session, room, devices, users] = await Promise.all([
     getSession(),
-    roomsApi.getById(params.roomId),
-    roomsApi.listDevices(params.roomId, { page: 1, rowsPerPage: 10 }),
+    roomsApi.getById(roomId),
+    roomsApi.listDevices(roomId, { page: 1, rowsPerPage: 10 }),
     usersApi.listSummary(),
   ]);
 
