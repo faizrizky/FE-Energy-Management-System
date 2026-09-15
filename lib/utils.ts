@@ -37,8 +37,7 @@ export function formatNumber(value: number): string {
 /**
  * Format tanggal jadi "September 14, 2026".
  *
- * Dipake di: Room detail, user/_partials/detail-drawer.tsx, column
- *   gateway/report/user.
+ * Dipake di: Room detail, column gateway/report/user.
  */
 export function formatDate(date: string | Date): string {
   return new Date(date).toLocaleDateString('en-US', {

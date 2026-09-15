@@ -23,6 +23,7 @@ import {
 import { TableToolbar } from '@/components/shared/table-toolbar';
 import { Pagination } from '@/components/ui/pagination';
 import { toast } from '@/lib/toast-store';
+import { toApiDate } from '@/lib/date';
 import { formatNumber } from '@/lib/utils';
 import { useTableSort } from '@/lib/use-table-sort';
 import { getGatewayColumns } from '@/column/gateway';
@@ -52,16 +53,6 @@ const GATEWAY_SORT_ACCESSORS = {
   name: (g: GatewayDTO) => g.name,
   status: (g: GatewayDTO) => g.status,
 };
-
-/**
- * Ngubah Date jadi string YYYY-MM-DD (UTC) buat param filter tanggal ke API.
- * (Fungsi yang sama ditulis ulang di 7 halaman.)
- *
- * Dipake di: Komponen client di file ini (loadX, filter tanggal).
- */
-function toApiDate(date: Date | undefined) {
-  return date ? date.toISOString().slice(0, 10) : undefined;
-}
 
 /**
  * Isi halaman Gateway: tabel, search, filter tanggal, paginasi, hapus, detail,

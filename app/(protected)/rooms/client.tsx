@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { toast } from '@/lib/toast-store';
+import { toApiDate, parseApiDate } from '@/lib/date';
 import { formatNumber } from '@/lib/utils';
 import { useTableSort } from '@/lib/use-table-sort';
 import { getRoomsColumns } from '@/column/rooms';
@@ -59,27 +60,6 @@ const ROOMS_SORT_ACCESSORS = {
 };
 
 /**
- * Ngubah Date jadi string YYYY-MM-DD (UTC) buat param filter tanggal ke API.
- * (Fungsi yang sama ditulis ulang di 7 halaman.)
- *
- * Dipake di: Komponen client di file ini (loadX, filter tanggal).
- */
-function toApiDate(date: Date | undefined) {
-  return date ? date.toISOString().slice(0, 10) : undefined;
-}
-
-/**
- * Baca tanggal dari query URL. Balikin undefined kalo kosong atau nggak valid.
- *
- * Dipake di: RoomsClient (file ini), buat isi awal filter tanggal.
- */
-function parseUrlDate(value: string | null): Date | undefined {
-  if (!value) return undefined;
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? undefined : d;
-}
-
-/**
  * Isi halaman Rooms: statistik, tabel & kartu, search, filter tanggal
  * (disimpen di URL), paginasi, hapus, power ON/OFF per room, sinkron lewat
  * socket, dan muat ulang pas halaman dibalikin dari cache.
@@ -104,8 +84,8 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const [search, setSearch] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => ({
-    from: parseUrlDate(searchParams.get('createdFrom')),
-    to: parseUrlDate(searchParams.get('createdTo')),
+    from: parseApiDate(searchParams.get('createdFrom')),
+    to: parseApiDate(searchParams.get('createdTo')),
   }));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState<{

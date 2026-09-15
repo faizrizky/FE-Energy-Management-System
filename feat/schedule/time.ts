@@ -12,7 +12,7 @@ export function toDateInputValue(value: string): string {
  * valid.
  *
  * Dipake di: dashboard/_partials/active-schedules.tsx, schedule
- *   detail-drawer/detail-modal/schedule-card, column/schedule.tsx.
+ *   detail-modal/schedule-card, column/schedule.tsx.
  */
 export function formatScheduleDate(value: string): string {
   const d = new Date(value);
@@ -28,7 +28,7 @@ export function formatScheduleDate(value: string): string {
 /**
  * Format tanggal + jam pake zona UTC (misal "Sep 20, 2026, 01:05 PM").
  *
- * Dipake di: schedule/_partials/detail-drawer.tsx, detail-modal.tsx.
+ * Dipake di: schedule/_partials/detail-modal.tsx.
  */
 export function formatScheduleDateTime(value: string): string {
   const d = new Date(value);
@@ -45,8 +45,7 @@ export function formatScheduleDateTime(value: string): string {
 /**
  * Ngubah angka hari 0–6 jadi nama hari (Minggu = 0); "-" kalo di luar itu.
  *
- * Dipake di: schedule/_partials/detail-drawer.tsx, detail-modal.tsx
- *   (formatRepeat).
+ * Dipake di: schedule/_partials/detail-modal.tsx (formatRepeat).
  */
 export function dayName(day: number): string {
   const names = [

@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { toast } from '@/lib/toast-store';
+import { toApiDate } from '@/lib/date';
 import { formatNumber } from '@/lib/utils';
 import { useTableSort } from '@/lib/use-table-sort';
 import { getUserColumns } from '@/column/user';
@@ -46,16 +47,6 @@ const USER_SORT_ACCESSORS = {
   lastActiveAt: (u: UserDTO) =>
     u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : null,
 };
-
-/**
- * Ngubah Date jadi string YYYY-MM-DD (UTC) buat param filter tanggal ke API.
- * (Fungsi yang sama ditulis ulang di 7 halaman.)
- *
- * Dipake di: Komponen client di file ini (loadX, filter tanggal).
- */
-function toApiDate(date: Date | undefined) {
-  return date ? date.toISOString().slice(0, 10) : undefined;
-}
 
 /**
  * Isi halaman User: tabel, search, filter tanggal, paginasi, hapus

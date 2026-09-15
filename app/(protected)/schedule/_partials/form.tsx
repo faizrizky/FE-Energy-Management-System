@@ -29,6 +29,9 @@ interface ScheduleFormProps {
   submitting?: boolean;
 }
 
+const SCHEDULE_TIMEZONE_LABEL =
+  process.env.NEXT_PUBLIC_SCHEDULE_TIMEZONE_LABEL || 'WIB';
+
 const DAYS = [
   { value: 1, label: 'Monday', short: 'Mon' },
   { value: 2, label: 'Tuesday', short: 'Tue' },
@@ -80,8 +83,6 @@ export function ScheduleForm({
   const repeatType = watch('repeatType');
   const repeatDays = watch('repeatDays');
 
-  // Devices already came down from the server component — filtering by
-  // room is a plain derived value, no fetch and no effect needed.
   const roomDevices = useMemo(
     () => devices.filter((device) => device.roomId === roomId),
     [devices, roomId]
@@ -221,7 +222,12 @@ export function ScheduleForm({
 
       {/* TIME */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Field label="Start time" required error={errors.startTime?.message}>
+        <Field
+          label="Start time"
+          required
+          error={errors.startTime?.message}
+          hint={`Time in ${SCHEDULE_TIMEZONE_LABEL}.`}
+        >
           <Input
             type="time"
             {...register('startTime')}
