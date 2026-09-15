@@ -15,10 +15,10 @@ export const devicesApi = {
       ...(search ? { search } : {}),
     });
     return http<DeviceListResponseDTO>(`/devices?${query.toString()}`, {
-      next: { revalidate: 15 },
+      cache: 'no-store',
     });
   },
 
   getById: (id: string) =>
-    http<DeviceDTO>(`/devices/${id}`, { next: { revalidate: 15 } }),
+    http<DeviceDTO>(`/devices/${id}`, { cache: 'no-store' }),
 };

@@ -1,3 +1,9 @@
+import type {
+  DeviceCommandEventDTO,
+  DevicePendingCommandDTO,
+  DevicePowerStatus,
+} from '@/feat/device/dto';
+
 export interface RoomListItemDTO {
   id: string;
   name: string;
@@ -7,7 +13,15 @@ export interface RoomListItemDTO {
   devicesOffline: number;
   totalUsage24hKwh: number;
   isPowerOn: boolean;
+  pendingCommandCount?: number;
   isCritical: boolean;
+}
+
+export interface RoomPowerResultDTO {
+  roomId: string;
+  action: DevicePowerStatus;
+  results: DeviceCommandEventDTO[];
+  summary: { total: number; pending: number; failed: number };
 }
 
 export interface RoomListResponseDTO {
@@ -64,6 +78,7 @@ export interface RoomDeviceDTO {
   totalUsage24hKwh: number;
   intervalMinutes: number;
   isPowerOn: boolean;
+  pendingCommand?: DevicePendingCommandDTO | null;
 }
 
 export interface RoomDeviceLogEntryDTO {

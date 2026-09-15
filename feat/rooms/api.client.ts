@@ -4,6 +4,7 @@ import type {
   RoomDetailDTO,
   RoomDeviceLogEntryDTO,
   RoomDeviceListResponseDTO,
+  RoomPowerResultDTO,
   RoomUsageSummaryDTO,
 } from './dto';
 import type { RoomFormValues } from './schema';
@@ -87,13 +88,7 @@ export const roomsClientApi = {
 
   setPower: (roomId: string, isPowerOn: boolean) =>
     api
-      .post<{
-        results: {
-          deviceId: string;
-          status: string;
-          notes: string | null;
-        }[];
-      }>(`/rooms/${roomId}/power`, {
+      .post<RoomPowerResultDTO>(`/rooms/${roomId}/power`, {
         action: isPowerOn ? 'on' : 'off',
       })
       .then((res) => res.data),

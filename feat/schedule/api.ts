@@ -25,12 +25,12 @@ export const scheduleApi = {
     if (status) query.set('status', status);
     if (search) query.set('search', search);
     return http<ScheduleListResponseDTO>(`/schedules?${query.toString()}`, {
-      next: { revalidate: 10 },
+      cache: 'no-store',
     });
   },
 
   getById: (scheduleId: string) =>
     http<ScheduleDTO>(`/schedules/${scheduleId}`, {
-      next: { revalidate: 10 },
+      cache: 'no-store',
     }),
 };

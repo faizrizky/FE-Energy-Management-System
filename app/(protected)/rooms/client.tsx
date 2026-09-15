@@ -42,6 +42,8 @@ import { Trash2 } from 'lucide-react';
 import { TableToolbar } from '@/components/shared/table-toolbar';
 import { useRealtimeEvent } from '@/hooks/use-realtime-event';
 import { useRealtimeRefresh } from '@/hooks/use-realtime-refresh';
+import { useDeviceCommands } from '@/hooks/use-device-commands';
+import { useResyncOnRestore } from '@/hooks/use-resync-on-restore';
 
 interface RoomsClientProps {
   summary: RoomSummaryDTO;
@@ -177,6 +179,10 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
     }));
   });
   useRealtimeRefresh(['device:status', 'room:power']);
+  useResyncOnRestore(
+    () => loadRooms(page, rowsPerPage, search, dateRange),
+    initialData
+  );
 
   const openEdit = async (room: RoomListItemDTO) => {
     try {
@@ -222,14 +228,39 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
     loadRooms(1, nextRowsPerPage, search, dateRange);
   };
 
+  const roomsReloadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+
+  const { track } = useDeviceCommands((event) => {
+    if (event.status === 'pending') return;
+    if (roomsReloadTimeoutRef.current) {
+      clearTimeout(roomsReloadTimeoutRef.current);
+    }
+    roomsReloadTimeoutRef.current = setTimeout(
+      () => loadRooms(page, rowsPerPage, search, dateRange),
+      1500
+    );
+  });
+
   const handleTogglePower = async (room: RoomListItemDTO) => {
     const nextState = room.isPowerOn !== true;
     try {
-      await roomsClientApi.setPower(room.id, nextState);
+      const { results } = await roomsClientApi.setPower(room.id, nextState);
+      const pending = results
+        .map((result) => track(result))
+        .filter((result) => result.status === 'pending').length;
+
+      if (pending > 0) {
+        toast.info(`Command sent to ${pending} device(s)`, {
+          description:
+            'Waiting for meter confirmation, this can take a few minutes.',
+        });
+      }
       setData((prev) => ({
         ...prev,
-        data: prev.data.map((d) =>
-          d.id === room.id ? { ...d, status: nextState ? 'on' : 'off' } : d
+        data: prev.data.map((r) =>
+          r.id === room.id ? { ...r, pendingCommandCount: pending } : r
         ),
       }));
     } catch (err) {

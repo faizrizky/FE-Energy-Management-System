@@ -37,7 +37,15 @@ import type { GatewayDTO } from '@/feat/gateway/dto';
 import { DeviceFormModal } from './_partials/modal';
 import { TableToolbar } from '@/components/shared/table-toolbar';
 import { useRealtimeEvent } from '@/hooks/use-realtime-event';
-import type { DeviceStatusEventDTO } from '@/feat/device/dto';
+import type {
+  DeviceCommandEventDTO,
+  DeviceStatusEventDTO,
+} from '@/feat/device/dto';
+import {
+  reduceCommandEvent,
+  useDeviceCommands,
+} from '@/hooks/use-device-commands';
+import { useResyncOnRestore } from '@/hooks/use-resync-on-restore';
 import { DeviceDetailModal } from './_partials/detail-modal';
 import { connectSocket } from '@/lib/socket';
 
@@ -181,6 +189,11 @@ export function DeviceClient({
     }));
   });
 
+  useResyncOnRestore(
+    () => loadDevices(page, rowsPerPage, search, dateRange),
+    initialData
+  );
+
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPage(1);
@@ -208,22 +221,49 @@ export function DeviceClient({
     loadDevices(1, nextRowsPerPage, search, dateRange);
   };
 
+  const applyCommandEvent = (event: DeviceCommandEventDTO) => {
+    setData((prev) => ({
+      ...prev,
+      data: prev.data.map((d) =>
+        d.id === event.deviceId
+          ? reduceCommandEvent(d, event, (item, action) => ({
+              ...item,
+              status: action,
+            }))
+          : d
+      ),
+    }));
+  };
+
+  const { track } = useDeviceCommands(applyCommandEvent);
+
   const handleTogglePower = async (device: DeviceDTO) => {
-    const nextState = device.status !== 'on';
+    const current = device.pendingCommand
+      ? device.pendingCommand.action === 'on'
+      : device.status === 'on';
     try {
-      await devicesClientApi.setPower(device.id, nextState);
-      setData((prev) => ({
-        ...prev,
-        data: prev.data.map((d) =>
-          d.id === device.id ? { ...d, status: nextState ? 'on' : 'off' } : d
-        ),
-      }));
+      const result = await devicesClientApi.setPower(device.id, !current);
+      applyCommandEvent(track(result));
     } catch (err) {
       toast.error(
         err instanceof Error
           ? err.message
           : 'Could not change device power state'
       );
+      loadDevices(page, rowsPerPage, search, dateRange);
+    }
+  };
+
+  const handleCancelPower = async (device: DeviceDTO) => {
+    try {
+      const result = await devicesClientApi.cancelPower(device.id);
+      result.cancelled.forEach((event) => applyCommandEvent(track(event)));
+      toast.info('Power command cancelled');
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Could not cancel power command'
+      );
+      loadDevices(page, rowsPerPage, search, dateRange);
     }
   };
 
@@ -306,6 +346,7 @@ export function DeviceClient({
       }),
     onView: openDeviceDetail,
     onTogglePower: handleTogglePower,
+    onCancelPower: handleCancelPower,
     onEdit: (device) => setModalState({ open: true, device }),
     onDelete: (device) => setDeleteTarget(device),
   });

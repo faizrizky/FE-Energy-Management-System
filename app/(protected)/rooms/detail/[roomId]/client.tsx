@@ -34,13 +34,21 @@ import type {
   RoomDTO,
   RoomUsageSummaryDTO,
 } from '@/feat/rooms/dto';
-import type { DeviceStatusEventDTO } from '@/feat/device/dto';
+import type {
+  DeviceCommandEventDTO,
+  DeviceStatusEventDTO,
+} from '@/feat/device/dto';
 import type { UserSummaryDTO } from '@/feat/user/dto';
 import { DeviceLogModal } from './_partials/device-log-modal';
 import { RoomFormModal } from '../../_partials/modal';
 import { TableToolbar } from '@/components/shared/table-toolbar';
 import { EmptyState } from '@/components/shared/empty-state';
 import { useRealtimeEvent } from '@/hooks/use-realtime-event';
+import { useResyncOnRestore } from '@/hooks/use-resync-on-restore';
+import {
+  reduceCommandEvent,
+  useDeviceCommands,
+} from '@/hooks/use-device-commands';
 import { useTableSort } from '@/lib/use-table-sort';
 
 interface RoomDetailClientProps {
@@ -148,6 +156,14 @@ export function RoomDetailClient({
 
   useRealtimeEvent<DeviceStatusEventDTO>('device:status', (payload) => {
     if (payload.roomId !== roomInfo.id) return;
+    setDevicesData((prev) => ({
+      ...prev,
+      data: prev.data.map((d) =>
+        d.id === payload.deviceId
+          ? { ...d, isPowerOn: payload.status === 'on' }
+          : d
+      ),
+    }));
     if (usageRefreshTimeoutRef.current) {
       clearTimeout(usageRefreshTimeoutRef.current);
     }
@@ -156,6 +172,11 @@ export function RoomDetailClient({
       USAGE_REFRESH_DEBOUNCE_MS
     );
   });
+
+  useResyncOnRestore(() => {
+    loadDevices(page, rowsPerPage, search, dateRange);
+    refreshUsage();
+  }, devices);
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -186,30 +207,50 @@ export function RoomDetailClient({
   const deviceRows = devicesData.data;
   const online = deviceRows.filter((device) => device.isPowerOn).length;
 
-  const handleTogglePower = async (device: RoomDeviceDTO) => {
-    const nextState = !device.isPowerOn;
-
+  const applyCommandEvent = (event: DeviceCommandEventDTO) => {
+    if (event.roomId !== roomInfo.id) return;
     setDevicesData((prev) => ({
       ...prev,
       data: prev.data.map((d) =>
-        d.id === device.id ? { ...d, isPowerOn: nextState } : d
+        d.id === event.deviceId
+          ? reduceCommandEvent(d, event, (item, action) => ({
+              ...item,
+              isPowerOn: action === 'on',
+            }))
+          : d
       ),
     }));
+  };
 
+  const { track } = useDeviceCommands(applyCommandEvent);
+
+  const handleTogglePower = async (device: RoomDeviceDTO) => {
+    const current = device.pendingCommand
+      ? device.pendingCommand.action === 'on'
+      : device.isPowerOn;
     try {
-      await devicesClientApi.setPower(device.id, nextState);
+      const result = await devicesClientApi.setPower(device.id, !current);
+      applyCommandEvent(track(result));
     } catch (err) {
-      setDevicesData((prev) => ({
-        ...prev,
-        data: prev.data.map((d) =>
-          d.id === device.id ? { ...d, isPowerOn: device.isPowerOn } : d
-        ),
-      }));
       toast.error(
         err instanceof Error
           ? err.message
           : 'Could not change device power state'
       );
+      loadDevices(page, rowsPerPage, search, dateRange);
+    }
+  };
+
+  const handleCancelPower = async (device: RoomDeviceDTO) => {
+    try {
+      const result = await devicesClientApi.cancelPower(device.id);
+      result.cancelled.forEach((event) => applyCommandEvent(track(event)));
+      toast.info('Power command cancelled');
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Could not cancel power command'
+      );
+      loadDevices(page, rowsPerPage, search, dateRange);
     }
   };
 
@@ -297,6 +338,7 @@ export function RoomDetailClient({
         return next;
       }),
     onTogglePower: handleTogglePower,
+    onCancelPower: handleCancelPower,
     onViewLog: openDeviceLog,
     onDelete: (device) => setDeleteTarget(device),
     onIntervalChange: (device, minutes) => {

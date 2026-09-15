@@ -15,10 +15,10 @@ export const gatewaysApi = {
       ...(search ? { search } : {}),
     });
     return http<GatewayListResponseDTO>(`/gateways?${query.toString()}`, {
-      next: { revalidate: 15 },
+      cache: 'no-store',
     });
   },
 
   getById: (id: string) =>
-    http<GatewayDetailDTO>(`/gateways/${id}`, { next: { revalidate: 15 } }),
+    http<GatewayDetailDTO>(`/gateways/${id}`, { cache: 'no-store' }),
 };

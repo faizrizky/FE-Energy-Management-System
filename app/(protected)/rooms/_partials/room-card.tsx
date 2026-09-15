@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
+import { DevicePowerControl } from '@/components/shared/device-power-control';
 import { formatKwh } from '@/lib/utils';
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
 
@@ -90,9 +90,11 @@ export function RoomCard({
 
       <div className="flex items-center justify-between">
         <span className="text-xs text-slate-500">Device status</span>
-        <Switch
+        <DevicePowerControl
           checked={room.isPowerOn}
-          onCheckedChange={() => onTogglePower(room)}
+          pending={(room.pendingCommandCount ?? 0) > 0}
+          pendingLabel={`${room.pendingCommandCount} pending`}
+          onToggle={() => onTogglePower(room)}
         />
       </div>
     </div>

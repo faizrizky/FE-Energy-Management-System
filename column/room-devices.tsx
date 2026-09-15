@@ -1,6 +1,6 @@
 import { FileClock, Trash2 } from 'lucide-react';
 import { TableActionButton } from '@/components/shared/table-action-button';
-import { Switch } from '@/components/ui/switch';
+import { DevicePowerControl } from '@/components/shared/device-power-control';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatKwh } from '@/lib/utils';
 import type { RoomDeviceDTO } from '@/feat/rooms/dto';
@@ -9,6 +9,7 @@ export interface RoomDevicesColumnHandlers {
   onToggleSelect: (id: string) => void;
   isSelected: (id: string) => boolean;
   onTogglePower: (device: RoomDeviceDTO) => void;
+  onCancelPower: (device: RoomDeviceDTO) => void;
   onViewLog: (device: RoomDeviceDTO) => void;
   onDelete: (device: RoomDeviceDTO) => void;
   onIntervalChange: (device: RoomDeviceDTO, minutes: number) => void;
@@ -19,6 +20,7 @@ export function getRoomDevicesColumns({
   onToggleSelect,
   isSelected,
   onTogglePower,
+  onCancelPower,
   onViewLog,
   onDelete,
   onIntervalChange,
@@ -54,9 +56,16 @@ export function getRoomDevicesColumns({
       );
     },
     status: (device: RoomDeviceDTO) => (
-      <Switch
-        checked={device.isPowerOn}
-        onCheckedChange={() => onTogglePower(device)}
+      <DevicePowerControl
+        checked={
+          device.pendingCommand
+            ? device.pendingCommand.action === 'on'
+            : device.isPowerOn
+        }
+        pending={Boolean(device.pendingCommand)}
+        pendingTitle={device.pendingCommand?.notes}
+        onToggle={() => onTogglePower(device)}
+        onCancel={() => onCancelPower(device)}
       />
     ),
     action: (device: RoomDeviceDTO) => (

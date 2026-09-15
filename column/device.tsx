@@ -1,6 +1,6 @@
 import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { TableActionButton } from '@/components/shared/table-action-button';
-import { Switch } from '@/components/ui/switch';
+import { DevicePowerControl } from '@/components/shared/device-power-control';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { DeviceDTO } from '@/feat/device/dto';
 
@@ -8,6 +8,7 @@ export interface DeviceColumnHandlers {
   onToggleSelect: (id: string) => void;
   isSelected: (id: string) => boolean;
   onTogglePower: (device: DeviceDTO) => void;
+  onCancelPower: (device: DeviceDTO) => void;
   onView: (device: DeviceDTO) => void;
   onEdit: (device: DeviceDTO) => void;
   onDelete: (device: DeviceDTO) => void;
@@ -17,6 +18,7 @@ export function getDeviceColumns({
   onToggleSelect,
   isSelected,
   onTogglePower,
+  onCancelPower,
   onView,
   onEdit,
   onDelete,
@@ -54,9 +56,16 @@ export function getDeviceColumns({
       <span className="text-slate-500">{device.intervalMinutes} min</span>
     ),
     status: (device: DeviceDTO) => (
-      <Switch
-        checked={device.status === 'on'}
-        onCheckedChange={() => onTogglePower(device)}
+      <DevicePowerControl
+        checked={
+          device.pendingCommand
+            ? device.pendingCommand.action === 'on'
+            : device.status === 'on'
+        }
+        pending={Boolean(device.pendingCommand)}
+        pendingTitle={device.pendingCommand?.notes}
+        onToggle={() => onTogglePower(device)}
+        onCancel={() => onCancelPower(device)}
       />
     ),
     action: (device: DeviceDTO) => (

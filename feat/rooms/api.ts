@@ -24,13 +24,12 @@ export interface RoomDetailParams {
 }
 
 export const roomsApi = {
-  getSummary: () =>
-    http<RoomSummaryDTO>('/rooms/stats', { next: { revalidate: 30 } }),
+  getSummary: () => http<RoomSummaryDTO>('/rooms/stats', { cache: 'no-store' }),
 
   listSummary: async (): Promise<RoomListItemDTO[]> => {
     const result = await http<RoomListResponseDTO>(
       '/rooms?page=1&rowsPerPage=1000',
-      { next: { revalidate: 30 } }
+      { cache: 'no-store' }
     );
     return result.data;
   },
@@ -52,7 +51,7 @@ export const roomsApi = {
       ...(roleFilter ? { roleFilter } : {}),
     });
     return http<RoomListResponseDTO>(`/rooms?${query.toString()}`, {
-      next: { revalidate: 15 },
+      cache: 'no-store',
     });
   },
 
@@ -66,7 +65,7 @@ export const roomsApi = {
       ...(search ? { search } : {}),
     });
     return http<RoomDetailDTO>(`/rooms/${roomId}?${query.toString()}`, {
-      next: { revalidate: 15 },
+      cache: 'no-store',
     });
   },
 
@@ -80,11 +79,11 @@ export const roomsApi = {
     });
     return http<RoomDeviceListResponseDTO>(
       `/rooms/${roomId}/devices?${query.toString()}`,
-      { next: { revalidate: 15 } }
+      { cache: 'no-store' }
     );
   },
   getDevices: (roomId: string) =>
     http<RoomDeviceDTO[]>(`/rooms/${roomId}/devices`, {
-      next: { revalidate: 15 },
+      cache: 'no-store',
     }),
 };

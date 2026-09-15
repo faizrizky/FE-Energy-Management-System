@@ -1,5 +1,38 @@
 export type DevicePowerStatus = 'on' | 'off';
 
+export type DeviceCommandStatus =
+  | 'pending'
+  | 'success'
+  | 'failed'
+  | 'cancelled';
+
+export interface DevicePendingCommandDTO {
+  id: string;
+  action: DevicePowerStatus;
+  notes: string | null;
+  requestedAt: string;
+  deadline: string;
+}
+
+export interface DeviceCommandEventDTO {
+  commandId: string;
+  deviceId: string;
+  deviceName: string | null;
+  roomId: string;
+  action: DevicePowerStatus;
+  status: DeviceCommandStatus;
+  notes: string | null;
+  requestedAt: string;
+  deadline: string;
+  timestamp: string;
+}
+
+export interface DeviceCancelPowerResultDTO {
+  deviceId: string;
+  status: DevicePowerStatus;
+  cancelled: DeviceCommandEventDTO[];
+}
+
 export interface DeviceRoomDTO {
   id: string;
   name: string;
@@ -25,6 +58,7 @@ export interface DeviceDTO {
   gatewayId: string;
   room?: DeviceRoomDTO | null;
   gateway?: DeviceGatewayDTO | null;
+  pendingCommand?: DevicePendingCommandDTO | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -11,6 +11,6 @@ function buildQuery({ from, to, roomId, deviceId }: ReportExportParams) {
 export const reportApi = {
   getSummary: (params: ReportExportParams) =>
     http<ReportDeviceRowDTO[]>(`/reports/summary?${buildQuery(params)}`, {
-      next: { revalidate: 60 },
+      cache: 'no-store',
     }),
 };

@@ -1,7 +1,7 @@
 import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { StatusDot } from '@/components/shared/status-dot';
 import { TableActionButton } from '@/components/shared/table-action-button';
-import { Switch } from '@/components/ui/switch';
+import { DevicePowerControl } from '@/components/shared/device-power-control';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatKwh } from '@/lib/utils';
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
@@ -60,9 +60,11 @@ export function getRoomsColumns({
       </span>
     ),
     status: (room: RoomListItemDTO) => (
-      <Switch
+      <DevicePowerControl
         checked={room.isPowerOn}
-        onCheckedChange={() => onTogglePower(room)}
+        pending={(room.pendingCommandCount ?? 0) > 0}
+        pendingLabel={`${room.pendingCommandCount} pending`}
+        onToggle={() => onTogglePower(room)}
       />
     ),
     action: (room: RoomListItemDTO) => (

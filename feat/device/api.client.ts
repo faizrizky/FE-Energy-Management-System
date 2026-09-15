@@ -1,5 +1,11 @@
 import { api } from '@/lib/axios';
-import type { DeviceDetailDTO, DeviceDTO, DeviceListResponseDTO } from './dto';
+import type {
+  DeviceCancelPowerResultDTO,
+  DeviceCommandEventDTO,
+  DeviceDetailDTO,
+  DeviceDTO,
+  DeviceListResponseDTO,
+} from './dto';
 import type { DeviceFormValues } from './schema';
 
 export interface DeviceListParams {
@@ -51,15 +57,16 @@ export const devicesClientApi = {
 
   remove: (id: string) => api.delete(`/devices/${id}`).then(() => undefined),
 
+  /** Membalas status `pending`; hasil akhir datang lewat socket `device:command`. */
   setPower: (id: string, isPowerOn: boolean) =>
     api
-      .post<{
-        deviceId: string;
-        action: string;
-        status: string;
-        notes: string | null;
-      }>(`/devices/${id}/power`, {
+      .post<DeviceCommandEventDTO>(`/devices/${id}/power`, {
         action: isPowerOn ? 'on' : 'off',
       })
+      .then((res) => res.data),
+
+  cancelPower: (id: string) =>
+    api
+      .post<DeviceCancelPowerResultDTO>(`/devices/${id}/power/cancel`)
       .then((res) => res.data),
 };
