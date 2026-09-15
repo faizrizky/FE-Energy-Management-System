@@ -39,14 +39,6 @@ export const rolesApi = {
   },
 
   /**
-   * GET /roles/:id dari server (tanpa cache).
-   *
-   * Dipake di: Belom dipake.
-   */
-  getById: (id: string) =>
-    http<RoleDTO>(`/roles/${id}`, { cache: 'no-store' }),
-
-  /**
    * GET /roles/permissions dari server, di-cache 5 menit karena katalognya
    * jarang berubah.
    *

@@ -1,5 +1,5 @@
 import { http } from '@/lib/http';
-import type { GatewayListResponseDTO, GatewayDetailDTO } from './dto';
+import type { GatewayListResponseDTO } from './dto';
 
 export interface GatewayListParams {
   page?: number;
@@ -23,12 +23,4 @@ export const gatewaysApi = {
       cache: 'no-store',
     });
   },
-
-  /**
-   * GET /gateways/:id dari server (tanpa cache).
-   *
-   * Dipake di: Belom dipake.
-   */
-  getById: (id: string) =>
-    http<GatewayDetailDTO>(`/gateways/${id}`, { cache: 'no-store' }),
 };

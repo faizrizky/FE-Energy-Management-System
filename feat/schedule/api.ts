@@ -1,5 +1,5 @@
 import { http } from '@/lib/http';
-import type { ScheduleDTO, ScheduleListResponseDTO } from './dto';
+import type { ScheduleListResponseDTO } from './dto';
 
 export interface ScheduleListParams {
   roomId?: string;
@@ -33,14 +33,4 @@ export const scheduleApi = {
       cache: 'no-store',
     });
   },
-
-  /**
-   * GET /schedules/:id dari server (tanpa cache).
-   *
-   * Dipake di: Belom dipake.
-   */
-  getById: (scheduleId: string) =>
-    http<ScheduleDTO>(`/schedules/${scheduleId}`, {
-      cache: 'no-store',
-    }),
 };

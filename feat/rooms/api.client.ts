@@ -4,18 +4,18 @@ import type {
   RoomDetailDTO,
   RoomDeviceLogEntryDTO,
   RoomDeviceListResponseDTO,
+  RoomListResponseDTO,
   RoomPowerResultDTO,
   RoomUsageSummaryDTO,
 } from './dto';
 import type { RoomFormValues } from './schema';
 
 export interface RoomListParams {
-  roomId?: string;
   page?: number;
   rowsPerPage?: number;
   search?: string;
-  scheduledFrom?: string;
-  scheduledTo?: string;
+  createdFrom?: string;
+  createdTo?: string;
 }
 
 export interface RoomDeviceListParams {
@@ -28,28 +28,26 @@ export interface RoomDeviceListParams {
 
 export const roomsClientApi = {
   /**
-   * Harusnya list room, tapi yang dipanggil malah GET /rooms/:roomId/devices
-   * dengan param scheduledFrom/To.
+   * GET /rooms dari browser dengan paginasi, search (kosong dibuang), & filter
+   * tanggal.
    *
-   * Dipake di: Belom dipake (rooms/client.tsx manggil api.get('/rooms')
-   *   langsung).
+   * Dipake di: rooms/client.tsx → loadRooms.
    */
   list: ({
-    roomId,
     page = 1,
     rowsPerPage = 10,
     search,
-    scheduledFrom,
-    scheduledTo,
+    createdFrom,
+    createdTo,
   }: RoomListParams = {}) =>
     api
-      .get<RoomDeviceListResponseDTO>(`/rooms/${roomId}/devices`, {
+      .get<RoomListResponseDTO>('/rooms', {
         params: {
           page,
           rowsPerPage,
           search: search || undefined,
-          scheduledFrom,
-          scheduledTo,
+          createdFrom,
+          createdTo,
         },
       })
       .then((res) => res.data),

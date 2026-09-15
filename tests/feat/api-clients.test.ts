@@ -97,10 +97,20 @@ describe('roomsClientApi', () => {
     expect(mocked.get).toHaveBeenLastCalledWith('/rooms/r1/usage-summary');
   });
 
-  // list() memanggil endpoint device per room dan mengirim scheduledFrom/To yang tidak dikenal endpoint itu.
-  test.fails('[BUG] roomsClientApi.list seharusnya memanggil /rooms, bukan /rooms/:id/devices', async () => {
-    await roomsClientApi.list({ page: 1 });
-    expect(mocked.get.mock.calls[0][0]).toBe('/rooms');
+  test('[positive] list memanggil /rooms dengan paginasi & filter tanggal', async () => {
+    await expect(
+      roomsClientApi.list({ page: 2, rowsPerPage: 20, search: 'srv', createdFrom: '2026-09-01', createdTo: '2026-09-30' })
+    ).resolves.toBe('RESULT');
+    expect(mocked.get).toHaveBeenCalledWith('/rooms', {
+      params: { page: 2, rowsPerPage: 20, search: 'srv', createdFrom: '2026-09-01', createdTo: '2026-09-30' },
+    });
+  });
+
+  test('[negative] list tanpa parameter -> default halaman 1, search kosong dibuang', async () => {
+    await roomsClientApi.list({ search: '' });
+    expect(mocked.get).toHaveBeenCalledWith('/rooms', {
+      params: { page: 1, rowsPerPage: 10, search: undefined, createdFrom: undefined, createdTo: undefined },
+    });
   });
 });
 
@@ -201,8 +211,6 @@ describe('server api (feat/*/api.ts) — kebijakan cache', () => {
   test('[positive] data yang bisa berubah lewat CRUD/power selalu no-store', async () => {
     await devicesApi.list({ page: 2, search: 'AC' });
     expect(http).toHaveBeenLastCalledWith('/devices?page=2&rowsPerPage=10&search=AC', noStore);
-    await devicesApi.getById('d1');
-    expect(http).toHaveBeenLastCalledWith('/devices/d1', noStore);
 
     await roomsApi.list({ createdFrom: '2026-09-01' });
     expect(http).toHaveBeenLastCalledWith('/rooms?page=1&rowsPerPage=10&createdFrom=2026-09-01', noStore);

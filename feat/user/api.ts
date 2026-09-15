@@ -45,12 +45,4 @@ export const usersApi = {
     );
     return result.data;
   },
-
-  /**
-   * GET /users/:id dari server (tanpa cache).
-   *
-   * Dipake di: Belom dipake.
-   */
-  getById: (id: string) =>
-    http<UserDTO>(`/users/${id}`, { cache: 'no-store' }),
 };

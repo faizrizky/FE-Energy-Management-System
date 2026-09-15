@@ -1,5 +1,5 @@
 import { http } from '@/lib/http';
-import type { DeviceDTO, DeviceListResponseDTO } from './dto';
+import type { DeviceListResponseDTO } from './dto';
 
 export interface DeviceListParams {
   page?: number;
@@ -23,12 +23,4 @@ export const devicesApi = {
       cache: 'no-store',
     });
   },
-
-  /**
-   * GET /devices/:id dari server (tanpa cache).
-   *
-   * Dipake di: Belom dipake.
-   */
-  getById: (id: string) =>
-    http<DeviceDTO>(`/devices/${id}`, { cache: 'no-store' }),
 };

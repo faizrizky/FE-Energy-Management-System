@@ -3,7 +3,6 @@ import type {
   RoomListResponseDTO,
   RoomSummaryDTO,
   RoomDetailDTO,
-  RoomDeviceDTO,
   RoomListItemDTO,
   RoomDeviceListResponseDTO,
 } from './dto';
@@ -109,14 +108,4 @@ export const roomsApi = {
       { cache: 'no-store' }
     );
   },
-
-  /**
-   * GET /rooms/:id/devices tanpa paginasi dari server.
-   *
-   * Dipake di: Belom dipake.
-   */
-  getDevices: (roomId: string) =>
-    http<RoomDeviceDTO[]>(`/rooms/${roomId}/devices`, {
-      cache: 'no-store',
-    }),
 };

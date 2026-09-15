@@ -23,7 +23,6 @@ import {
   SortableTableHead,
 } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
-import { api } from '@/lib/axios';
 import { toast } from '@/lib/toast-store';
 import { formatNumber } from '@/lib/utils';
 import { useTableSort } from '@/lib/use-table-sort';
@@ -148,17 +147,15 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
       const requestId = ++loadRoomsRequestRef.current;
       setIsFetching(true);
       try {
-        const res = await api.get<RoomListResponseDTO>('/rooms', {
-          params: {
-            page: nextPage,
-            rowsPerPage: nextRowsPerPage,
-            search: nextSearch || undefined,
-            createdFrom: toApiDate(nextRange?.from),
-            createdTo: toApiDate(nextRange?.to),
-          },
+        const result = await roomsClientApi.list({
+          page: nextPage,
+          rowsPerPage: nextRowsPerPage,
+          search: nextSearch,
+          createdFrom: toApiDate(nextRange?.from),
+          createdTo: toApiDate(nextRange?.to),
         });
         if (requestId !== loadRoomsRequestRef.current) return;
-        setData(res.data);
+        setData(result);
       } catch (err) {
         if (requestId !== loadRoomsRequestRef.current) return;
         toast.error(
