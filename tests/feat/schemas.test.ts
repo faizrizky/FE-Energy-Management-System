@@ -24,17 +24,16 @@ describe('loginFormSchema', () => {
 });
 
 describe('deviceFormSchema', () => {
-  const valid = { name: 'AC', eui: 'E1', deviceType: 'AC', roomId: 'r1', gatewayId: 'g1', tbDeviceId: '', intervalMinutes: '60' };
+  const valid = { name: 'AC', eui: '08000000410000e4', deviceType: 'AC', roomId: 'r1', gatewayId: 'g1', intervalMinutes: '60' };
 
-  test('[positive] interval string di-coerce, tbDeviceId opsional', () => {
+  test('[positive] interval string di-coerce', () => {
     expect(ok(deviceFormSchema, valid).intervalMinutes).toBe(60);
-    ok(deviceFormSchema, { ...valid, tbDeviceId: undefined });
   });
 
   test('[negative] field wajib kosong & interval < 60', () => {
     expect(issues(deviceFormSchema, { ...valid, name: '', eui: '', deviceType: '', roomId: '', gatewayId: '' })).toEqual([
       'Device name is required',
-      'Device EUI is required',
+      'Device EUI must be a 16-character hex devEUI',
       'Component type is required',
       'Room is required',
       'Gateway is required',
@@ -42,9 +41,10 @@ describe('deviceFormSchema', () => {
     expect(issues(deviceFormSchema, { ...valid, intervalMinutes: 30 })).toEqual(['Minimum interval is 60 minutes']);
   });
 
-  // Frontend tidak memvalidasi format devEUI (16 hex) padahal backend menolaknya -> error baru muncul setelah submit.
-  test.fails('[BUG] tbDeviceId bukan 16 hex seharusnya ditolak di form', () => {
-    expect(deviceFormSchema.safeParse({ ...valid, tbDeviceId: 'abc' }).success).toBe(false);
+  // Dulu form nerima devEUI asal-asalan; sekarang eui wajib 16 hex.
+  test('[negative] eui bukan devEUI 16 hex ditolak', () => {
+    expect(deviceFormSchema.safeParse({ ...valid, eui: 'abc' }).success).toBe(false);
+    expect(deviceFormSchema.safeParse({ ...valid, eui: 'DEV-001' }).success).toBe(false);
   });
 });
 

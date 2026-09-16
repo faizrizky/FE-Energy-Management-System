@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Inbox, Trash2 } from 'lucide-react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
@@ -60,29 +60,128 @@ describe('Switch', () => {
 describe('DevicePowerControl', () => {
   test('[positive] tidak pending -> hanya switch, klik memanggil onToggle', async () => {
     const onToggle = vi.fn();
-    render(<DevicePowerControl checked onToggle={onToggle} onCancel={vi.fn()} />);
+    render(<DevicePowerControl checked onToggle={onToggle} />);
     expect(screen.queryByText('Waiting for meter')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Cancel power command')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('switch'));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  test('[positive] pending -> label, tooltip catatan, aria-busy & tombol batal', async () => {
-    const onCancel = vi.fn();
-    render(<DevicePowerControl checked={false} pending pendingTitle="Percobaan ke-2" onToggle={vi.fn()} onCancel={onCancel} />);
+  test('[positive] pending -> label, tooltip catatan & aria-busy', () => {
+    render(<DevicePowerControl checked={false} pending pendingTitle="Percobaan ke-2" onToggle={vi.fn()} />);
     expect(screen.getByRole('switch')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByText('Waiting for meter').closest('span')).toHaveAttribute('title', 'Percobaan ke-2');
-    await userEvent.click(screen.getByLabelText('Cancel power command'));
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Waiting for meter').closest('span[title]')).toHaveAttribute('title', 'Percobaan ke-2');
   });
 
-  test('[negative] pending tanpa onCancel -> tanpa tombol batal; switch tetap bisa diklik (menggantikan perintah)', async () => {
+  // Perintah relay dicoba ulang tiap beberapa detik; hitungannya ikut tampil saat pending.
+  test('[positive] pending + progres percobaan -> tampil "Resync in" & nomor percobaan', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const nextRetryAt = new Date(Date.now() + 5000).toISOString();
+      render(
+        <DevicePowerControl
+          checked
+          pending
+          resync={{ attempt: 3, maxAttempts: null, nextRetryAt }}
+          onToggle={vi.fn()}
+        />
+      );
+      expect(screen.getByText(/Resync in 5s/)).toBeInTheDocument();
+      expect(screen.getByText(/attempt 3/)).toBeInTheDocument();
+
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(screen.getByText(/Resync in 3s/)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('[negative] pending -> label pending tampil & switch terkunci', async () => {
     const onToggle = vi.fn();
     render(<DevicePowerControl checked pending pendingLabel="2 pending" onToggle={onToggle} />);
     expect(screen.getByText('2 pending')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Cancel power command')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('switch'));
-    expect(onToggle).toHaveBeenCalled();
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  // Klik beruntun saat pending dulu bikin banyak perintah kebalikan terkirim.
+  test('[negative] pending -> switch dikunci, klik berkali-kali tidak mengirim perintah', async () => {
+    const onToggle = vi.fn();
+    render(<DevicePowerControl checked={false} pending onToggle={onToggle} />);
+    const toggle = screen.getByRole('switch');
+    expect(toggle).toBeDisabled();
+    await userEvent.click(toggle);
+    await userEvent.click(toggle);
+    await userEvent.click(toggle);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  // Status belum pasti = posisi relai aslinya belum ketahuan, jangan kirim perintah dulu.
+  test('[negative] uncertain -> penanda muncul & switch ikut terkunci', async () => {
+    const onToggle = vi.fn();
+    render(<DevicePowerControl checked uncertain onToggle={onToggle} />);
+    expect(screen.getByText('Status unconfirmed')).toBeInTheDocument();
+    expect(screen.getByRole('switch')).toBeDisabled();
+    await userEvent.click(screen.getByRole('switch'));
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  test('[positive] uncertain + resync -> tampil hitungan mundur "Resync in"', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const nextRetryAt = new Date(Date.now() + 12000).toISOString();
+      render(
+        <DevicePowerControl
+          checked
+          uncertain
+          resync={{ attempt: 3, maxAttempts: 20, nextRetryAt }}
+          onToggle={vi.fn()}
+        />
+      );
+      expect(screen.getByText(/Resync in 12s/)).toBeInTheDocument();
+      expect(screen.getByText(/3\/20/)).toBeInTheDocument();
+
+      await act(async () => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(screen.getByText(/Resync in 8s/)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('[positive] resync sedang menunggu uplink (tanpa nextRetryAt) -> "Resync running"', () => {
+    render(
+      <DevicePowerControl
+        checked
+        uncertain
+        resync={{ attempt: 5, maxAttempts: 20, nextRetryAt: null }}
+        onToggle={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/Resync running/)).toBeInTheDocument();
+  });
+
+  test('[negative] tanpa data resync -> cuma penanda, tanpa hitungan mundur', () => {
+    render(<DevicePowerControl checked uncertain onToggle={vi.fn()} />);
+    expect(screen.getByText('Status unconfirmed')).toBeInTheDocument();
+    expect(screen.queryByText(/Resync/)).not.toBeInTheDocument();
+  });
+
+  test('[positive] uncertain hilang -> switch bisa dipakai lagi', async () => {
+    const onToggle = vi.fn();
+    const { rerender } = render(<DevicePowerControl checked uncertain onToggle={onToggle} />);
+    rerender(<DevicePowerControl checked onToggle={onToggle} />);
+    expect(screen.queryByText('Status unconfirmed')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('switch'));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  test('[negative] uncertain saat pending -> penanda disembunyikan (pending yang ditampilkan)', () => {
+    render(<DevicePowerControl checked pending uncertain onToggle={vi.fn()} />);
+    expect(screen.queryByText('Status unconfirmed')).not.toBeInTheDocument();
+    expect(screen.getByText('Waiting for meter')).toBeInTheDocument();
   });
 });
 
@@ -225,8 +324,7 @@ describe('Pagination', () => {
 describe('column renderers & RoomCard', () => {
   const device: DeviceDTO = {
     id: 'd1',
-    eui: 'E1',
-    tbDeviceId: null,
+    eui: '08000000410000e4',
     name: 'AC',
     deviceType: null,
     intervalMinutes: 30,
@@ -246,7 +344,6 @@ describe('column renderers & RoomCard', () => {
       onToggleSelect: vi.fn(),
       isSelected: vi.fn(() => false),
       onTogglePower: vi.fn(),
-      onCancelPower: vi.fn(),
       onView: vi.fn(),
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -262,13 +359,13 @@ describe('column renderers & RoomCard', () => {
       <div>
         {cols.component(device)}
         {cols.gateway(device)}
-        {cols.tbDeviceId(device)}
+        {cols.devEui(device)}
         {cols.room(device)}
         {cols.action(device)}
         {cols.checkbox(device)}
       </div>
     );
-    expect(screen.getByText('Not mapped')).toHaveClass('text-status-error');
+    expect(screen.getByText('08000000410000e4')).toBeInTheDocument();
     expect(screen.getAllByText('-')).toHaveLength(2);
     await userEvent.click(screen.getByLabelText('Edit AC'));
     await userEvent.click(screen.getByLabelText('Delete AC'));
@@ -280,16 +377,17 @@ describe('column renderers & RoomCard', () => {
     expect(h.onToggleSelect).toHaveBeenCalledWith('d1');
   });
 
-  test('[positive] device status saat pending menampilkan TARGET perintah, bukan status lama', async () => {
+  test('[positive] device status saat pending menampilkan TARGET perintah & switch terkunci', async () => {
     const h = handlers();
     const pending = { ...device, status: 'off' as const, pendingCommand: { id: 'c1', action: 'on' as const, notes: 'menunggu', requestedAt: '', deadline: '' } };
     render(<div>{getDeviceColumns(h).status(pending)}</div>);
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
-    await userEvent.click(screen.getByLabelText('Cancel power command'));
-    expect(h.onCancelPower).toHaveBeenCalledWith(pending);
+    expect(screen.getByRole('switch')).toBeDisabled();
+    await userEvent.click(screen.getByRole('switch'));
+    expect(h.onTogglePower).not.toHaveBeenCalled();
   });
 
-  test('[negative] device tanpa pending -> switch sesuai status & tanpa tombol batal', async () => {
+  test('[negative] device tanpa pending -> switch sesuai status & bisa diklik', async () => {
     const h = handlers();
     render(<div>{getDeviceColumns(h).status(device)}</div>);
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
@@ -301,8 +399,7 @@ describe('column renderers & RoomCard', () => {
     const h = handlers();
     const row: RoomDeviceDTO = {
       id: 'd1',
-      tbDeviceId: '08000000410000e4',
-      deviceEui: 'E1',
+      deviceEui: '08000000410000e4',
       deviceType: 'AC',
       totalUsage24hKwh: 3.4,
       intervalMinutes: 30,
@@ -342,6 +439,77 @@ describe('column renderers & RoomCard', () => {
     expect(h.onView).toHaveBeenCalledWith(room);
   });
 
+  test('[positive] kolom room dengan perintah pending -> switch terkunci & label pending', () => {
+    const h = handlers();
+    const cols = getRoomsColumns(h);
+    render(<div>{cols.status({ ...room, pendingCommandCount: 2 })}</div>);
+    expect(screen.getByRole('switch')).toBeDisabled();
+    expect(screen.getByText('2 pending')).toBeInTheDocument();
+  });
+
+  // Mati lampu di tengah perintah: jangan tampil hijau seolah masih nyala.
+  test('[negative] offline saat pending -> switch ke posisi Off & label Offline menang', () => {
+    const h = handlers();
+    const pending = {
+      ...device,
+      status: 'on' as const,
+      isOnline: false,
+      pendingCommand: { id: 'c1', action: 'on' as const, notes: null, requestedAt: '', deadline: '' },
+    };
+    render(<div>{getDeviceColumns(h).status(pending)}</div>);
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('switch')).toBeDisabled();
+    // Nggak ada tulisan apa-apa; alasannya cukup lewat tooltip switch.
+    expect(screen.queryByText('Offline')).not.toBeInTheDocument();
+    expect(screen.queryByText('Waiting for meter')).not.toBeInTheDocument();
+  });
+
+  test('[negative] offline + status belum pasti -> penanda unconfirmed disembunyikan', () => {
+    const h = handlers();
+    render(<div>{getDeviceColumns(h).status({ ...device, isOnline: false, statusUncertain: true })}</div>);
+    expect(screen.queryByText('Status unconfirmed')).not.toBeInTheDocument();
+    expect(screen.getByRole('switch')).toBeDisabled();
+  });
+
+  // Device yang meternya sudah lewat jadwal lapor: perintah nggak bakal nyampe.
+  test('[negative] device offline -> switch terkunci, tanpa tulisan tambahan', async () => {
+    const h = handlers();
+    render(<div>{getDeviceColumns(h).status({ ...device, isOnline: false })}</div>);
+    const toggle = screen.getByRole('switch');
+    expect(toggle).toBeDisabled();
+    expect(toggle).toHaveAttribute('title', expect.stringContaining('offline'));
+    expect(screen.queryByText('Offline')).not.toBeInTheDocument();
+    await userEvent.click(toggle);
+    expect(h.onTogglePower).not.toHaveBeenCalled();
+  });
+
+  test('[negative] batas online lewat -> switch ikut terkunci walau server bilang online', async () => {
+    const h = handlers();
+    const onlineUntil = new Date(Date.now() - 1000).toISOString();
+    render(<div>{getDeviceColumns(h).status({ ...device, isOnline: true, onlineUntil })}</div>);
+    expect(screen.getByRole('switch')).toBeDisabled();
+  });
+
+  test('[positive] device online -> switch bisa dipakai & tanpa tooltip offline', async () => {
+    const h = handlers();
+    const onlineUntil = new Date(Date.now() + 600000).toISOString();
+    render(<div>{getDeviceColumns(h).status({ ...device, isOnline: true, onlineUntil })}</div>);
+    expect(screen.getByRole('switch')).not.toHaveAttribute('title');
+    await userEvent.click(screen.getByRole('switch'));
+    expect(h.onTogglePower).toHaveBeenCalled();
+  });
+
+  // Satu device yang statusnya belum pasti -> switch room ikut dikunci.
+  test('[negative] kolom room dengan statusUncertain -> switch terkunci & ada penanda', async () => {
+    const h = handlers();
+    const cols = getRoomsColumns(h);
+    render(<div>{cols.status({ ...room, pendingCommandCount: 0, statusUncertain: true })}</div>);
+    expect(screen.getByText('Status unconfirmed')).toBeInTheDocument();
+    expect(screen.getByRole('switch')).toBeDisabled();
+    await userEvent.click(screen.getByRole('switch'));
+    expect(h.onTogglePower).not.toHaveBeenCalled();
+  });
+
   test('[negative] RoomCard tanpa pending & tanpa gateway', async () => {
     const h = handlers();
     render(<RoomCard room={{ ...room, pendingCommandCount: 0, gatewayId: null as unknown as string, devicesOnline: 0, devicesOffline: 3 }} onTogglePower={h.onTogglePower} onView={h.onView} onEdit={h.onEdit} onDelete={h.onDelete} />);
@@ -349,6 +517,16 @@ describe('column renderers & RoomCard', () => {
     expect(within(card).queryByText(/pending/)).not.toBeInTheDocument();
     expect(within(card).getByText('-')).toBeInTheDocument();
     expect(within(card).getByText('3 offline')).toBeInTheDocument();
+    // Semua device offline -> switch room ikut dikunci.
+    expect(within(card).getByRole('switch')).toBeDisabled();
+    await userEvent.click(within(card).getByRole('switch'));
+    expect(h.onTogglePower).not.toHaveBeenCalled();
+  });
+
+  test('[positive] RoomCard dengan device online -> switch bisa dipakai', async () => {
+    const h = handlers();
+    render(<RoomCard room={{ ...room, pendingCommandCount: 0, devicesOnline: 2 }} onTogglePower={h.onTogglePower} onView={h.onView} onEdit={h.onEdit} onDelete={h.onDelete} />);
+    const card = screen.getByText('Server').closest('div')!.parentElement!.parentElement!;
     await userEvent.click(within(card).getByRole('switch'));
     expect(h.onTogglePower).toHaveBeenCalled();
   });

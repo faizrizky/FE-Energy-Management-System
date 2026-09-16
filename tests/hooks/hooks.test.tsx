@@ -116,7 +116,12 @@ describe('useRealtimeRefresh', () => {
 });
 
 describe('reduceCommandEvent', () => {
-  type Row = { id: string; status: 'on' | 'off'; pendingCommand?: DevicePendingCommandDTO | null };
+  type Row = {
+    id: string;
+    status: 'on' | 'off';
+    pendingCommand?: DevicePendingCommandDTO | null;
+    statusUncertain?: boolean;
+  };
   const applySuccess = (row: Row, action: 'on' | 'off'): Row => ({ ...row, status: action });
   const row: Row = { id: 'd1', status: 'off', pendingCommand: null };
 
@@ -127,7 +132,15 @@ describe('reduceCommandEvent', () => {
       notes: null,
       requestedAt: '2026-09-15T10:00:00.000Z',
       deadline: '2026-09-15T10:30:00.000Z',
+      resync: null,
     });
+  });
+
+  // Tanpa ini, teks "Resync in 5s" cuma muncul setelah halaman di-reload.
+  test('[positive] progres percobaan dari event ikut dibawa ke pendingCommand', () => {
+    const resync = { attempt: 2, maxAttempts: null, nextRetryAt: '2026-09-15T10:00:05.000Z' };
+    const result = reduceCommandEvent(row, commandEvent({ resync }), applySuccess);
+    expect(result.pendingCommand?.resync).toEqual(resync);
   });
 
   test('[positive] success -> pending dibersihkan & status diterapkan', () => {
@@ -138,6 +151,32 @@ describe('reduceCommandEvent', () => {
   test.each(['failed', 'cancelled'] as const)('[negative] %s -> pending dibersihkan, status tetap', (status) => {
     const pending = reduceCommandEvent(row, commandEvent(), applySuccess);
     expect(reduceCommandEvent(pending, commandEvent({ status }), applySuccess)).toEqual({ id: 'd1', status: 'off', pendingCommand: null });
+  });
+
+  test('[positive] batal setelah downlink terkirim -> baris ditandai statusUncertain', () => {
+    const pending = reduceCommandEvent(row, commandEvent(), applySuccess);
+    const result = reduceCommandEvent(
+      pending,
+      commandEvent({ status: 'cancelled', statusUncertain: true, sentAt: '2026-09-15T10:00:05.000Z' }),
+      applySuccess
+    );
+    expect(result).toEqual({ id: 'd1', status: 'off', pendingCommand: null, statusUncertain: true });
+  });
+
+  test('[positive] perintah sukses berikutnya menghapus tanda statusUncertain', () => {
+    const uncertain: Row = { ...row, statusUncertain: true };
+    const pending = reduceCommandEvent(uncertain, commandEvent({ commandId: 'c2' }), applySuccess);
+    const result = reduceCommandEvent(pending, commandEvent({ commandId: 'c2', status: 'success' }), applySuccess);
+    expect(result).toMatchObject({ status: 'on', statusUncertain: false, pendingCommand: null });
+  });
+
+  test('[positive] status skipped -> pending dibersihkan, status & tanda tidak berubah', () => {
+    const pending = reduceCommandEvent(row, commandEvent(), applySuccess);
+    expect(reduceCommandEvent(pending, commandEvent({ status: 'skipped' }), applySuccess)).toEqual({
+      id: 'd1',
+      status: 'off',
+      pendingCommand: null,
+    });
   });
 
   test('[negative] event final untuk command lama tidak menghapus pending command baru', () => {

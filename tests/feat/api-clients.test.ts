@@ -47,21 +47,20 @@ describe('devicesClientApi', () => {
     });
   });
 
-  test('[positive/negative] create & update: tbDeviceId kosong dikirim null', async () => {
-    const values = { name: 'AC', eui: 'E1', deviceType: 'AC', roomId: 'r', gatewayId: 'g', tbDeviceId: '', intervalMinutes: 60 };
+  // eui device = devEUI ChirpStack, dikirim apa adanya.
+  test('[positive] create & update ngirim payload form apa adanya', async () => {
+    const values = { name: 'AC', eui: '08000000410000e4', deviceType: 'AC', roomId: 'r', gatewayId: 'g', intervalMinutes: 60 };
     await devicesClientApi.create(values);
-    expect(mocked.post).toHaveBeenCalledWith('/devices', { ...values, tbDeviceId: null });
-    await devicesClientApi.update('d1', { ...values, tbDeviceId: '08000000410000e4' });
-    expect(mocked.put).toHaveBeenCalledWith('/devices/d1', { ...values, tbDeviceId: '08000000410000e4' });
+    expect(mocked.post).toHaveBeenCalledWith('/devices', values);
+    await devicesClientApi.update('d1', values);
+    expect(mocked.put).toHaveBeenCalledWith('/devices/d1', values);
   });
 
-  test('[positive] setPower on/off, cancelPower, getById, remove', async () => {
+  test('[positive] setPower on/off, getById, remove', async () => {
     await devicesClientApi.setPower('d1', true);
     expect(mocked.post).toHaveBeenLastCalledWith('/devices/d1/power', { action: 'on' });
     await devicesClientApi.setPower('d1', false);
     expect(mocked.post).toHaveBeenLastCalledWith('/devices/d1/power', { action: 'off' });
-    await devicesClientApi.cancelPower('d1');
-    expect(mocked.post).toHaveBeenLastCalledWith('/devices/d1/power/cancel');
     await devicesClientApi.getById('d1');
     expect(mocked.get).toHaveBeenLastCalledWith('/devices/d1');
     await expect(devicesClientApi.remove('d1')).resolves.toBeUndefined();
