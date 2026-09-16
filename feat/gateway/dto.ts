@@ -5,6 +5,12 @@ export interface GatewayInstallerDTO {
   fullName: string;
 }
 
+export interface GatewayChirpstackInfoDTO {
+  registered: boolean;
+  name: string | null;
+  lastSeenAt: string | null;
+}
+
 export interface GatewayDTO {
   id: string;
   eui: string;
@@ -16,6 +22,7 @@ export interface GatewayDTO {
   installationDate: string | null;
   status: GatewayStatus;
   lastSeenAt: string | null;
+  chirpstack?: GatewayChirpstackInfoDTO | null;
   installedById: string | null;
   installedBy: GatewayInstallerDTO | null;
   createdAt: string;

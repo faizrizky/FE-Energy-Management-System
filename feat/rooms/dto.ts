@@ -2,6 +2,7 @@ import type {
   DeviceCommandEventDTO,
   DevicePendingCommandDTO,
   DevicePowerStatus,
+  DeviceResyncStateDTO,
 } from '@/feat/device/dto';
 
 export interface RoomListItemDTO {
@@ -13,7 +14,13 @@ export interface RoomListItemDTO {
   devicesOffline: number;
   totalUsage24hKwh: number;
   isPowerOn: boolean;
+
+  pendingAction?: DevicePowerStatus | null;
   pendingCommandCount?: number;
+  statusUncertain?: boolean;
+  statusResync?: DeviceResyncStateDTO | null;
+  pendingResync?: DeviceResyncStateDTO | null;
+  onlineUntil?: string | null;
   isCritical: boolean;
 }
 
@@ -72,13 +79,16 @@ export interface RoomDetailDTO extends RoomDTO {
 
 export interface RoomDeviceDTO {
   id: string;
-  tbDeviceId: string;
   deviceEui: string;
   deviceType: string;
   totalUsage24hKwh: number;
   intervalMinutes: number;
   isPowerOn: boolean;
   pendingCommand?: DevicePendingCommandDTO | null;
+  statusUncertain?: boolean;
+  statusResync?: DeviceResyncStateDTO | null;
+  isOnline?: boolean;
+  onlineUntil?: string | null;
 }
 
 export interface RoomDeviceLogEntryDTO {

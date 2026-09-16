@@ -43,7 +43,6 @@ export function DeviceForm({
       deviceType: '',
       roomId: '',
       gatewayId: '',
-      tbDeviceId: '',
       intervalMinutes: 60,
       ...defaultValues,
     },
@@ -60,9 +59,13 @@ export function DeviceForm({
           />
         </Field>
 
-        <Field label="Device EUI" error={errors.eui?.message}>
+        <Field
+          label="Device EUI"
+          error={errors.eui?.message}
+          hint="devEUI dari ChirpStack, 16 karakter hex."
+        >
           <Input
-            placeholder="e.g. DEV-0001"
+            placeholder="e.g. 08000000410000e4"
             {...register('eui')}
             aria-invalid={!!errors.eui}
           />
@@ -87,8 +90,6 @@ export function DeviceForm({
             min={60}
             {...register('intervalMinutes')}
             aria-invalid={!!errors.intervalMinutes}
-            readOnly={true}
-            className="bg-slate-100 text-slate-400 cursor-not-allowed select-none"
           />
         </Field>
       </div>
@@ -120,19 +121,6 @@ export function DeviceForm({
               </option>
             ))}
           </select>
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Field
-          label="ThingsBoard device ID"
-          error={errors.tbDeviceId?.message}
-          hint="Optional. UUID dari ThingsBoard, dibutuhkan buat power control."
-        >
-          <Input
-            placeholder="e.g. 11111111-1111-4111-8111-111111111111"
-            {...register('tbDeviceId')}
-          />
         </Field>
       </div>
 

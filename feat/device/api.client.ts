@@ -1,6 +1,5 @@
 import { api } from '@/lib/axios';
 import type {
-  DeviceCancelPowerResultDTO,
   DeviceCommandEventDTO,
   DeviceDetailDTO,
   DeviceDTO,
@@ -56,25 +55,15 @@ export const devicesClientApi = {
    * Dipake di: device/_partials/modal.tsx.
    */
   create: (payload: DeviceFormValues) =>
-    api
-      .post<DeviceDTO>('/devices', {
-        ...payload,
-        tbDeviceId: payload.tbDeviceId || null,
-      })
-      .then((res) => res.data),
+    api.post<DeviceDTO>('/devices', payload).then((res) => res.data),
 
   /**
-   * PUT /devices/:id; devEUI kosong dikirim null.
+   * PUT /devices/:id.
    *
    * Dipake di: device/_partials/modal.tsx.
    */
   update: (id: string, payload: DeviceFormValues) =>
-    api
-      .put<DeviceDTO>(`/devices/${id}`, {
-        ...payload,
-        tbDeviceId: payload.tbDeviceId || null,
-      })
-      .then((res) => res.data),
+    api.put<DeviceDTO>(`/devices/${id}`, payload).then((res) => res.data),
 
   /**
    * DELETE /devices/:id.
@@ -96,13 +85,4 @@ export const devicesClientApi = {
       })
       .then((res) => res.data),
 
-  /**
-   * POST /devices/:id/power/cancel buat batalin perintah yang masih pending.
-   *
-   * Dipake di: device/client.tsx, rooms/detail/[roomId]/client.tsx.
-   */
-  cancelPower: (id: string) =>
-    api
-      .post<DeviceCancelPowerResultDTO>(`/devices/${id}/power/cancel`)
-      .then((res) => res.data),
 };

@@ -41,7 +41,6 @@ export function DeviceFormModal({
     deviceType: device?.deviceType ?? '',
     roomId: device?.roomId ?? '',
     gatewayId: device?.gatewayId ?? '',
-    tbDeviceId: device?.tbDeviceId ?? '',
     intervalMinutes: device?.intervalMinutes ?? 60,
   };
 
