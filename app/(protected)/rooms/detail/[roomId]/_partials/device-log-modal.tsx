@@ -51,7 +51,7 @@ export function DeviceLogModal({
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-1">
           <p className="text-lg font-semibold text-emerald-500">
-            {device.tbDeviceId}
+            {device.deviceEui}
           </p>
           <p className="text-sm text-stone-500">{device.deviceEui}</p>
         </div>
