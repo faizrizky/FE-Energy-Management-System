@@ -97,9 +97,15 @@ export function RoomCard({
       <div className="flex items-center justify-between">
         <span className="text-xs text-slate-500">Device status</span>
         <DevicePowerControl
-          checked={room.isPowerOn}
+          checked={
+            room.pendingAction ? room.pendingAction === 'on' : room.isPowerOn
+          }
           pending={(room.pendingCommandCount ?? 0) > 0}
           pendingLabel={`${room.pendingCommandCount} pending`}
+          uncertain={room.statusUncertain}
+          resync={room.pendingResync ?? room.statusResync}
+          offline={room.devicesOnline === 0}
+          onlineUntil={room.onlineUntil}
           onToggle={() => onTogglePower(room)}
         />
       </div>

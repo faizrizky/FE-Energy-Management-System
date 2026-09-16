@@ -8,16 +8,14 @@ export interface DeviceColumnHandlers {
   onToggleSelect: (id: string) => void;
   isSelected: (id: string) => boolean;
   onTogglePower: (device: DeviceDTO) => void;
-  onCancelPower: (device: DeviceDTO) => void;
   onView: (device: DeviceDTO) => void;
   onEdit: (device: DeviceDTO) => void;
   onDelete: (device: DeviceDTO) => void;
 }
 
 /**
- * Renderer tiap kolom tabel device: checkbox, nama/EUI, tipe, room, gateway,
- * devEUI ("Not mapped" kalo kosong), interval, switch power + batal, tombol
- * aksi.
+ * Renderer tiap kolom tabel device: checkbox, nama, tipe, room, gateway,
+ * devEUI ChirpStack, interval, switch power, tombol aksi.
  *
  * Dipake di: app/(protected)/device/client.tsx.
  */
@@ -25,7 +23,6 @@ export function getDeviceColumns({
   onToggleSelect,
   isSelected,
   onTogglePower,
-  onCancelPower,
   onView,
   onEdit,
   onDelete,
@@ -38,10 +35,7 @@ export function getDeviceColumns({
       />
     ),
     device: (device: DeviceDTO) => (
-      <div className="flex flex-col gap-0.5 py-1">
-        <span>{device.name}</span>
-        <span className="text-[10px] text-slate-500">{device.eui}</span>
-      </div>
+      <span>{device.name}</span>
     ),
     component: (device: DeviceDTO) => (
       <span className="text-slate-500">{device.deviceType || '-'}</span>
@@ -52,12 +46,8 @@ export function getDeviceColumns({
     gateway: (device: DeviceDTO) => (
       <span className="text-slate-500">{device.gateway?.name ?? '-'}</span>
     ),
-    tbDeviceId: (device: DeviceDTO) => (
-      <span
-        className={device.tbDeviceId ? 'text-slate-500' : 'text-status-error'}
-      >
-        {device.tbDeviceId || 'Not mapped'}
-      </span>
+    devEui: (device: DeviceDTO) => (
+      <span className="text-slate-500">{device.eui}</span>
     ),
     interval: (device: DeviceDTO) => (
       <span className="text-slate-500">{device.intervalMinutes} min</span>
@@ -71,8 +61,11 @@ export function getDeviceColumns({
         }
         pending={Boolean(device.pendingCommand)}
         pendingTitle={device.pendingCommand?.notes}
+        uncertain={device.statusUncertain}
+        resync={device.pendingCommand?.resync ?? device.statusResync}
+        offline={device.isOnline === false}
+        onlineUntil={device.onlineUntil}
         onToggle={() => onTogglePower(device)}
-        onCancel={() => onCancelPower(device)}
       />
     ),
     action: (device: DeviceDTO) => (

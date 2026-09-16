@@ -33,12 +33,16 @@ function notify(event: DeviceCommandEventDTO) {
 /**
  * Nerapin event device:command ke satu baris data: pending ngisi
  * pendingCommand, final ngosongin pending-nya dan (kalo sukses) update status.
- * Event lama yang telat datang diabaikan.
+ * Kalo batal/gagal padahal downlink udah kekirim, barisnya ditandain
+ * statusUncertain. Event lama yang telat datang diabaikan.
  *
  * Dipake di: device/client.tsx, rooms/detail/[roomId]/client.tsx.
  */
 export function reduceCommandEvent<
-  T extends { pendingCommand?: DevicePendingCommandDTO | null },
+  T extends {
+    pendingCommand?: DevicePendingCommandDTO | null;
+    statusUncertain?: boolean;
+  },
 >(
   item: T,
   event: DeviceCommandEventDTO,
@@ -61,6 +65,7 @@ export function reduceCommandEvent<
         notes: event.notes,
         requestedAt: event.requestedAt,
         deadline: event.deadline,
+        resync: event.resync ?? null,
       },
     };
   }
@@ -69,7 +74,15 @@ export function reduceCommandEvent<
     item.pendingCommand?.id === event.commandId
       ? { ...item, pendingCommand: null }
       : item;
-  return event.status === 'success' ? applySuccess(next, event.action) : next;
+
+  if (event.status === 'success') {
+    const applied = applySuccess(next, event.action);
+    return applied.statusUncertain
+      ? { ...applied, statusUncertain: false }
+      : applied;
+  }
+
+  return event.statusUncertain ? { ...next, statusUncertain: true } : next;
 }
 
 /**

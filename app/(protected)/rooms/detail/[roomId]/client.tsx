@@ -37,6 +37,7 @@ import type {
 } from '@/feat/rooms/dto';
 import type {
   DeviceCommandEventDTO,
+  DeviceResyncEventDTO,
   DeviceStatusEventDTO,
 } from '@/feat/device/dto';
 import type { UserSummaryDTO } from '@/feat/user/dto';
@@ -164,7 +165,16 @@ export function RoomDetailClient({
       ...prev,
       data: prev.data.map((d) =>
         d.id === payload.deviceId
-          ? { ...d, isPowerOn: payload.status === 'on' }
+          ? {
+              ...d,
+              isPowerOn: payload.status === 'on',
+              ...(payload.source === 'telemetry'
+                ? { statusUncertain: false }
+                : {}),
+              ...(payload.online === undefined
+                ? {}
+                : { isOnline: payload.online }),
+            }
           : d
       ),
     }));
@@ -211,6 +221,16 @@ export function RoomDetailClient({
   const deviceRows = devicesData.data;
   const online = deviceRows.filter((device) => device.isPowerOn).length;
 
+  useRealtimeEvent<DeviceResyncEventDTO>('device:resync', (payload) => {
+    if (payload.roomId !== roomInfo.id) return;
+    setDevicesData((prev) => ({
+      ...prev,
+      data: prev.data.map((d) =>
+        d.id === payload.deviceId ? { ...d, statusResync: payload.resync } : d
+      ),
+    }));
+  });
+
   const applyCommandEvent = (event: DeviceCommandEventDTO) => {
     if (event.roomId !== roomInfo.id) return;
     setDevicesData((prev) => ({
@@ -245,25 +265,12 @@ export function RoomDetailClient({
     }
   };
 
-  const handleCancelPower = async (device: RoomDeviceDTO) => {
-    try {
-      const result = await devicesClientApi.cancelPower(device.id);
-      result.cancelled.forEach((event) => applyCommandEvent(track(event)));
-      toast.info('Power command cancelled');
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Could not cancel power command'
-      );
-      loadDevices(page, rowsPerPage, search, dateRange);
-    }
-  };
-
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
       await toast.promise(devicesClientApi.remove(deleteTarget.id), {
-        loading: `Removing ${deleteTarget.tbDeviceId}...`,
+        loading: `Removing ${deleteTarget.deviceEui}...`,
         success: 'Device has been removed from this room',
       });
       setDevicesData((prev) => ({
@@ -342,7 +349,6 @@ export function RoomDetailClient({
         return next;
       }),
     onTogglePower: handleTogglePower,
-    onCancelPower: handleCancelPower,
     onViewLog: openDeviceLog,
     onDelete: (device) => setDeleteTarget(device),
     onIntervalChange: (device, minutes) => {
@@ -647,7 +653,7 @@ export function RoomDetailClient({
           <>
             Are you sure you want to remove{' '}
             <span className="font-bold">
-              &quot;{deleteTarget?.tbDeviceId}&quot;
+              &quot;{deleteTarget?.deviceEui}&quot;
             </span>{' '}
             from this room? This action cannot be undone.
           </>

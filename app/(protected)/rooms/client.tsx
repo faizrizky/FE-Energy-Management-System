@@ -36,6 +36,10 @@ import type {
   RoomDTO,
 } from '@/feat/rooms/dto';
 import type { UserSummaryDTO } from '@/feat/user/dto';
+import type {
+  DeviceResyncEventDTO,
+  DeviceStatusEventDTO,
+} from '@/feat/device/dto';
 import { RoomFormModal } from './_partials/modal';
 import { RoomCard } from './_partials/room-card';
 import { Trash2 } from 'lucide-react';
@@ -102,6 +106,9 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadRoomsRequestRef = useRef(0);
+  const statusReloadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   const safeSummary: RoomSummaryDTO = {
     totalRooms: summary?.totalRooms ?? 0,
@@ -173,7 +180,25 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
       data: prev.data.filter((r) => r.id !== roomId),
     }));
   });
-  useRealtimeRefresh(['device:status', 'room:power']);
+  useRealtimeRefresh(['room:power']);
+  useRealtimeEvent<DeviceStatusEventDTO>('device:status', () => {
+    if (statusReloadTimeoutRef.current) {
+      clearTimeout(statusReloadTimeoutRef.current);
+    }
+    statusReloadTimeoutRef.current = setTimeout(
+      () => loadRooms(page, rowsPerPage, search, dateRange),
+      500
+    );
+  });
+  useRealtimeEvent<DeviceResyncEventDTO>('device:resync', (payload) => {
+    setData((prev) => ({
+      ...prev,
+      data: prev.data.map((r) =>
+        r.id === payload.roomId ? { ...r, statusResync: payload.resync } : r
+      ),
+    }));
+  });
+
   useResyncOnRestore(
     () => loadRooms(page, rowsPerPage, search, dateRange),
     initialData
@@ -228,7 +253,22 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   );
 
   const { track } = useDeviceCommands((event) => {
-    if (event.status === 'pending') return;
+    if (event.status === 'pending') {
+      setData((prev) => ({
+        ...prev,
+        data: prev.data.map((r) =>
+          r.id === event.roomId
+            ? {
+                ...r,
+                pendingAction: event.action,
+                pendingResync: event.resync ?? null,
+                pendingCommandCount: Math.max(1, r.pendingCommandCount ?? 0),
+              }
+            : r
+        ),
+      }));
+      return;
+    }
     if (roomsReloadTimeoutRef.current) {
       clearTimeout(roomsReloadTimeoutRef.current);
     }
@@ -239,7 +279,10 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
   });
 
   const handleTogglePower = async (room: RoomListItemDTO) => {
-    const nextState = room.isPowerOn !== true;
+    const current = room.pendingAction
+      ? room.pendingAction === 'on'
+      : room.isPowerOn === true;
+    const nextState = !current;
     try {
       const { results } = await roomsClientApi.setPower(room.id, nextState);
       const pending = results
@@ -255,7 +298,13 @@ export function RoomsClient({ summary, initialData, users }: RoomsClientProps) {
       setData((prev) => ({
         ...prev,
         data: prev.data.map((r) =>
-          r.id === room.id ? { ...r, pendingCommandCount: pending } : r
+          r.id === room.id
+            ? {
+                ...r,
+                pendingCommandCount: pending,
+                pendingAction: pending > 0 ? (nextState ? 'on' : 'off') : null,
+              }
+            : r
         ),
       }));
     } catch (err) {

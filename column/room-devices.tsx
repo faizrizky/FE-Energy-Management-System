@@ -9,7 +9,6 @@ export interface RoomDevicesColumnHandlers {
   onToggleSelect: (id: string) => void;
   isSelected: (id: string) => boolean;
   onTogglePower: (device: RoomDeviceDTO) => void;
-  onCancelPower: (device: RoomDeviceDTO) => void;
   onViewLog: (device: RoomDeviceDTO) => void;
   onDelete: (device: RoomDeviceDTO) => void;
   onIntervalChange: (device: RoomDeviceDTO, minutes: number) => void;
@@ -25,7 +24,6 @@ export function getRoomDevicesColumns({
   onToggleSelect,
   isSelected,
   onTogglePower,
-  onCancelPower,
   onViewLog,
   onDelete,
   onIntervalChange,
@@ -38,10 +36,7 @@ export function getRoomDevicesColumns({
       />
     ),
     device: (device: RoomDeviceDTO) => (
-      <div className="flex flex-col gap-0.5 py-1">
-        <span>{device.tbDeviceId}</span>
-        <span className="text-[10px] text-slate-500">{device.deviceEui}</span>
-      </div>
+      <span>{device.deviceEui}</span>
     ),
     component: (device: RoomDeviceDTO) => (
       <span className="text-slate-500">{device.deviceType}</span>
@@ -69,21 +64,24 @@ export function getRoomDevicesColumns({
         }
         pending={Boolean(device.pendingCommand)}
         pendingTitle={device.pendingCommand?.notes}
+        uncertain={device.statusUncertain}
+        resync={device.pendingCommand?.resync ?? device.statusResync}
+        offline={device.isOnline === false}
+        onlineUntil={device.onlineUntil}
         onToggle={() => onTogglePower(device)}
-        onCancel={() => onCancelPower(device)}
       />
     ),
     action: (device: RoomDeviceDTO) => (
       <div className="flex items-center gap-2">
         <TableActionButton
           icon={FileClock}
-          aria-label={`View log for ${device.tbDeviceId}`}
+          aria-label={`View log for ${device.deviceEui}`}
           onClick={() => onViewLog(device)}
         />
         <TableActionButton
           icon={Trash2}
           tone="destructive"
-          aria-label={`Delete ${device.tbDeviceId}`}
+          aria-label={`Delete ${device.deviceEui}`}
           onClick={() => onDelete(device)}
         />
       </div>

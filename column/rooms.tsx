@@ -63,9 +63,15 @@ export function getRoomsColumns({
     ),
     status: (room: RoomListItemDTO) => (
       <DevicePowerControl
-        checked={room.isPowerOn}
+        checked={
+          room.pendingAction ? room.pendingAction === 'on' : room.isPowerOn
+        }
         pending={(room.pendingCommandCount ?? 0) > 0}
         pendingLabel={`${room.pendingCommandCount} pending`}
+        uncertain={room.statusUncertain}
+        resync={room.pendingResync ?? room.statusResync}
+        offline={room.devicesOnline === 0}
+        onlineUntil={room.onlineUntil}
         onToggle={() => onTogglePower(room)}
       />
     ),

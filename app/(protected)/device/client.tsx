@@ -40,6 +40,7 @@ import { TableToolbar } from '@/components/shared/table-toolbar';
 import { useRealtimeEvent } from '@/hooks/use-realtime-event';
 import type {
   DeviceCommandEventDTO,
+  DeviceResyncEventDTO,
   DeviceStatusEventDTO,
 } from '@/feat/device/dto';
 import {
@@ -62,7 +63,7 @@ const DEVICE_SORT_ACCESSORS = {
   component: (d: DeviceDTO) => d.deviceType,
   room: (d: DeviceDTO) => d.room?.name ?? '',
   gateway: (d: DeviceDTO) => d.gateway?.name ?? '',
-  tbDeviceId: (d: DeviceDTO) => d.tbDeviceId,
+  devEui: (d: DeviceDTO) => d.eui,
   inverval: (d: DeviceDTO) => d.intervalMinutes,
   status: (d: DeviceDTO) => d.status,
 };
@@ -187,8 +188,26 @@ export function DeviceClient({
       ...prev,
       data: prev.data.map((d) =>
         d.id === payload.deviceId
-          ? { ...d, status: payload.status, lastSeenAt: payload.timestamp }
+          ? {
+              ...d,
+              status: payload.status,
+              ...(payload.source === 'telemetry'
+                ? { lastSeenAt: payload.timestamp, statusUncertain: false }
+                : {}),
+              ...(payload.online === undefined
+                ? {}
+                : { isOnline: payload.online }),
+            }
           : d
+      ),
+    }));
+  });
+
+  useRealtimeEvent<DeviceResyncEventDTO>('device:resync', (payload) => {
+    setData((prev) => ({
+      ...prev,
+      data: prev.data.map((d) =>
+        d.id === payload.deviceId ? { ...d, statusResync: payload.resync } : d
       ),
     }));
   });
@@ -253,19 +272,6 @@ export function DeviceClient({
         err instanceof Error
           ? err.message
           : 'Could not change device power state'
-      );
-      loadDevices(page, rowsPerPage, search, dateRange);
-    }
-  };
-
-  const handleCancelPower = async (device: DeviceDTO) => {
-    try {
-      const result = await devicesClientApi.cancelPower(device.id);
-      result.cancelled.forEach((event) => applyCommandEvent(track(event)));
-      toast.info('Power command cancelled');
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Could not cancel power command'
       );
       loadDevices(page, rowsPerPage, search, dateRange);
     }
@@ -350,7 +356,6 @@ export function DeviceClient({
       }),
     onView: openDeviceDetail,
     onTogglePower: handleTogglePower,
-    onCancelPower: handleCancelPower,
     onEdit: (device) => setModalState({ open: true, device }),
     onDelete: (device) => setDeleteTarget(device),
   });
@@ -519,12 +524,12 @@ export function DeviceClient({
                         Gateway
                       </SortableTableHead>
                       <SortableTableHead
-                        sortKey="tbDeviceId"
+                        sortKey="devEui"
                         activeKey={sortKey}
                         direction={direction}
                         onSort={toggleSort}
                       >
-                        ThingsBoard ID
+                        Dev EUI
                       </SortableTableHead>
                       <SortableTableHead
                         sortKey="inverval"
@@ -533,6 +538,14 @@ export function DeviceClient({
                         onSort={toggleSort}
                       >
                         Interval
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="status"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Status
                       </SortableTableHead>
                       <TableHead>Action</TableHead>
                     </TableRow>
@@ -545,8 +558,9 @@ export function DeviceClient({
                         <TableCell>{columns.component(device)}</TableCell>
                         <TableCell>{columns.room(device)}</TableCell>
                         <TableCell>{columns.gateway(device)}</TableCell>
-                        <TableCell>{columns.tbDeviceId(device)}</TableCell>
+                        <TableCell>{columns.devEui(device)}</TableCell>
                         <TableCell>{columns.interval(device)}</TableCell>
+                        <TableCell>{columns.status(device)}</TableCell>
                         <TableCell>{columns.action(device)}</TableCell>
                       </TableRow>
                     ))}
