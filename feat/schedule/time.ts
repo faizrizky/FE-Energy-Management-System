@@ -1,13 +1,4 @@
 /**
- * Ambil bagian YYYY-MM-DD dari string ISO buat isi input date.
- *
- * Dipake di: schedule/_partials/modal.tsx.
- */
-export function toDateInputValue(value: string): string {
-  return value.slice(0, 10);
-}
-
-/**
  * Format tanggal schedule pake zona UTC (misal "Sep 20, 2026"); "-" kalo nggak
  * valid.
  *
@@ -26,38 +17,20 @@ export function formatScheduleDate(value: string): string {
 }
 
 /**
- * Format tanggal + jam pake zona UTC (misal "Sep 20, 2026, 01:05 PM").
+ * Format timestamp jadi tanggal panjang di zona waktu browser (misal "April
+ * 12, 2026"). Sengaja nggak UTC kayak formatScheduleDate: scheduledDate itu
+ * cuma tanggal, sedangkan createdAt/updatedAt itu waktu beneran.
  *
  * Dipake di: schedule/_partials/detail-modal.tsx.
  */
-export function formatScheduleDateTime(value: string): string {
+export function formatLongDate(value: string): string {
   const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '-';
   return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
+    month: 'long',
     day: 'numeric',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
   }).format(d);
-}
-
-/**
- * Ngubah angka hari 0–6 jadi nama hari (Minggu = 0); "-" kalo di luar itu.
- *
- * Dipake di: schedule/_partials/detail-modal.tsx (formatRepeat).
- */
-export function dayName(day: number): string {
-  const names = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-  return names[day] ?? '-';
 }
 
 /**

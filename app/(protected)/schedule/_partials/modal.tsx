@@ -5,20 +5,19 @@ import { X } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { ScheduleForm } from './form';
 import { scheduleClientApi } from '@/feat/schedule/api.client';
-import { toDateInputValue } from '@/feat/schedule/time';
 import type { ScheduleDTO } from '@/feat/schedule/dto';
 import type { ScheduleFormValues } from '@/feat/schedule/schema';
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
-import type { DeviceDTO } from '@/feat/device/dto';
 
 interface ScheduleFormModalProps {
   open: boolean;
   schedule?: ScheduleDTO;
   rooms: RoomListItemDTO[];
-  devices: DeviceDTO[];
   onOpenChange: (open: boolean) => void;
   onSuccess: (schedule: ScheduleDTO) => void;
 }
+
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 
 /**
  * Modal tambah/edit schedule: ngisi default dari data lama, manggil
@@ -30,7 +29,6 @@ export function ScheduleFormModal({
   open,
   schedule,
   rooms,
-  devices,
   onOpenChange,
   onSuccess,
 }: ScheduleFormModalProps) {
@@ -38,21 +36,29 @@ export function ScheduleFormModal({
 
   const defaultValues: Partial<ScheduleFormValues> = schedule
     ? {
+        name: schedule.name,
+        description: schedule.description ?? '',
         roomId: schedule.roomId,
-        deviceId: schedule.deviceId ?? '',
         action: schedule.action,
-        scheduledDate: toDateInputValue(schedule.scheduledDate),
         startTime: schedule.startTime,
+        durationConstraint: schedule.endTime ? 'end-at' : 'no-end',
         endTime: schedule.endTime ?? '',
-        repeatType: schedule.repeatType,
-        repeatDays: schedule.repeatDays ?? [],
+        // "daily" udah gak ada di form baru (toggle repeat cuma none/weekly);
+        // jadwal lama yang masih "daily" ditampilin sebagai weekly, semua
+        // hari kecentang, biar visualnya tetap "tiap hari".
+        repeatType: schedule.repeatType === 'none' ? 'none' : 'weekly',
+        repeatDays:
+          schedule.repeatType === 'daily'
+            ? ALL_DAYS
+            : schedule.repeatDays ?? [],
       }
     : {
+        name: '',
+        description: '',
         roomId: '',
-        deviceId: '',
         action: 'on',
-        scheduledDate: toDateInputValue(new Date().toISOString()),
         startTime: '08:00',
+        durationConstraint: 'no-end',
         endTime: '',
         repeatType: 'none',
         repeatDays: [],
@@ -93,7 +99,6 @@ export function ScheduleFormModal({
       <div className="overflow-y-auto px-6 py-5">
         <ScheduleForm
           rooms={rooms}
-          devices={devices}
           defaultValues={defaultValues}
           schedule={schedule}
           onSubmit={handleSubmit}

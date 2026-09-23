@@ -148,24 +148,42 @@ describe('user/role/gateway client api', () => {
 
 describe('scheduleClientApi', () => {
   const base = {
+    name: 'Nyala Lampu',
+    description: '',
     roomId: 'r1',
-    deviceId: '',
     action: 'on' as const,
-    scheduledDate: '2026-09-20',
     startTime: '08:00',
+    durationConstraint: 'no-end' as const,
     endTime: '',
-    repeatType: 'daily' as const,
+    repeatType: 'none' as const,
     repeatDays: [1, 2],
   };
 
-  test('[positive] field kosong jadi null & repeatDays dikosongkan bila bukan weekly', async () => {
+  test('[positive] no-end -> endTime null & repeatDays dikosongkan bila bukan weekly', async () => {
     await scheduleClientApi.create(base);
-    expect(mocked.post).toHaveBeenCalledWith('/schedules', { ...base, deviceId: null, endTime: null, repeatDays: [] });
+    expect(mocked.post).toHaveBeenCalledWith('/schedules', {
+      name: base.name,
+      description: null,
+      roomId: base.roomId,
+      action: base.action,
+      startTime: base.startTime,
+      repeatType: base.repeatType,
+      endTime: null,
+      repeatDays: [],
+    });
   });
 
-  test('[positive] weekly mempertahankan repeatDays; update memakai PUT', async () => {
-    await scheduleClientApi.update('s1', { ...base, repeatType: 'weekly', deviceId: 'd1', endTime: '17:00' });
-    expect(mocked.put).toHaveBeenCalledWith('/schedules/s1', expect.objectContaining({ deviceId: 'd1', endTime: '17:00', repeatDays: [1, 2] }));
+  test('[positive] weekly mempertahankan repeatDays; end-at mengirim endTime; update memakai PUT', async () => {
+    await scheduleClientApi.update('s1', {
+      ...base,
+      repeatType: 'weekly',
+      durationConstraint: 'end-at',
+      endTime: '17:00',
+    });
+    expect(mocked.put).toHaveBeenCalledWith(
+      '/schedules/s1',
+      expect.objectContaining({ endTime: '17:00', repeatDays: [1, 2] })
+    );
   });
 
   test('[positive] list status & getById & remove', async () => {

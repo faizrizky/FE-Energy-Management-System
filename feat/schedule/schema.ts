@@ -1,28 +1,30 @@
 import { z } from 'zod';
 
+const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
 export const scheduleFormSchema = z
   .object({
-    roomId: z.string().min(1, 'Room is required'),
+    name: z.string().trim().min(1, 'Schedule name is required').max(120),
 
-    deviceId: z.string().optional().or(z.literal('')),
+    description: z.string().trim().max(500).optional().or(z.literal('')),
+
+    roomId: z.string().min(1, 'Room is required'),
 
     action: z.enum(['on', 'off'], {
       message: 'Action is required',
     }),
 
-    scheduledDate: z.string().min(1, 'Date is required'),
+    startTime: z.string().regex(timeRegex, 'Invalid start time'),
 
-    startTime: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid start time'),
+    durationConstraint: z.enum(['no-end', 'end-at']).default('no-end'),
 
     endTime: z
       .string()
-      .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid end time')
+      .regex(timeRegex, 'Invalid end time')
       .optional()
       .or(z.literal('')),
 
-    repeatType: z.enum(['none', 'daily', 'weekly']),
+    repeatType: z.enum(['none', 'weekly']),
 
     repeatDays: z.array(z.number().int().min(0).max(6)).default([]),
   })
@@ -35,12 +37,20 @@ export const scheduleFormSchema = z
       });
     }
 
-    if (values.endTime && values.startTime === values.endTime) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['endTime'],
-        message: 'End time cannot be the same as start time',
-      });
+    if (values.durationConstraint === 'end-at') {
+      if (!values.endTime) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['endTime'],
+          message: 'End time is required',
+        });
+      } else if (values.endTime === values.startTime) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['endTime'],
+          message: 'End time cannot be the same as start time',
+        });
+      }
     }
   });
 

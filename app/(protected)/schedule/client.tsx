@@ -28,9 +28,12 @@ import { formatNumber } from '@/lib/utils';
 import { useTableSort } from '@/lib/use-table-sort';
 import { getScheduleColumns } from '@/column/schedule';
 import { scheduleClientApi } from '@/feat/schedule/api.client';
-import type { ScheduleDTO, ScheduleListResponseDTO } from '@/feat/schedule/dto';
+import type {
+  ScheduleDetailDTO,
+  ScheduleDTO,
+  ScheduleListResponseDTO,
+} from '@/feat/schedule/dto';
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
-import type { DeviceDTO } from '@/feat/device/dto';
 import { ScheduleFormModal } from './_partials/modal';
 import { ScheduleDetailModal } from './_partials/detail-modal';
 import { TableToolbar } from '@/components/shared/table-toolbar';
@@ -42,18 +45,17 @@ interface ScheduleClientProps {
   initialOverallTotal: number;
   initialUpcomingTotal: number;
   rooms: RoomListItemDTO[];
-  devices: DeviceDTO[];
 }
 
 const SEARCH_DEBOUNCE_MS = 250;
 
 const SCHEDULE_SORT_ACCESSORS = {
+  name: (s: ScheduleDTO) => s.name,
   room: (s: ScheduleDTO) => s.room?.name ?? '',
-  component: (s: ScheduleDTO) => s.device?.deviceType ?? '',
-  deviceEui: (s: ScheduleDTO) => s.device?.eui ?? '',
   date: (s: ScheduleDTO) => new Date(s.scheduledDate).getTime(),
   time: (s: ScheduleDTO) => s.startTime,
   repeat: (s: ScheduleDTO) => s.repeatType,
+  activity: (s: ScheduleDTO) => s.action,
 };
 
 type ScheduleTab = 'active' | 'upcoming';
@@ -69,7 +71,6 @@ export function ScheduleClient({
   initialOverallTotal,
   initialUpcomingTotal,
   rooms,
-  devices,
 }: ScheduleClientProps) {
   const [data, setData] = useState<ScheduleListResponseDTO>(
     initialData ?? {
@@ -96,9 +97,8 @@ export function ScheduleClient({
     schedule?: ScheduleDTO;
   }>({ open: false });
   const [detailOpen, setDetailOpen] = useState(false);
-  const [detailSchedule, setDetailSchedule] = useState<ScheduleDTO | null>(
-    null
-  );
+  const [detailSchedule, setDetailSchedule] =
+    useState<ScheduleDetailDTO | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ScheduleDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -325,7 +325,7 @@ export function ScheduleClient({
     <div className="flex w-full flex-1 flex-col items-start gap-8 overflow-y-auto bg-slate-50 p-8">
       <PageHeader
         title="Schedules"
-        description="Manage scheduled actions for rooms and electrical devices."
+        description="Manage scheduled actions for rooms."
         actions={
           <Button
             onClick={() => setModalState({ open: true })}
@@ -483,20 +483,12 @@ export function ScheduleClient({
                         Room
                       </SortableTableHead>
                       <SortableTableHead
-                        sortKey="component"
+                        sortKey="name"
                         activeKey={sortKey}
                         direction={direction}
                         onSort={toggleSort}
                       >
-                        Component
-                      </SortableTableHead>
-                      <SortableTableHead
-                        sortKey="deviceEui"
-                        activeKey={sortKey}
-                        direction={direction}
-                        onSort={toggleSort}
-                      >
-                        Device EUI
+                        Name
                       </SortableTableHead>
                       <SortableTableHead
                         sortKey="date"
@@ -522,6 +514,14 @@ export function ScheduleClient({
                       >
                         Repeat
                       </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="activity"
+                        activeKey={sortKey}
+                        direction={direction}
+                        onSort={toggleSort}
+                      >
+                        Activity
+                      </SortableTableHead>
                       <TableHead>Action</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -530,11 +530,11 @@ export function ScheduleClient({
                       <TableRow key={schedule.id}>
                         <TableCell>{columns.checkbox(schedule)}</TableCell>
                         <TableCell>{columns.schedule(schedule)}</TableCell>
-                        <TableCell>{columns.component(schedule)}</TableCell>
-                        <TableCell>{columns.deviceEui(schedule)}</TableCell>
+                        <TableCell>{columns.name(schedule)}</TableCell>
                         <TableCell>{columns.date(schedule)}</TableCell>
                         <TableCell>{columns.time(schedule)}</TableCell>
                         <TableCell>{columns.repeat(schedule)}</TableCell>
+                        <TableCell>{columns.activity(schedule)}</TableCell>
                         <TableCell>{columns.action(schedule)}</TableCell>
                       </TableRow>
                     ))}
@@ -558,7 +558,6 @@ export function ScheduleClient({
         open={modalState.open}
         schedule={modalState.schedule}
         rooms={rooms}
-        devices={devices}
         onOpenChange={(open) => setModalState({ open })}
         onSuccess={handleSave}
       />

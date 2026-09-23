@@ -1,8 +1,60 @@
-import { Eye, Pencil, Trash2 } from 'lucide-react';
+import { ChevronRight, Eye, Pencil, Trash2 } from 'lucide-react';
 import { TableActionButton } from '@/components/shared/table-action-button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatScheduleDate, formatTimeRange } from '@/feat/schedule/time';
-import type { ScheduleDTO } from '@/feat/schedule/dto';
+import type {
+  ScheduleAction,
+  ScheduleActivityDTO,
+  ScheduleDTO,
+} from '@/feat/schedule/dto';
+
+/**
+ * Ringkasan aksi schedule: pill aksi awal, terus panah + pill aksi akhir kalo
+ * schedule-nya punya jam selesai. Nilainya dibaca apa adanya dari backend
+ * (field activity), bukan diturunin ulang di sini.
+ *
+ * Dipake di: getScheduleColumns.activity (file ini),
+ *   schedule/_partials/schedule-card.tsx.
+ */
+export function ScheduleActivity({
+  activity,
+}: {
+  activity: ScheduleActivityDTO;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <PowerPill action={activity.start} />
+      {activity.end && (
+        <>
+          <ChevronRight className="size-4 shrink-0 text-slate-950" />
+          <PowerPill action={activity.end} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Pill status ON/OFF: hijau buat on, merah buat off.
+ *
+ * Dipake di: ScheduleActivity (file ini),
+ *   schedule/_partials/detail-modal.tsx (Recent Activity Log).
+ */
+export function PowerPill({ action }: { action: ScheduleAction }) {
+  const on = action === 'on';
+  return (
+    <span
+      className={[
+        'inline-flex h-7 shrink-0 items-center justify-center rounded-full border px-2.5 text-xs font-medium',
+        on
+          ? 'border-emerald-500 bg-emerald-50 text-emerald-500'
+          : 'border-red-500 bg-red-50 text-red-500',
+      ].join(' ')}
+    >
+      {on ? 'ON' : 'OFF'}
+    </span>
+  );
+}
 
 export interface ScheduleColumnHandlers {
   onToggleSelect: (id: string) => void;
@@ -13,7 +65,7 @@ export interface ScheduleColumnHandlers {
 }
 
 /**
- * Renderer tiap kolom tabel schedule: checkbox, room, device, tanggal, jam,
+ * Renderer tiap kolom tabel schedule: checkbox, room, nama, tanggal, jam,
  * pola ulang, tombol aksi.
  *
  * Dipake di: app/(protected)/schedule/client.tsx.
@@ -42,15 +94,8 @@ export function getScheduleColumns({
         )}
       </div>
     ),
-    component: (schedule: ScheduleDTO) => (
-      <span className="text-slate-500">
-        {schedule.device?.deviceType ?? 'Room'}
-      </span>
-    ),
-    deviceEui: (schedule: ScheduleDTO) => (
-      <span className="text-slate-500">
-        {schedule.device?.eui ?? 'Room level'}
-      </span>
+    name: (schedule: ScheduleDTO) => (
+      <span className="text-slate-950">{schedule.name}</span>
     ),
     date: (schedule: ScheduleDTO) => (
       <span className="text-slate-500">
@@ -61,6 +106,9 @@ export function getScheduleColumns({
       <span className="text-slate-500">
         {formatTimeRange(schedule.startTime, schedule.endTime)}
       </span>
+    ),
+    activity: (schedule: ScheduleDTO) => (
+      <ScheduleActivity activity={schedule.activity} />
     ),
     repeat: (schedule: ScheduleDTO) => (
       <span

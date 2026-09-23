@@ -6,15 +6,17 @@ export interface ScheduleRoomDTO {
   id: string;
   name: string;
   location: string | null;
+  _count?: { devices: number };
 }
 
-export interface ScheduleDeviceDTO {
-  id: string;
-  eui: string;
-  name: string;
-  deviceType: string | null;
-  roomId: string;
-  status: string;
+/**
+ * Ringkasan aksi schedule dari backend: start = aksi pas jam mulai, end =
+ * aksi kebalikannya pas jam selesai (null kalo schedule-nya gak punya
+ * endTime). Diitung di backend biar aturannya satu sumber.
+ */
+export interface ScheduleActivityDTO {
+  start: ScheduleAction;
+  end: ScheduleAction | null;
 }
 
 export interface ScheduleCreatedByDTO {
@@ -27,8 +29,10 @@ export interface ScheduleCreatedByDTO {
 export interface ScheduleDTO {
   id: string;
 
+  name: string;
+  description: string | null;
+
   roomId: string;
-  deviceId: string | null;
 
   action: ScheduleAction;
 
@@ -40,6 +44,8 @@ export interface ScheduleDTO {
   repeatType: ScheduleRepeatType;
   repeatDays: number[] | null;
 
+  activity: ScheduleActivityDTO;
+
   status: string;
 
   createdById: string;
@@ -48,8 +54,33 @@ export interface ScheduleDTO {
   updatedAt: string;
 
   room?: ScheduleRoomDTO | null;
-  device?: ScheduleDeviceDTO | null;
   createdBy?: ScheduleCreatedByDTO | null;
+}
+
+export type ScheduleExecutionStatus =
+  | 'executed'
+  | 'partial'
+  | 'pending'
+  | 'skipped'
+  | 'failed';
+
+/**
+ * Satu kali eksekusi schedule (semua device di room pada menit yang sama),
+ * udah diringkas backend jadi satu status + label.
+ */
+export interface ScheduleRecentActivityDTO {
+  key: string;
+  executedAt: string;
+  date: string;
+  time: string;
+  action: ScheduleAction;
+  status: ScheduleExecutionStatus;
+  label: string;
+}
+
+/** Response GET /schedules/:id: schedule biasa plus riwayat eksekusi. */
+export interface ScheduleDetailDTO extends ScheduleDTO {
+  recentActivity: ScheduleRecentActivityDTO[];
 }
 
 export interface ScheduleListResponseDTO {

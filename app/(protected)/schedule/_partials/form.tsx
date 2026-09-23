@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { ChevronDown, Plus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,12 +15,10 @@ import {
 import { ApiError } from '@/lib/axios';
 
 import type { RoomListItemDTO } from '@/feat/rooms/dto';
-import type { DeviceDTO } from '@/feat/device/dto';
 import type { ScheduleDTO } from '@/feat/schedule/dto';
 
 interface ScheduleFormProps {
   rooms: RoomListItemDTO[];
-  devices: DeviceDTO[];
   defaultValues?: Partial<ScheduleFormValues>;
   schedule?: ScheduleDTO;
   onSubmit: (values: ScheduleFormValues) => Promise<void>;
@@ -33,25 +30,26 @@ const SCHEDULE_TIMEZONE_LABEL =
   process.env.NEXT_PUBLIC_SCHEDULE_TIMEZONE_LABEL || 'WIB';
 
 const DAYS = [
-  { value: 1, label: 'Monday', short: 'Mon' },
-  { value: 2, label: 'Tuesday', short: 'Tue' },
-  { value: 3, label: 'Wednesday', short: 'Wed' },
-  { value: 4, label: 'Thursday', short: 'Thu' },
-  { value: 5, label: 'Friday', short: 'Fri' },
-  { value: 6, label: 'Saturday', short: 'Sat' },
-  { value: 0, label: 'Sunday', short: 'Sun' },
+  { value: 1, letter: 'M', label: 'Monday' },
+  { value: 2, letter: 'T', label: 'Tuesday' },
+  { value: 3, letter: 'W', label: 'Wednesday' },
+  { value: 4, letter: 'T', label: 'Thursday' },
+  { value: 5, letter: 'F', label: 'Friday' },
+  { value: 6, letter: 'S', label: 'Saturday' },
+  { value: 0, letter: 'S', label: 'Sunday' },
 ];
 
 /**
- * Form tambah/edit schedule: room, device (opsional), action, tanggal, jam
- * mulai/selesai, pola ulang, sama hari buat yang weekly.
+ * Form tambah/edit schedule: nama, deskripsi, room, action, jam mulai, batas
+ * durasi (no end/end at), sama pola ulang mingguan. Schedule sekarang selalu
+ * berlaku ke seluruh device di room, jadi gak ada pilihan device lagi.
  *
- * Dipake di: schedule/_partials/modal.tsx → ScheduleFormModal.
+ * Dipake di: schedule/_partials/modal.tsx -> ScheduleFormModal.
  */
 export function ScheduleForm({
   rooms,
-  devices,
   defaultValues,
+  schedule,
   onSubmit,
   onCancel,
   submitting,
@@ -67,11 +65,12 @@ export function ScheduleForm({
   } = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleFormSchema),
     defaultValues: {
+      name: '',
+      description: '',
       roomId: '',
-      deviceId: '',
       action: 'on',
-      scheduledDate: '',
       startTime: '08:00',
+      durationConstraint: 'no-end',
       endTime: '',
       repeatType: 'none',
       repeatDays: [],
@@ -79,16 +78,11 @@ export function ScheduleForm({
     },
   });
 
-  const roomId = watch('roomId');
+  const action = watch('action');
+  const durationConstraint = watch('durationConstraint');
   const repeatType = watch('repeatType');
   const repeatDays = watch('repeatDays');
-
-  const roomDevices = useMemo(
-    () => devices.filter((device) => device.roomId === roomId),
-    [devices, roomId]
-  );
-
-  const roomRegister = register('roomId');
+  const negatedAction = action === 'off' ? 'ON' : 'OFF';
 
   const toggleDay = (day: number) => {
     const current = repeatDays ?? [];
@@ -99,13 +93,9 @@ export function ScheduleForm({
         { shouldValidate: true }
       );
     } else {
-      setValue(
-        'repeatDays',
-        [...current, day].sort((a, b) => a - b),
-        {
-          shouldValidate: true,
-        }
-      );
+      setValue('repeatDays', [...current, day].sort((a, b) => a - b), {
+        shouldValidate: true,
+      });
     }
   };
 
@@ -143,62 +133,54 @@ export function ScheduleForm({
         </div>
       )}
 
-      {/* ROOM + DEVICE */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Field
-          label="Choose room"
-          required
-          error={errors.roomId?.message}
-          hint="Choose one room to schedule the action"
-        >
-          <SelectField>
-            <select
-              {...roomRegister}
-              onChange={(e) => {
-                roomRegister.onChange(e);
-                setValue('deviceId', '');
-              }}
-              className="h-11 w-full appearance-none rounded-lg border border-slate-400 bg-white px-3 pr-10 text-sm text-slate-950 outline-none shadow-[0_1px_2px_rgba(0,0,0,0.1)] focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            >
-              <option value="">Choose room</option>
-              {rooms.map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.name}
-                </option>
-              ))}
-            </select>
-          </SelectField>
-        </Field>
+      <Field label="Schedule Name" required error={errors.name?.message}>
+        <Input
+          type="text"
+          placeholder="Enter schedule name"
+          {...register('name')}
+          aria-invalid={!!errors.name}
+          className="h-11 rounded-lg border-slate-300 text-sm"
+        />
+      </Field>
 
-        <Field
-          label="Choose device"
-          error={errors.deviceId?.message}
-          hint="Leave empty to schedule the whole room"
-        >
-          <SelectField>
-            <select
-              {...register('deviceId')}
-              disabled={!roomId}
-              className="h-11 w-full appearance-none rounded-lg border border-slate-400 bg-white px-3 pr-10 text-sm text-slate-950 outline-none shadow-[0_1px_2px_rgba(0,0,0,0.1)] disabled:bg-slate-50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            >
-              <option value="">Whole room</option>
-              {roomDevices.map((device) => (
-                <option key={device.id} value={device.id}>
-                  {device.eui} - {device.name}
-                </option>
-              ))}
-            </select>
-          </SelectField>
-        </Field>
-      </div>
+      <Field
+        label="Schedule description"
+        error={errors.description?.message}
+      >
+        <textarea
+          placeholder="Enter schedule description"
+          rows={4}
+          {...register('description')}
+          aria-invalid={!!errors.description}
+          className="w-full resize-none rounded-lg border border-slate-400 px-3 py-2 text-sm text-slate-950 shadow-[0_1px_2px_rgba(0,0,0,0.1)] outline-none placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+        />
+      </Field>
 
-      {/* ACTION + DATE */}
+      <Field label="Choose Room" required error={errors.roomId?.message}>
+        <SelectField>
+          <select
+            {...register('roomId')}
+            className="h-11 w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 pr-10 text-sm text-slate-950 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+          >
+            <option value="">Select room</option>
+            {rooms.map((room) => (
+              <option key={room.id} value={room.id}>
+                {room.name}
+              </option>
+            ))}
+          </select>
+        </SelectField>
+      </Field>
+
+      <SectionDivider label="Scheduling Controls" />
+
+      {/* ACTION + START TIME */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field label="Action" required error={errors.action?.message}>
           <SelectField>
             <select
               {...register('action')}
-              className="h-11 w-full appearance-none rounded-lg border border-slate-400 bg-white px-3 pr-10 text-sm text-slate-950 outline-none shadow-[0_1px_2px_rgba(0,0,0,0.1)] focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              className="h-11 w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 pr-10 text-sm text-slate-950 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             >
               <option value="on">Turn ON</option>
               <option value="off">Turn OFF</option>
@@ -207,23 +189,7 @@ export function ScheduleForm({
         </Field>
 
         <Field
-          label="Choose date"
-          required
-          error={errors.scheduledDate?.message}
-        >
-          <Input
-            type="date"
-            {...register('scheduledDate')}
-            aria-invalid={!!errors.scheduledDate}
-            className="h-11 rounded-lg border-slate-400 text-sm shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
-          />
-        </Field>
-      </div>
-
-      {/* TIME */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Field
-          label="Start time"
+          label="Start Time"
           required
           error={errors.startTime?.message}
           hint={`Time in ${SCHEDULE_TIMEZONE_LABEL}.`}
@@ -232,46 +198,82 @@ export function ScheduleForm({
             type="time"
             {...register('startTime')}
             aria-invalid={!!errors.startTime}
-            className="h-11 rounded-lg border-slate-400 text-sm shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
-          />
-        </Field>
-
-        <Field
-          label="End time"
-          error={errors.endTime?.message}
-          hint="Optional. Supports cross-midnight ranges."
-        >
-          <Input
-            type="time"
-            {...register('endTime')}
-            aria-invalid={!!errors.endTime}
-            className="h-11 rounded-lg border-slate-400 text-sm shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+            className="h-11 rounded-lg border-slate-300 text-sm"
           />
         </Field>
       </div>
 
+      {/* DURATION CONSTRAINT */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium leading-5 text-slate-950">
+          Duration Constraint
+          <span className="ml-1 text-red-500">*</span>
+        </label>
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-6">
+            <DurationOption
+              active={durationConstraint === 'no-end'}
+              label="No end"
+              onClick={() =>
+                setValue('durationConstraint', 'no-end', {
+                  shouldValidate: true,
+                })
+              }
+            />
+            <DurationOption
+              active={durationConstraint === 'end-at'}
+              label="End at"
+              onClick={() =>
+                setValue('durationConstraint', 'end-at', {
+                  shouldValidate: true,
+                })
+              }
+            />
+          </div>
+
+          {durationConstraint === 'end-at' ? (
+            <div>
+              <Input
+                type="time"
+                {...register('endTime')}
+                aria-invalid={!!errors.endTime}
+                className="h-11 rounded-lg border-slate-300 text-sm"
+              />
+              {errors.endTime?.message ? (
+                <span className="mt-1 block text-xs leading-[18px] text-red-500">
+                  {errors.endTime.message}
+                </span>
+              ) : (
+                <span className="mt-1 block text-xs leading-[18px] text-slate-400">
+                  At end time, the room will automatically turn {negatedAction}.
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="flex h-11 w-full items-center rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-400 opacity-60">
+              No turn-off event scheduled
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* REPEAT */}
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between py-2">
-          <p className="text-sm font-medium text-neutral-500">Repeat?</p>
+        <p className="text-sm font-medium text-slate-950">Repeat Schedule</p>
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <button
               type="button"
               role="switch"
               aria-checked={repeatType !== 'none'}
               onClick={() => {
-                setValue(
-                  'repeatType',
-                  repeatType === 'none' ? 'weekly' : 'none',
-                  {
-                    shouldValidate: true,
-                  }
-                );
-                if (repeatType === 'none') setValue('repeatDays', []);
+                const next = repeatType === 'none' ? 'weekly' : 'none';
+                setValue('repeatType', next, { shouldValidate: true });
+                if (next === 'none') setValue('repeatDays', []);
               }}
               className={[
                 'relative h-6 w-11 rounded-full transition',
-                repeatType !== 'none' ? 'bg-emerald-700' : 'bg-slate-300',
+                repeatType !== 'none' ? 'bg-emerald-500' : 'bg-slate-300',
               ].join(' ')}
             >
               <span
@@ -281,70 +283,49 @@ export function ScheduleForm({
                 ].join(' ')}
               />
             </button>
-            <span className="text-sm text-emerald-700">
+            <span className="text-sm text-neutral-500">
               {repeatType !== 'none' ? 'Repeat on' : 'Repeat off'}
             </span>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-          <RepeatOption
-            active={repeatType === 'none'}
-            title="Does not repeat"
-            description="Runs once"
-            onClick={() =>
-              setValue('repeatType', 'none', { shouldValidate: true })
-            }
-          />
-          <RepeatOption
-            active={repeatType === 'daily'}
-            title="Every day"
-            description="Runs every day"
-            onClick={() =>
-              setValue('repeatType', 'daily', { shouldValidate: true })
-            }
-          />
-          <RepeatOption
-            active={repeatType === 'weekly'}
-            title="Every week"
-            description="Choose days"
-            onClick={() =>
-              setValue('repeatType', 'weekly', { shouldValidate: true })
-            }
-          />
-        </div>
-      </div>
-
-      {repeatType === 'weekly' && (
-        <div className="rounded-xl border border-emerald-500 bg-emerald-50 p-4 shadow-[0_8px_12px_rgba(0,0,0,0.05)]">
-          <p className="mb-3 text-sm font-medium text-emerald-500">Repeat on</p>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-            {DAYS.map((day) => {
-              const selected = repeatDays.includes(day.value);
-              return (
-                <button
-                  key={day.value}
-                  type="button"
-                  onClick={() => toggleDay(day.value)}
-                  className={[
-                    'rounded-lg border px-3 py-3 text-xs font-medium transition',
-                    selected
-                      ? 'border-emerald-500 bg-emerald-500 text-white'
-                      : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-400',
-                  ].join(' ')}
-                >
-                  {day.short}
-                </button>
-              );
-            })}
-          </div>
-          {errors.repeatDays?.message && (
-            <p className="mt-2 text-xs text-red-500">
-              {errors.repeatDays.message}
+          {repeatType === 'weekly' ? (
+            <div>
+              <div className="grid grid-cols-7 gap-2">
+                {DAYS.map((day) => {
+                  const selected = repeatDays.includes(day.value);
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      title={day.label}
+                      onClick={() => toggleDay(day.value)}
+                      className={[
+                        'flex h-8 items-center justify-center rounded-lg border text-sm font-medium transition',
+                        selected
+                          ? 'border-emerald-500 bg-emerald-500 text-white'
+                          : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-400',
+                      ].join(' ')}
+                    >
+                      {day.letter}
+                    </button>
+                  );
+                })}
+              </div>
+              {errors.repeatDays?.message && (
+                <p className="mt-2 text-xs text-red-500">
+                  {errors.repeatDays.message}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs leading-[18px] text-slate-400">
+              Enable Repeat to reapply the start action on selected days. The
+              device state remains until changed manually or by another
+              automation.
             </p>
           )}
         </div>
-      )}
+      </div>
 
       <div className="mt-2 flex items-center justify-end gap-2 border-t border-slate-200 pt-4">
         <Button
@@ -362,7 +343,7 @@ export function ScheduleForm({
           className="h-11 w-[200px] rounded-lg bg-emerald-500 px-4 text-sm font-medium text-white hover:bg-emerald-600"
         >
           <Plus className="size-4" />
-          {submitting ? 'Saving...' : 'Save schedule'}
+          {submitting ? 'Saving...' : schedule ? 'Save changes' : 'Add schedule'}
         </Button>
       </div>
     </form>
@@ -388,7 +369,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <label className="text-sm font-medium leading-5 text-slate-950">
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
@@ -418,43 +399,47 @@ function SelectField({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Kartu pilihan pola ulang (none/daily/weekly) yang bisa diklik.
+ * Garis pemisah section dengan label di tengah (mis. "Scheduling Controls").
  *
  * Dipake di: ScheduleForm (file ini).
  */
-function RepeatOption({
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-px flex-1 bg-slate-200" />
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+      <div className="h-px flex-1 bg-slate-200" />
+    </div>
+  );
+}
+
+/**
+ * Radio pseudo-button buat pilihan Duration Constraint (No end / End at).
+ *
+ * Dipake di: ScheduleForm (file ini).
+ */
+function DurationOption({
   active,
-  title,
-  description,
+  label,
   onClick,
 }: {
   active: boolean;
-  title: string;
-  description: string;
+  label: string;
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        'flex min-h-[68px] flex-col items-start justify-center rounded-xl border p-4 text-left shadow-[0_8px_12px_rgba(0,0,0,0.05)] transition',
-        active
-          ? 'border-emerald-500 bg-emerald-50'
-          : 'border-slate-300 bg-white hover:border-emerald-300',
-      ].join(' ')}
-    >
+    <button type="button" onClick={onClick} className="flex items-center gap-2">
       <span
         className={[
-          'text-sm font-medium leading-5',
-          active ? 'text-emerald-500' : 'text-slate-950',
+          'flex size-[18px] shrink-0 items-center justify-center rounded-full border-2',
+          active ? 'border-emerald-500' : 'border-slate-400',
         ].join(' ')}
       >
-        {title}
+        {active && <span className="size-2.5 rounded-full bg-emerald-500" />}
       </span>
-      <span className="mt-1 text-[10px] leading-[18px] text-slate-950">
-        {description}
-      </span>
+      <span className="text-sm font-medium text-slate-950">{label}</span>
     </button>
   );
 }

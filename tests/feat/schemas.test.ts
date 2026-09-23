@@ -79,12 +79,27 @@ describe('roomFormSchema', () => {
 });
 
 describe('scheduleFormSchema', () => {
-  const valid = { roomId: 'r1', deviceId: '', action: 'on', scheduledDate: '2026-09-20', startTime: '08:00', endTime: '17:00', repeatType: 'none' };
+  const valid = {
+    name: 'Nyala Lampu',
+    roomId: 'r1',
+    action: 'on',
+    startTime: '08:00',
+    durationConstraint: 'no-end',
+    endTime: '',
+    repeatType: 'none',
+  };
 
-  test('[positive] one-time & weekly dengan hari', () => {
+  test('[positive] no-end & weekly dengan hari', () => {
     expect(ok(scheduleFormSchema, valid).repeatDays).toEqual([]);
     ok(scheduleFormSchema, { ...valid, repeatType: 'weekly', repeatDays: [1, 5] });
-    ok(scheduleFormSchema, { ...valid, endTime: '' });
+  });
+
+  test('[positive] end-at dengan endTime valid', () => {
+    ok(scheduleFormSchema, { ...valid, durationConstraint: 'end-at', endTime: '17:00' });
+  });
+
+  test('[negative] name kosong', () => {
+    expect(issues(scheduleFormSchema, { ...valid, name: '' })).toEqual(['Schedule name is required']);
   });
 
   test('[negative] weekly tanpa hari -> error di repeatDays', () => {
@@ -92,14 +107,20 @@ describe('scheduleFormSchema', () => {
     expect(r.error?.issues).toEqual([expect.objectContaining({ path: ['repeatDays'], message: 'Select at least one day' })]);
   });
 
-  test('[negative] endTime sama dengan startTime', () => {
-    expect(issues(scheduleFormSchema, { ...valid, endTime: '08:00' })).toEqual(['End time cannot be the same as start time']);
+  test('[negative] end-at tanpa endTime -> wajib diisi', () => {
+    expect(issues(scheduleFormSchema, { ...valid, durationConstraint: 'end-at', endTime: '' })).toEqual(['End time is required']);
+  });
+
+  test('[negative] end-at, endTime sama dengan startTime', () => {
+    expect(issues(scheduleFormSchema, { ...valid, durationConstraint: 'end-at', endTime: '08:00' })).toEqual([
+      'End time cannot be the same as start time',
+    ]);
   });
 
   test('[negative] format jam, action, repeatType tidak valid', () => {
     expect(issues(scheduleFormSchema, { ...valid, startTime: '8:00' })).toEqual(['Invalid start time']);
-    expect(issues(scheduleFormSchema, { ...valid, endTime: '24:00' })).toEqual(['Invalid end time']);
     expect(issues(scheduleFormSchema, { ...valid, action: 'toggle' })).toEqual(['Action is required']);
+    expect(scheduleFormSchema.safeParse({ ...valid, repeatType: 'daily' }).success).toBe(false);
     expect(scheduleFormSchema.safeParse({ ...valid, repeatType: 'monthly' }).success).toBe(false);
     expect(scheduleFormSchema.safeParse({ ...valid, repeatDays: [7] }).success).toBe(false);
   });

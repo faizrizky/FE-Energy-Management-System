@@ -1,5 +1,9 @@
 import { api } from '@/lib/axios';
-import type { ScheduleDTO, ScheduleListResponseDTO } from './dto';
+import type {
+  ScheduleDetailDTO,
+  ScheduleDTO,
+  ScheduleListResponseDTO,
+} from './dto';
 import type { ScheduleFormValues } from './schema';
 
 export interface ScheduleListParams {
@@ -10,6 +14,22 @@ export interface ScheduleListParams {
   search?: string;
   scheduledFrom?: string;
   scheduledTo?: string;
+}
+
+/**
+ * Ubah nilai form (durationConstraint/repeatType lokal) jadi body API:
+ * no-end -> endTime null, repeatDays cuma ikut kalo weekly.
+ *
+ * Dipake di: scheduleClientApi.create, scheduleClientApi.update (file ini).
+ */
+function toSchedulePayload(payload: ScheduleFormValues) {
+  const { durationConstraint, ...rest } = payload;
+  return {
+    ...rest,
+    description: payload.description || null,
+    endTime: durationConstraint === 'end-at' ? payload.endTime : null,
+    repeatDays: payload.repeatType === 'weekly' ? payload.repeatDays : [],
+  };
 }
 
 export const scheduleClientApi = {
@@ -43,27 +63,25 @@ export const scheduleClientApi = {
       .then((res) => res.data),
 
   /**
-   * GET /schedules/:id dari browser.
+   * GET /schedules/:id dari browser; ikut bawa riwayat eksekusi terbaru.
    *
    * Dipake di: schedule/client.tsx (modal detail).
    */
   getById: (scheduleId: string) =>
-    api.get<ScheduleDTO>(`/schedules/${scheduleId}`).then((res) => res.data),
+    api
+      .get<ScheduleDetailDTO>(`/schedules/${scheduleId}`)
+      .then((res) => res.data),
 
   /**
-   * POST /schedules; deviceId/endTime kosong dikirim null, repeatDays cuma
-   * dikirim kalo weekly.
+   * POST /schedules; durationConstraint 'no-end' -> endTime null, repeatDays
+   * cuma dikirim kalo weekly. scheduledDate sengaja gak dikirim, backend
+   * ngitung sendiri.
    *
    * Dipake di: schedule/_partials/modal.tsx.
    */
   create: (payload: ScheduleFormValues) =>
     api
-      .post<ScheduleDTO>('/schedules', {
-        ...payload,
-        deviceId: payload.deviceId || null,
-        endTime: payload.endTime || null,
-        repeatDays: payload.repeatType === 'weekly' ? payload.repeatDays : [],
-      })
+      .post<ScheduleDTO>('/schedules', toSchedulePayload(payload))
       .then((res) => res.data),
 
   /**
@@ -73,12 +91,7 @@ export const scheduleClientApi = {
    */
   update: (scheduleId: string, payload: ScheduleFormValues) =>
     api
-      .put<ScheduleDTO>(`/schedules/${scheduleId}`, {
-        ...payload,
-        deviceId: payload.deviceId || null,
-        endTime: payload.endTime || null,
-        repeatDays: payload.repeatType === 'weekly' ? payload.repeatDays : [],
-      })
+      .put<ScheduleDTO>(`/schedules/${scheduleId}`, toSchedulePayload(payload))
       .then((res) => res.data),
 
   /**

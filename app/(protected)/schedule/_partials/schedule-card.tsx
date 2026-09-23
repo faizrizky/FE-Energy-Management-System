@@ -1,5 +1,6 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import { formatScheduleDate, formatTimeRange } from '@/feat/schedule/time';
+import { ScheduleActivity } from '@/column/schedule';
 import type { ScheduleDTO } from '@/feat/schedule/dto';
 
 interface ScheduleCardProps {
@@ -9,7 +10,7 @@ interface ScheduleCardProps {
 }
 
 /**
- * Kartu schedule versi mobile: room, device, tanggal, jam, tanda berulang,
+ * Kartu schedule versi mobile: room, nama, tanggal, jam, tanda berulang,
  * tombol edit & hapus.
  *
  * Dipake di: schedule/client.tsx (tampilan mobile).
@@ -49,19 +50,11 @@ export function ScheduleCard({
 
       <div className="h-px bg-slate-100" />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1">
-          <span className="text-sm text-slate-500">Component</span>
-          <p className="truncate text-base font-semibold text-slate-950">
-            {schedule.device?.deviceType ?? 'Room'}
-          </p>
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-sm text-slate-500">Device EUI</span>
-          <p className="truncate text-base font-semibold text-slate-950">
-            {schedule.device?.eui ?? 'Room level'}
-          </p>
-        </div>
+      <div className="flex flex-col gap-1">
+        <span className="text-sm text-slate-500">Name</span>
+        <p className="truncate text-base font-semibold text-slate-950">
+          {schedule.name}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -80,6 +73,11 @@ export function ScheduleCard({
       </div>
 
       <div className="h-px bg-slate-100" />
+
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-slate-500">Activity</span>
+        <ScheduleActivity activity={schedule.activity} />
+      </div>
 
       <div className="flex items-center justify-between">
         <span className="text-sm text-slate-500">Repeat status</span>
